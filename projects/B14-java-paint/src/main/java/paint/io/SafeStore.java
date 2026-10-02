@@ -29,6 +29,7 @@ import java.util.regex.Pattern;
 public final class SafeStore {
 
     public static final String EXTENSION = ".pad";
+    public static final String PNG_EXTENSION = ".png";
     public static final int MAX_NAME_CHARS = 64;
 
     /** 允许中文，但不允许点、斜杠、反斜杠、冒号、控制字符：整个文件名里只有扩展名那一个点。 */
@@ -48,8 +49,17 @@ public final class SafeStore {
         return root;
     }
 
-    /** 校验文件名并给出安全路径。文件名不合格时抛 IOException，消息里说清哪条规则拦的。 */
+    /** 文档文件的安全路径。 */
     public Path resolve(String name) throws IOException {
+        return check(name, PAD_NAME, EXTENSION);
+    }
+
+    /** 导出图片的安全路径：同样只许落在文档目录里，只是换个扩展名。 */
+    public Path resolveExport(String name) throws IOException {
+        return check(name, PNG_NAME, PNG_EXTENSION);
+    }
+
+    private Path check(String name, Pattern allowed, String extension) throws IOException {
         if (name == null || name.isBlank()) {
             throw new IOException("文件名不能为空");
         }
@@ -57,11 +67,16 @@ public final class SafeStore {
             throw new IOException("文件名过长（" + name.length() + " > " + MAX_NAME_CHARS + "）");
         }
         String trimmed = name.trim();
-        if (!NAME.matcher(trimmed).matches()) {
-            throw new IOException("文件名不合法：" + name + "。只允许字母、数字、下划线、连字符、中文，"
-                    + "并且必须以内置扩展名 " + EXTENSION + " 结尾");
+        if (!trimmed.equals(name)) {
+            // 前导/尾随空白一律拒：**不静默 trim**。否则"你写的名字"和"磁盘上的名字"不一样，
+            // 保存/打开对不上（README 记的那条真 bug 就是它；恢复到的这版是修之前的）。
+            throw new IOException("文件名前后不能有空白：'" + name + "'");
         }
-        String stem = trimmed.substring(0, trimmed.length() - EXTENSION.length()).toLowerCase();
+        if (!allowed.matcher(trimmed).matches()) {
+            throw new IOException("文件名不合法：" + name + "。只允许字母、数字、下划线、连字符、中文，"
+                    + "并且必须以 " + extension + " 结尾");
+        }
+        String stem = trimmed.substring(0, trimmed.length() - extension.length()).toLowerCase();
         if (RESERVED.contains(stem)) {
             throw new IOException("文件名 " + trimmed + " 是 Windows 保留名，换一个是吧");
         }
@@ -88,9 +103,9 @@ public final class SafeStore {
         try {
             Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE,
                     StandardCopyOption.REPLACE_EXISTING);
-        } catch (AtomicMoveUnsupportedFileException | UnsupportedOperationException
-                 | AtomicMoveNotSupportedException unsupported) {
-            // 某些网络盘/临时目录不支持原子移动：退化成"先写后换"，仍不留半个文件在 target 上
+        } catch (AtomicMoveNotSupportedException noAtomicHere) {
+            // 某些网络盘/文件系统不支持原子移动。只兜这一个具体异常：别的 IOException
+            // 必须原样抛出去，否则"磁盘满了"会被伪装成"写成功了"。
             Files.move(temp, target, StandardCopyOption.REPLACE_EXISTING);
         }
     }
@@ -118,10 +133,5 @@ public final class SafeStore {
                     .forEach(names::add);
         }
         return names;
-    }
-
-    /** 编译期防御：万一某平台抛的是没列出来的异常类型，也不至于变成"写坏了没提示"。 */
-    private static final class AtomicMoveUnsupportedFileException extends IOException {
-        private static final long serialVersionUID = 1L;
     }
 }

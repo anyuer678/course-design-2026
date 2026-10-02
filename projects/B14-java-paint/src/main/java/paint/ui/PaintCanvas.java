@@ -100,7 +100,12 @@ public final class PaintCanvas extends JPanel implements MouseListener, MouseMot
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        renderInto((Graphics2D) g.create(), getWidth(), getHeight());
+        Graphics2D scratch = (Graphics2D) g.create();   // create() 出来的副本必须 dispose，
+        try {                                            // 否则每次重绘都泄一个图形上下文
+            renderInto(scratch, getWidth(), getHeight());
+        } finally {
+            scratch.dispose();
+        }
     }
 
     // ------------------------------------------------ 语义入口（真实逻辑在这）
@@ -144,7 +149,7 @@ public final class PaintCanvas extends JPanel implements MouseListener, MouseMot
                 committed = true;
             }
             preview = null;
-        } else if (movingIndex >= 0 && Math.abs(dx) >= MOVE_TRIGGER && Math.abs(dy) >= 0
+        } else if (movingIndex >= 0
                 && (Math.abs(dx) >= MOVE_TRIGGER || Math.abs(dy) >= MOVE_TRIGGER)) {
             history.run(new MoveShapeCommand(drawing, movingIndex, dx, dy));
             committed = true;

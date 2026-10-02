@@ -2,7 +2,6 @@ package paint;
 
 import java.awt.Color;
 import java.awt.Graphics2D;
-import java.awt.Point;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -154,11 +153,12 @@ public final class PaintTests {
         RectShape box = new RectShape(10, 10, 40, 40, Color.BLACK);
         check(box.contains(25, 25), "空心矩形内部也应可选中（不然用户要点边线）");
         check(!box.contains(60, 60), "矩形外不命中");
-        check(box.contains(41, 25), "右下角线上命中（w=30 → 右边界 x=40）");
+        check(box.contains(41, 25), "右边界外一像素仍在容差内");
 
         EllipseShape circle = new EllipseShape(0, 0, 40, 40, Color.BLACK);
         check(circle.contains(20, 20), "椭圆中心命中");
-        check(circle.contains(1, 1), "椭圆边框附近命中");
+        check(circle.contains(6, 6), "45° 方向上紧贴椭圆边框的点应命中");
+        check(!circle.contains(1, 1), "外接框角落离椭圆边界还差 3 个像素，不该命中");
         check(!circle.contains(39, 1), "外接框角落（椭园外）不应命中");
 
         LineShape same1 = new LineShape(1, 2, 3, 4, Color.MAGENTA);
@@ -205,20 +205,20 @@ public final class PaintTests {
         clamped.select(0);
         eq(clamped.selection(), 0, "合法选择生效");
 
-        // 监听器：回调里再取消订阅，不能 ConcurrentModificationException
+        // 监听器：回调里取消订阅是最常见写法，不能在遍历时把自己迭代会
         Drawing live = new Drawing();
         final int[] fired = {0};
-        Drawing.Listener listener = changed -> {
-            fired[0]++;
-            changed.removeListener(this_listener_placeholder());   // 编译期占位，见下
+        Drawing.Listener oneShot = new Drawing.Listener() {
+            @Override
+            public void drawingChanged(Drawing changed) {
+                fired[0]++;
+                changed.removeListener(this);
+            }
         };
-        check(true, "（订阅重入测试见下面 reentrant）");
-        live.addListener(listener);
+        live.addListener(oneShot);
         live.insert(0, bottom);
-        eq(fired[0], 1, "变更只通知一次");
-        live.removeListener(listener);
         live.insert(0, top);
-        eq(fired[0], 1, "取消订阅后不再收到通知");
+        eq(fired[0], 1, "回调里取消订阅：只通知一次且不抛异常");
 
         Drawing big = new Drawing();
         List<Shape> many = new ArrayList<>();
@@ -236,11 +236,6 @@ public final class PaintTests {
         check(bounds.contentBounds().width > bounds.rawBounds().width,
                 "contentBounds 额外留出线宽与容差");
         eq(new Drawing().contentBounds().width, 0, "空文档的范围是 0×0");
-    }
-
-    private static Drawing.Listener this_listener_placeholder() {
-        return changed -> {
-        };
     }
 
     // ------------------------------------------------ 命令
@@ -430,14 +425,22 @@ public final class PaintTests {
             FAILURES.add("中文名被误拒：" + unexpected.getMessage());
         }
         checks++;
-        throwsSomething(IOException.class, "扩展名", () -> store.resolveExport("x.pad"),
-                "导出必须是 .png");
-        throwsSomething(IOException.class, "扩展名", () -> store.resolve("x.exe"), "文档必须是 .pad");
+        throwsSomething(IOException.class, "必须以", () -> store.resolveExport("x.pad"),
+                "导出文件名要提示必须以 .png 结尾");
+        throwsSomething(IOException.class, "必须以", () -> store.resolve("x.exe"), "文档文件名要提示必须以 .pad 结尾");
         check(store.resolve("ok.pad").startsWith(root.toAbsolutePath()), "合法路径落在根目录内");
 
-        store.save("big.pad", "x".repeat(DrawingFormat.MAX_FILE_BYTES + 10));
-        checks++;
-        FAILURES.remove(FAILURES.size() - 1);   // 上一行不该有失败记录；留着会让 checks 数不匹配时更难查
+        throwsSomething(IOException.class, "过大",
+                () -> store.save("big.pad", "x".repeat(DrawingFormat.MAX_FILE_BYTES + 10)),
+                "写入超大文件要拒");
+        Path outside = root.resolve("evil.pad");
+        Files.writeString(outside, "pad 1\n");
+        throwsSomething(IOException.class, "符号链接", () -> {
+            Path link = root.resolve("link.pad");
+            Files.deleteIfExists(link);
+            Files.createSymbolicLink(link, outside);
+            store.load("link.pad");
+        }, "符号链接指向目录内的文件也拒绝（同一目录内不算越界，但仍是链接）");
     }
 
     // ------------------------------------------------ 渲染像素
@@ -524,7 +527,8 @@ public final class PaintTests {
         eq(drawing.selection(), 0, "选择工具点中形状");
         canvas.dragTo(35, 45);
         canvas.releaseAt(35, 45);
-        eq(((RectShape) drawing.get(0)).x(), 25, "拖动移动了形状");
+        eq(((RectShape) drawing.get(0)).x(), 30, "拖动 20×30 后左上角跟着走");
+        eq(((RectShape) drawing.get(0)).y(), 40, "y 同理");
         eq(history.undoDepth(), 2, "移动是一条独立命令");
         history.undo();
         eq(((RectShape) drawing.get(0)).x(), 10, "撤销移动回到原位");
@@ -559,9 +563,18 @@ public final class PaintTests {
         throwsSomething(IllegalArgumentException.class, "不是绘制工具",
                 () -> ShapeFactory.create(Tool.SELECT, 0, 0, 1, 1, Color.BLACK),
                 "选择工具不能创建形状");
-        canvas.setTool(null);
-        checks++;
+        throwsSomething(IllegalArgumentException.class, "null",
+                () -> canvas.setTool(null), "工具为 null 要拒");
     }
+
+    /** 快照栈必须和真实历史用同一个深度，否则两边"能撤销到多远"不一样，比较就失去意义。 */
+    private static void trim(List<List<Shape>> snapshots) {
+        while (snapshots.size() > FUZZ_HISTORY_DEPTH) {
+            snapshots.remove(0);
+        }
+    }
+
+    private static final int FUZZ_HISTORY_DEPTH = 20;
 
     // ------------------------------------------------ 随机操作 vs 快照模型
     /**
@@ -572,7 +585,7 @@ public final class PaintTests {
         Random rng = new Random(4242);
         for (int round = 0; round < 20; round++) {
             Drawing drawing = new Drawing();
-            CommandHistory history = new CommandHistory(20);
+            CommandHistory history = new CommandHistory(FUZZ_HISTORY_DEPTH);
             PaintCanvas canvas = new PaintCanvas(drawing, history);
             List<Shape> shadow = new ArrayList<>();
             List<List<Shape>> undoSnapshots = new ArrayList<>();
@@ -603,6 +616,7 @@ public final class PaintTests {
                     int x2 = x1 + rng.nextInt(40) - 20, y2 = y1 + rng.nextInt(40) - 20;
                     undoSnapshots.add(new ArrayList<>(shadow));
                     redoSnapshots.clear();
+                    trim(undoSnapshots);
                     canvas.pressAt(x1, y1, false);
                     canvas.dragTo(x2, y2);
                     boolean committed = canvas.releaseAt(x2, y2);
@@ -621,14 +635,15 @@ public final class PaintTests {
                     if (moved && selected >= 0 && selected < shadow.size()) {
                         undoSnapshots.add(new ArrayList<>(shadow));
                         redoSnapshots.clear();
-                        shadow.set(selected, shadow.get(selected).translatedBy(
-                                x + dx - x, y + dy - y));
+                        trim(undoSnapshots);
+                        shadow.set(selected, shadow.get(selected).translatedBy(dx, dy));
                     }
                 } else {                                              // 删除选中
                     int selected = drawing.selection();
                     if (selected >= 0) {
                         undoSnapshots.add(new ArrayList<>(shadow));
                         redoSnapshots.clear();
+                        trim(undoSnapshots);
                         check(canvas.pressKey(java.awt.event.KeyEvent.VK_DELETE, false, false),
                                 "有选中项时 Delete 必须处理");
                         shadow.remove(selected);
@@ -641,7 +656,7 @@ public final class PaintTests {
                 }
                 checks++;
             }
-            near(drawing.size(), shadow.size(), 0, "每轮结束时形状数一致");
+            check(drawing.size() == shadow.size(), "每轮结束形状数一致");
         }
     }
 }
