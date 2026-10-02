@@ -1,0 +1,16 @@
+需求ID,名称,用例,故事,验收标准,业务规则,接口,验证入口,状态
+FR-01,学生可新建报修草稿，填写宿舍编号、报修分类、优先级、描述与联系方式,UC-01,US-01,,BR-01 BR-07 BR-09,IF-01 IF-03,T:tests/test_workorder_spec.py::test_valid_order_accepts_minimal_fixture,已可执行
+FR-02,草稿可反复修改后提交；提交动作是一次状态转换并校验字段,UC-01,US-01 US-02 US-13,,BR-01 BR-07 BR-09,IF-01 IF-03,T:tests/test_workorder_spec.py::test_transition_table_matches_srs,已可执行
+FR-03,系统对必填与格式问题**一次性报出全部错误**，且不改工单状态,UC-01,US-01,,BR-01 BR-07 BR-09,IF-01 IF-03,T:tests/test_workorder_spec.py::test_validation_reports_all_problems_at_once,已可执行
+FR-04,同一宿舍同一分类存在未进入终态的报修单时，提交前给出重复提示,UC-01,US-03,,BR-01 BR-07 BR-09,IF-01 IF-03,T:tests/test_workorder_spec.py::test_duplicate_open_order_detected,已可执行
+FR-05,管理员查看待派单队列，并把工单派给指定维修员,UC-02,US-04,,BR-03 BR-05,IF-01,T:tests/test_workorder_spec.py::test_transition_table_matches_srs,已可执行
+FR-06,管理员可改派、可把已派单退回待派单队列,UC-02,US-05,,BR-03 BR-05,IF-01,T:tests/test_workorder_spec.py::test_transition_table_matches_srs,已可执行
+FR-07,被派单的维修员可接单（进入维修中）或拒单（退回队列）,UC-03,US-06,,BR-04 BR-06,IF-01,T:tests/test_workorder_spec.py::test_permission_matrix_matches_srs,已可执行
+FR-08,维修员填写完工说明后标记完工，工单进入待验收,UC-03,US-07,,BR-04 BR-06,IF-01,T:tests/test_workorder_spec.py::test_transition_table_matches_srs,已可执行
+FR-09,报修学生可验收通过（关闭）或退回维修（回到维修中，同一维修员）,UC-04,US-08,,BR-02 BR-05 BR-10,IF-03,T:tests/test_workorder_spec.py::test_transition_table_matches_srs,已可执行
+FR-10,管理员可在验收超时时强制关闭,UC-04,US-09,,BR-02 BR-05 BR-10,IF-03,T:tests/test_workorder_spec.py::test_permission_matrix_matches_srs,已可执行
+FR-11,学生可取消自己的草稿或待派单工单；管理员可取消待派单/已派单工单并写明理由,UC-06,US-10,,BR-02 BR-05 BR-09,,T:tests/test_workorder_spec.py::test_transition_table_matches_srs,已可执行
+FR-12,学生查询自己的报修单，可按状态与分类筛选,UC-05,US-11,,BR-09 BR-11,IF-04,T:tests/test_workorder_spec.py::test_visibility_matrix_matches_srs,已可执行
+FR-13,维修员查询公共池（待派单）与派给自己的工单,UC-05,US-11,,BR-09 BR-11,IF-04,T:tests/test_workorder_spec.py::test_visibility_matrix_matches_srs,已可执行
+FR-14,管理员可按宿舍编号、分类、状态、优先级筛选全部工单,UC-05,US-11,,BR-09 BR-11,IF-04,T:tests/test_workorder_spec.py::test_filters_narrow_the_fixture_set,已可执行
+FR-15,每次状态变更追加一条历史记录：谁、何时、从哪个状态到哪个状态、理由,UC-01 UC-04,US-12 US-13,,BR-01 BR-02 BR-05 BR-07 BR-09 BR-10,IF-01 IF-03,T:tests/test_workorder_spec.py::test_history_is_append_only,已可执行

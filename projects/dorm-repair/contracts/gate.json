@@ -1,0 +1,151 @@
+{
+ "schema_version": 1,
+ "source": "docs/12-qa.md 第 1、2 节（由 tools/export_gate.py 生成，勿手改）",
+ "layers": [
+  {
+   "id": "docs",
+   "blocking": true,
+   "catches": "需求表、可执行模型、追踪矩阵三者说不同的话",
+   "next": "先确认这次动的是需求还是实现；需求真变了就跑 `checks/check_docs.py --write`"
+  },
+  {
+   "id": "contract",
+   "blocking": true,
+   "catches": "契约落后于文档与模型，Java 会读旧表",
+   "next": "`python tools/export_contract.py --write`，然后看 Java 是否跟着变"
+  },
+  {
+   "id": "verdict",
+   "blocking": true,
+   "catches": "跨语言判定基准过期，对拍失去参照",
+   "next": "`python tools/export_verdict_table.py --write`，再跑 Java 对拍"
+  },
+  {
+   "id": "arch",
+   "blocking": true,
+   "catches": "依赖越界、Java 里长出第二份判定、ADR 缺节",
+   "next": "不要改文档来迁就代码；先看那条边是不是违反了 ADR-02"
+  },
+  {
+   "id": "pm",
+   "blocking": true,
+   "catches": "管理文档里的数字与台账现算不一致、风险登记册漏了未决项、复盘没覆盖全部坑——**本轮交付物就是文档 + 证据，数字过期就是交付物有错**",
+   "next": "`python tools/project_ledger.py --write` 后重跑 `checks/check_pm.py`，看是哪一篇过期"
+  },
+  {
+   "id": "qa",
+   "blocking": true,
+   "catches": "门禁口径过期、走查清单某步的证据是条不存在的测试、结果列被检查器代填",
+   "next": "`python tools/export_gate.py --write` 后重跑 `checks/check_qa.py`"
+  },
+  {
+   "id": "pytests",
+   "blocking": true,
+   "catches": "需求模型的行为回归（状态机、权限、可见性、时限）",
+   "next": "读失败消息里的期望值出处，判断是被改坏还是需求真变了"
+  },
+  {
+   "id": "javatests",
+   "blocking": true,
+   "catches": "平台实现与契约/判定表分叉，或构建\"0 个测试\"假绿",
+   "next": "先分清是 `Tests run=0`（工具链）还是某格分叉（实现）"
+  },
+  {
+   "id": "mutation",
+   "blocking": true,
+   "catches": "核对器失去牙齿——这轮的绿从此不可信",
+   "next": "逐条跑 `tools/mutation_check.py --verbose`，看是哪条变异没弄红"
+  },
+  {
+   "id": "shrink",
+   "blocking": false,
+   "catches": "最小反例收缩退化到非最短（调试工具变钝）",
+   "next": "产品未必坏，但反例不再可信；修完再升回 blocking 讨论"
+  },
+  {
+   "id": "consequences",
+   "blocking": false,
+   "catches": "AQ-10/AQ-11 的量化结果漂移（假设或模型变了）",
+   "next": "先看数字是否随参数假设改动；是就更新 `docs/11` 的实测表"
+  }
+ ],
+ "triage": [
+  {
+   "category": "artifact-stale",
+   "patterns": [
+    "已过期",
+    "契约与模型不一致",
+    "判定表与当前模型不一致",
+    "与现算事实不一致",
+    "台账现算"
+   ],
+   "meaning": "生成物落后，重生成即可",
+   "confirm": "`--write` 后重跑该层"
+  },
+  {
+   "category": "architecture-violation",
+   "patterns": [
+    "依赖越界",
+    "疑似第二份状态表",
+    "ADR"
+   ],
+   "meaning": "结构约束被破",
+   "confirm": "`python checks/check_arch.py` 单跑，看是哪条边"
+  },
+  {
+   "category": "doc-model-divergence",
+   "patterns": [
+    "文档一致性检查发现",
+    "：文档",
+    "可见性矩阵"
+   ],
+   "meaning": "文档与模型说不同话",
+   "confirm": "用需求来源列判断哪一侧才是新裁决"
+  },
+  {
+   "category": "harness-broken",
+   "patterns": [
+    "没能把对应核对器弄红",
+    "变异锚点命中",
+    "不可达"
+   ],
+   "meaning": "验证工具自己被削弱",
+   "confirm": "`python tools/mutation_check.py --verbose`"
+  },
+  {
+   "category": "toolchain",
+   "patterns": [
+    "BUILD SUCCESS",
+    "Tests run=0",
+    "找不到 Maven"
+   ],
+   "meaning": "构建或环境，不代表产品坏了",
+   "confirm": "`python tools/java_build.py --require`"
+  },
+  {
+   "category": "register-incomplete",
+   "patterns": [
+    "没有登记进风险登记册",
+    "没有被 docs/13 第 8 节引用",
+    "复盘漏了"
+   ],
+   "meaning": "该登记的没登记：风险、指标或复盘条目缺项",
+   "confirm": "`python checks/check_pm.py` 单跑，看缺哪一条"
+  },
+  {
+   "category": "policy-tampering",
+   "patterns": [
+    "被降级成 advisory",
+    "不在分诊表里"
+   ],
+   "meaning": "门禁口径本身被动过——最危险的一类，因为它让别的层从此没人拦",
+   "confirm": "`python tools/export_gate.py --check` 单跑，看是哪一行被改"
+  },
+  {
+   "category": "behavior-regression",
+   "patterns": [],
+   "meaning": "真实行为回归",
+   "confirm": "读那条测试的期望值出处，判被改坏还是需求变了"
+  }
+ ]
+}

@@ -1,0 +1,374 @@
+{
+  "contract": "dorm-repair/workflow",
+  "schema_version": 2,
+  "source": "docs/02-srs.md 第 1/3/4/5/6/8/9 节（由 tools/export_contract.py 生成，勿手改）",
+  "roles": [
+    "STUDENT",
+    "WORKER",
+    "ADMIN"
+  ],
+  "states": [
+    "DRAFT",
+    "SUBMITTED",
+    "ASSIGNED",
+    "IN_PROGRESS",
+    "RESOLVED",
+    "CLOSED",
+    "CANCELLED"
+  ],
+  "actions": [
+    "accept",
+    "assign",
+    "cancel",
+    "confirm",
+    "decline",
+    "escalate",
+    "force_close",
+    "reassign",
+    "reject_check",
+    "resolve",
+    "return_pool",
+    "submit"
+  ],
+  "terminal_states": [
+    "CLOSED",
+    "CANCELLED"
+  ],
+  "categories": [
+    "WATER_ELEC",
+    "NETWORK",
+    "FURNITURE",
+    "OTHER"
+  ],
+  "priorities": [
+    "LOW",
+    "NORMAL",
+    "HIGH",
+    "URGENT"
+  ],
+  "preconditions": [
+    "acceptance_timeout",
+    "assignee",
+    "assignee_required",
+    "none",
+    "owner",
+    "reason",
+    "resolution_note",
+    "valid_fields"
+  ],
+  "transitions": [
+    {
+      "id": "TR-01",
+      "action": "submit",
+      "from": "DRAFT",
+      "to": "SUBMITTED",
+      "roles": [
+        "STUDENT"
+      ],
+      "requires": [
+        "owner",
+        "valid_fields"
+      ]
+    },
+    {
+      "id": "TR-02",
+      "action": "assign",
+      "from": "SUBMITTED",
+      "to": "ASSIGNED",
+      "roles": [
+        "ADMIN"
+      ],
+      "requires": [
+        "assignee_required"
+      ]
+    },
+    {
+      "id": "TR-03",
+      "action": "reassign",
+      "from": "ASSIGNED",
+      "to": "ASSIGNED",
+      "roles": [
+        "ADMIN"
+      ],
+      "requires": [
+        "assignee_required"
+      ]
+    },
+    {
+      "id": "TR-04",
+      "action": "return_pool",
+      "from": "ASSIGNED",
+      "to": "SUBMITTED",
+      "roles": [
+        "ADMIN"
+      ],
+      "requires": [
+        "reason"
+      ]
+    },
+    {
+      "id": "TR-05",
+      "action": "accept",
+      "from": "ASSIGNED",
+      "to": "IN_PROGRESS",
+      "roles": [
+        "WORKER"
+      ],
+      "requires": [
+        "assignee"
+      ]
+    },
+    {
+      "id": "TR-06",
+      "action": "decline",
+      "from": "ASSIGNED",
+      "to": "SUBMITTED",
+      "roles": [
+        "WORKER"
+      ],
+      "requires": [
+        "assignee"
+      ]
+    },
+    {
+      "id": "TR-07",
+      "action": "resolve",
+      "from": "IN_PROGRESS",
+      "to": "RESOLVED",
+      "roles": [
+        "WORKER"
+      ],
+      "requires": [
+        "assignee",
+        "resolution_note"
+      ]
+    },
+    {
+      "id": "TR-08",
+      "action": "confirm",
+      "from": "RESOLVED",
+      "to": "CLOSED",
+      "roles": [
+        "STUDENT"
+      ],
+      "requires": [
+        "owner"
+      ]
+    },
+    {
+      "id": "TR-09",
+      "action": "reject_check",
+      "from": "RESOLVED",
+      "to": "IN_PROGRESS",
+      "roles": [
+        "STUDENT"
+      ],
+      "requires": [
+        "owner",
+        "reason"
+      ]
+    },
+    {
+      "id": "TR-10",
+      "action": "force_close",
+      "from": "RESOLVED",
+      "to": "CLOSED",
+      "roles": [
+        "ADMIN"
+      ],
+      "requires": [
+        "acceptance_timeout"
+      ]
+    },
+    {
+      "id": "TR-11",
+      "action": "cancel",
+      "from": "DRAFT",
+      "to": "CANCELLED",
+      "roles": [
+        "STUDENT"
+      ],
+      "requires": [
+        "owner"
+      ]
+    },
+    {
+      "id": "TR-12",
+      "action": "cancel",
+      "from": "SUBMITTED",
+      "to": "CANCELLED",
+      "roles": [
+        "STUDENT"
+      ],
+      "requires": [
+        "owner"
+      ]
+    },
+    {
+      "id": "TR-13",
+      "action": "cancel",
+      "from": "SUBMITTED",
+      "to": "CANCELLED",
+      "roles": [
+        "ADMIN"
+      ],
+      "requires": [
+        "reason"
+      ]
+    },
+    {
+      "id": "TR-14",
+      "action": "cancel",
+      "from": "ASSIGNED",
+      "to": "CANCELLED",
+      "roles": [
+        "ADMIN"
+      ],
+      "requires": [
+        "reason"
+      ]
+    },
+    {
+      "id": "TR-15",
+      "action": "escalate",
+      "from": "IN_PROGRESS",
+      "to": "SUBMITTED",
+      "roles": [
+        "ADMIN"
+      ],
+      "requires": [
+        "reason"
+      ]
+    }
+  ],
+  "permissions": {
+    "accept": [
+      "WORKER"
+    ],
+    "assign": [
+      "ADMIN"
+    ],
+    "cancel": [
+      "ADMIN",
+      "STUDENT"
+    ],
+    "confirm": [
+      "STUDENT"
+    ],
+    "decline": [
+      "WORKER"
+    ],
+    "escalate": [
+      "ADMIN"
+    ],
+    "force_close": [
+      "ADMIN"
+    ],
+    "reassign": [
+      "ADMIN"
+    ],
+    "reject_check": [
+      "STUDENT"
+    ],
+    "resolve": [
+      "WORKER"
+    ],
+    "return_pool": [
+      "ADMIN"
+    ],
+    "submit": [
+      "STUDENT"
+    ]
+  },
+  "visibility": {
+    "ADMIN": "ALL",
+    "STUDENT": "OWN",
+    "WORKER": "OWN_OR_POOL_OR_RESOLVED"
+  },
+  "sla_hours": {
+    "HIGH": 8,
+    "LOW": 72,
+    "NORMAL": 24,
+    "URGENT": 2
+  },
+  "acceptance_grace_hours": 168,
+  "field_effects": [
+    {
+      "field": "assignee",
+      "when": "`assign`/`reassign` 写入；退回公共池、拒单、升级、进入终态时清空",
+      "test": "`T:tests/test_workorder_spec.py::test_assignee_cleared_when_leaving_assigned`"
+    },
+    {
+      "field": "history",
+      "when": "每次成功转换追加一条，不可修改、不可删除（BR-06）",
+      "test": "`T:tests/test_workorder_spec.py::test_history_is_append_only`"
+    },
+    {
+      "field": "resolved_at",
+      "when": "**每次**进入 `RESOLVED` 都重写（退回再修则宽限期重新起算，BR-10）",
+      "test": "`T:tests/test_workorder_spec.py::test_acceptance_grace_is_configurable_and_blocks_force_close`"
+    },
+    {
+      "field": "resolved_by",
+      "when": "仅 `resolve` 时写入操作者工号，之后**不清空**；只喂可见性，不参与权限（BR-11）",
+      "test": "`T:tests/test_workorder_spec.py::test_resolved_history_is_visible_but_inert`"
+    },
+    {
+      "field": "sla_due_at",
+      "when": "与 `submitted_at` 同一刻按第 8 节优先级表算出",
+      "test": "`T:tests/test_workorder_spec.py::test_sla_hours_match_srs_table`"
+    },
+    {
+      "field": "state",
+      "when": "只由第 3 节的转换写；非法转换连历史都不追加（BR-02、NFR-03）",
+      "test": "`T:tests/test_workorder_spec.py::test_illegal_transition_leaves_order_unchanged`"
+    },
+    {
+      "field": "submitted_at",
+      "when": "首次进入 `SUBMITTED` 写入，之后任何转换都不改（BR-08）",
+      "test": "`T:tests/test_workorder_spec.py::test_sla_starts_at_first_submission`"
+    }
+  ],
+  "field_errors": {
+    "assignee": "ASSIGNEE_REQUIRED",
+    "category": "CATEGORY_UNKNOWN",
+    "contact": "CONTACT_FORMAT",
+    "description": "DESCRIPTION_LENGTH",
+    "priority": "PRIORITY_UNKNOWN",
+    "reason": "REASON_REQUIRED",
+    "resolution_note": "NOTE_REQUIRED",
+    "room": "ROOM_FORMAT"
+  },
+  "field_limits": {
+    "assignee": {
+      "min": 1,
+      "max": 32,
+      "pattern": "NONE"
+    },
+    "contact": {
+      "min": 11,
+      "max": 11,
+      "pattern": "CONTACT_PATTERN"
+    },
+    "description": {
+      "min": 1,
+      "max": 500,
+      "pattern": "NONE"
+    },
+    "reason": {
+      "min": 1,
+      "max": 200,
+      "pattern": "NONE"
+    },
+    "resolution_note": {
+      "min": 1,
+      "max": 500,
+      "pattern": "NONE"
+    },
+    "room": {
+      "min": 8,
+      "max": 8,
+      "pattern": "ROOM_PATTERN"
+    }
+  }
+}
