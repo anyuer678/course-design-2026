@@ -4,13 +4,13 @@ rem cmd re-reads this file by byte offset, so multi-byte text here makes it resu
 rem in the middle of a line (this project is where that pitfall was first recorded:
 rem a Chinese line before a goto made cmd run "'adless' is not recognized").
 rem Build output goes to %TEMP%, so the project directory keeps no build residue.
-chcp 65001 >/dev/null
+chcp 65001 >nul
 setlocal
 cd /d %~dp0
 set JAVA_FLAGS=-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8
 set BUILD=%TEMP%\b14-java-paint-build
 
-where javac >/dev/null 2>/dev/null
+where javac >nul 2>nul
 if errorlevel 1 echo [!] javac not found in PATH. Install JDK 17 or newer first.
 if errorlevel 1 exit /b 1
 

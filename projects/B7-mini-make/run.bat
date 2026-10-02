@@ -4,7 +4,7 @@ rem cmd re-reads this file by byte offset, so multi-byte text here can make it
 rem resume in the middle of a line. Chinese output comes from the Python files.
 rem The original script appended a blank line to demo/src/greet.cpp on every run
 rem (unbounded growth); this version touches the file's mtime instead.
-chcp 65001 >/dev/null
+chcp 65001 >nul
 setlocal
 cd /d %~dp0
 set PYTHONUTF8=1

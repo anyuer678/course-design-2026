@@ -2,11 +2,11 @@
 rem B9-os-sim one-click entry. Body is pure ASCII on purpose (PLAN section 6):
 rem cmd re-reads this file by byte offset, so multi-byte text here can make it
 rem resume in the middle of a line. Chinese output comes from the C++ programs.
-chcp 65001 >/dev/null
+chcp 65001 >nul
 setlocal
 cd /d %~dp0
 
-where mingw32-make >/dev/null 2>/dev/null
+where mingw32-make >nul 2>nul
 if errorlevel 1 echo [!] mingw32-make not found in PATH (MinGW-w64 ships it as mingw32-make).
 if errorlevel 1 exit /b 1
 

@@ -2,11 +2,11 @@
 rem B5-cpu-sim one-click entry. Body is pure ASCII on purpose (PLAN section 6):
 rem cmd re-reads this file by byte offset, so multi-byte text here can make it
 rem resume in the middle of a line. Chinese output comes from the C++ programs.
-chcp 65001 >/dev/null
+chcp 65001 >nul
 setlocal
 cd /d %~dp0
 
-where g++ >/dev/null 2>/dev/null
+where g++ >nul 2>nul
 if errorlevel 1 echo [!] g++ not found in PATH. Run setup\add-mingw-path.ps1 first.
 if errorlevel 1 exit /b 1
 
