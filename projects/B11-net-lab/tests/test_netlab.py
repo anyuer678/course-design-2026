@@ -186,6 +186,22 @@ class TestResponseRoundtrip(unittest.TestCase):
             data = build_response(200, body=b"x", version=version, keep_alive=keep, date="x")
             self.assertIn(f"Connection: {'keep-alive' if keep else 'close'}".encode(), data)
 
+    def test_redirect_status_codes_are_buildable(self):
+        """3xx/4xx 是给应用层用的（短链跳转、别名冲突、限流）。
+        状态码表里少一条的后果很不直观：Server._reply 在事件循环线程里抛 ValueError，
+        客户端那边只是"等不到响应"，排查方向会跑到超时和死锁上去。"""
+        data = build_response(302, body=b"redirecting", headers=[("Location", "/l/abc")], date="x")
+        resp, used = parse_response(data)
+        self.assertEqual((resp.status, resp.reason, resp.header("Location"), resp.body),
+                         (302, "Found", "/l/abc", b"redirecting"))
+        self.assertEqual(resp.header("Content-Length"), "11")   # 302 允许带体，长度必须准确
+        for status in (301, 303, 307, 409, 415, 429):
+            self.assertIn(f"{status} ".encode("ascii"), build_response(status, date="x"))
+        # 304 按定义不能带体，长度字段也得一起省掉，否则客户端会等一个不存在的体
+        self.assertNotIn(b"Content-Length", build_response(304, body=b"", date="x"))
+        with self.assertRaises(ValueError):
+            build_response(418, date="x")             # 表外的码仍要求显式给 reason
+
     def test_parse_rejects_unsupported_or_truncated(self):
         self.assertIsNone(parse_response(b"HTTP/1.1 200 OC"))
         head = b"HTTP/1.1 200 OK\r\nContent-Length: 5\r\n\r\nab"

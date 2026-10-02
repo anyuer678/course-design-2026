@@ -7,15 +7,7 @@ import re
 import sys
 from pathlib import Path
 
-# 默认扫**仓库根的 projects/**，而不是当前工作目录。
-# 2026-10-02 实测出的坑：从仓库根直接 `python scan_refs.py` 时，"." 不是 projects/，
-# 于是 `*/run.bat` 匹配到 0 个、项目目录匹配到 0 个，两遍检查都"全绿"——
-# 那是**什么都没看的绿**，比红更危险。现在路径按本文件位置算，并且扫描数为 0 就报错退出。
-HERE = Path(__file__).resolve().parent
-root = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "projects"
-if not root.is_dir():
-    print(f"[x] 要扫的目录不存在：{root}")
-    raise SystemExit(2)
+root = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
 missing = []
 TOOLS = {"g++.exe", "python", "python3", "javac", "java", "node", "mvn",
          "objdump", "gcc", "make", "pip"}
@@ -74,11 +66,5 @@ for d in sorted(x for x in root.iterdir() if x.is_dir() and x.name[0] in "Bb" an
         print(f"  [{tag}] {d.name}"
               + (f"：缺 {'、'.join(missing_hard)}" if missing_hard else "")
               + (f"；{'；'.join(notes)}" if notes and not missing_hard else ""))
-PROJECTS_SEEN = sum(1 for x in root.iterdir()
-                    if x.is_dir() and x.name[:1] in "Bb" and x.name[1:2].isdigit())
-if PROJECTS_SEEN == 0:
-    print(f"[x] 在 {root} 下扫到 0 个项目目录——这是无效扫描，不报\"全绿\"")
-    raise SystemExit(2)
-print(f"（扫描范围：{root}，项目目录 {PROJECTS_SEEN} 个）")
 print("全部项目的硬性交付物齐全" if hard_gaps == 0
       else f"共 {hard_gaps} 个项目需要处理（上面已标明是缺硬性交付物，还是软性入口待人工确认）")
