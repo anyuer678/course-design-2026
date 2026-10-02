@@ -79,7 +79,7 @@ class TestSeedsChecker(unittest.TestCase):
 
     def test_chosen_bad_anchor_turns_red(self):
         def mutate(data):
-            data["chosen"]["evidence"]["anchor"] = "这段字符串绝不可能出现xq9"
+            data["chosen"][0]["evidence"]["anchor"] = "这段字符串绝不可能出现xq9"
         data = json.loads(json.dumps(self.seeds))
         mutate(data)
         path = self.tmp / "seeds.json"
@@ -108,13 +108,14 @@ class TestReport(unittest.TestCase):
 
     def test_report_lists_remaining_candidates_and_chosen(self):
         rendered = report_seeds.render_report(report_seeds._load())
-        for i in range(1, 5):
+        for i in range(1, 4):
             self.assertIn(f"| {i} |", rendered)
-        self.assertNotIn("| 5 |", rendered)
-        self.assertIn("B10 加 fsync", rendered)
+        self.assertNotIn("| 4 |", rendered)
+        self.assertIn("B13 加函数调用帧", rendered)
         self.assertIn("B23 + NumPy", rendered)
-        self.assertIn("已选定并实施", rendered)
+        self.assertIn("已选定并实施（2 个）", rendered)
         self.assertIn("B38 主从复制", rendered)
+        self.assertIn("B10 加 fsync", rendered)
 
     def test_report_footer_keeps_choice_with_user(self):
         text = report_seeds.render_report(report_seeds._load())
@@ -126,18 +127,19 @@ class TestDesignPins(unittest.TestCase):
     def test_seed_id_set_pinned(self):
         data = report_seeds._load()
         self.assertEqual({s["id"] for s in data["seeds"]},
-                         {"b10-fsync-pages", "b13-call-frames",
-                          "b30-raft-snapshot", "b23-numpy-sklearn"})
-        self.assertEqual(data["chosen"]["id"], "b38-replication")
+                         {"b13-call-frames", "b30-raft-snapshot", "b23-numpy-sklearn"})
+        self.assertEqual([c["id"] for c in data["chosen"]],
+                         ["b38-replication", "b10-fsync-pages"])
 
-    def test_chosen_record_pinned(self):
+    def test_chosen_records_pinned(self):
         data = report_seeds._load()
-        chosen = data["chosen"]
-        self.assertEqual(chosen["date"], "2026-10-02")
-        self.assertTrue(chosen["note"])
-        path = REPO_ROOT / chosen["evidence"]["path"]
-        self.assertTrue(path.is_file())
-        self.assertIn(chosen["evidence"]["anchor"], path.read_text(encoding="utf-8"))
+        for chosen in data["chosen"]:
+            self.assertEqual(chosen["date"], "2026-10-02")
+            self.assertTrue(chosen["note"])
+            path = REPO_ROOT / chosen["evidence"]["path"]
+            self.assertTrue(path.is_file(), msg=chosen["id"])
+            self.assertIn(chosen["evidence"]["anchor"], path.read_text(encoding="utf-8"),
+                          msg=chosen["id"])
 
     def test_every_seed_has_facts(self):
         seeds = report_seeds._load()["seeds"]

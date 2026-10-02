@@ -2,53 +2,6 @@
   "note": "B41 毕设种子：5 个候选的三维可行性（数据/资源/评价）。facts 段里的每个数字都由 tools/check_seeds.py 现算复核（行数逐字比对、缺口关键词按'计数=0'断言、import 探针实跑）——数字过期就红，防止'可行性分析'变成文艺创作。选定由用户：本文件只做比较，不替你开题。",
   "seeds": [
     {
-      "id": "b10-fsync-pages",
-      "title": "B10 加 fsync + 页式存储（持久性工程化）",
-      "question": "把「最后一次提交可能丢」的 JSON 日志库改成「提交即持久、崩溃后逐条对账」的页式存储，要动哪些层、代价在哪儿？",
-      "evidence": {
-        "path": "projects/B10-minidb/README.md",
-        "anchor": "自测（36 项）"
-      },
-      "files": [
-        {
-          "path": "projects/B10-minidb/minidb/engine.py",
-          "lines": 629
-        },
-        {
-          "path": "projects/B10-minidb/minidb/btree.py",
-          "lines": 226
-        },
-        {
-          "path": "projects/B10-minidb/minidb/sqlparser.py",
-          "lines": 356
-        },
-        {
-          "path": "projects/B10-minidb/tests/test_minidb.py",
-          "lines": 672
-        }
-      ],
-      "probes": [
-        {
-          "name": "代码里没有 fsync（README 自述缺点）",
-          "kind": "code-count",
-          "glob": "projects/B10-minidb/minidb/*.py",
-          "pattern": "fsync",
-          "expected": 0
-        },
-        {
-          "name": "没有页式存储概念（page 计数为 0）",
-          "kind": "code-count",
-          "glob": "projects/B10-minidb/minidb/*.py",
-          "pattern": "\\bpage\\b",
-          "expected": 0
-        }
-      ],
-      "data": "现有测试与演示已覆盖崩溃前后对账的数据面（36 项 + 账本式 demo）；扩展用同一批用例加「提交后立刻重启」场景，无需新数据源。",
-      "resources": "改动集中在 minidb/engine.py（629 行，存储与提交路径）+ 新页文件模块（估 250–400 行）；在现有 36 项上增 8–12 项崩溃/页边界测试；零外部依赖。时间盒 1–2 会话（与 ROADMAP 3.8 完全同构——B38 的快照已提前示范了「原子写+校验」写法可参考）。",
-      "evaluation": "①提交后模拟进程重启：逐条对账「已确认提交的都在」；②SQL 行为与现库逐用例不变（既有 36 项全绿即回归）；③页大小/记录数的读写放大与 fsync 频率对照表（demo 现算）。",
-      "risks": "fsync 的真实代价依介质而变（demo 里有本机基准，若机械盘差距会被放大）；「断电」只能近似模拟（进程级重启+文件级对账），如实声明为局限。"
-    },
-    {
       "id": "b13-call-frames",
       "title": "B13 加函数调用帧与错误恢复",
       "question": "给只有扁平程序的小语言补上函数定义/调用与调用栈，怎样保持「两条后端逐字节一致」的对拍纪律不破？",
@@ -193,14 +146,26 @@
       "risks": "20–30MB 只是下载口径，装后磁盘占用以实测为准并双口径登记；sklearn 版本行为差异（默认参、随机种子）会制造假分歧，必须写死全部随机源。"
     }
   ],
-  "chosen": {
-    "id": "b38-replication",
-    "title": "B38 主从复制（RESP 内复制协议子集）",
-    "date": "2026-10-02",
-    "note": "用户选定并实施：见 projects/B38-mini-redis/——复制语义表（case-study §8，含 6 条偏差声明）、PSYNC 全量+命令流、断连重连全量重同步并追平（两库对账器逐键逐值+逐到期时刻，自带牙齿）、-READONLY 拒写、从库被动过期语义；49 项测试双入口（36 核心 + 13 复制）、run.bat 两次退出码 0、规范化日志逐字相同。实施中还把两条潜伏缺陷照了出来（DEL 不清 expires、export_state 迭代中被改字典）——详见 B38 README 坑记。",
-    "evidence": {
-      "path": "projects/B38-mini-redis/README.md",
-      "anchor": "49 项测试双入口同数"
+  "chosen": [
+    {
+      "id": "b38-replication",
+      "title": "B38 主从复制（RESP 内复制协议子集）",
+      "date": "2026-10-02",
+      "note": "用户选定并实施：见 projects/B38-mini-redis/——复制语义表（case-study §8，含 6 条偏差声明）、PSYNC 全量+命令流、断连重连全量重同步并追平（两库对账器逐键逐值+逐到期时刻，自带牙齿）、-READONLY 拒写、从库被动过期语义；49 项测试双入口（36 核心 + 13 复制）、run.bat 两次退出码 0、规范化日志逐字相同。实施中还把两条潜伏缺陷照了出来（DEL 不清 expires、export_state 迭代中被改字典）——详见 B38 README 坑记。",
+      "evidence": {
+        "path": "projects/B38-mini-redis/README.md",
+        "anchor": "49 项测试双入口同数"
+      }
+    },
+    {
+      "id": "b10-fsync-pages",
+      "title": "B10 加 fsync + 页式存储（持久性工程化）",
+      "date": "2026-10-02",
+      "note": "用户紧接着选定并实施：见 projects/B10-minidb/——单调 LSN + 提交即 flush+fsync（事务组提交）、页式快照（固定页/逐页 crc32/双固定头槽位/代追加不覆盖/坏页回退旧代/阈值压实）、CHECKPOINT 写前次序（数据 fsync -> 头 fsync -> 删 WAL）、恢复按 lsn 跳过已进快照的记录；崩溃用**真子进程 os._exit 硬退**对账（已提交必在、未提交必不在）；53 项测试双入口（36 核心 + 17 持久性）、run.bat 两次退出码 0、规范化日志逐字相同（各 180 行）。实施中把三个格式/接口错误当场抓出（页尾标位置、补零对齐起点、Path 与 str 混用）——详见 B10 README 坑记 12-14。",
+      "evidence": {
+        "path": "projects/B10-minidb/README.md",
+        "anchor": "自测（53 项：36 核心 + 17 持久性）"
+      }
     }
-  }
+  ]
 }

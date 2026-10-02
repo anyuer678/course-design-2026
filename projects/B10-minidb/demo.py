@@ -7,8 +7,10 @@ from __future__ import annotations
 
 import os
 import shutil
+import subprocess
 import sys
 import tempfile
+import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -170,6 +172,82 @@ def demo_recovery(path: str) -> None:
                                                    " WHERE id >= 900"))
 
 
+# --------------------------------------------------------------- 7
+CHILD_SQL = """
+import os, sys
+sys.path.insert(0, sys.argv[1])
+from minidb.engine import Engine
+eng = Engine(sys.argv[2], durable=True)
+eng.execute("CREATE TABLE t (id INTEGER, v TEXT, PRIMARY KEY id)")
+eng.execute("INSERT INTO t VALUES (1, 'auto-commit')")
+eng.execute("BEGIN")
+eng.execute("INSERT INTO t VALUES (2, 'in-txn'), (3, 'also')")
+eng.execute("COMMIT")
+os._exit(0)          # 硬退：不析构、不 CHECKPOINT
+"""
+
+
+def demo_durability(root: str) -> None:
+    step(7, "持久性工程化：提交即 fsync、页式快照、坏页回退（B41 候选①）")
+
+    # ---- 提交即持久：子进程硬退后逐条对账
+    crash_db = os.path.join(root, "crash_db")
+    proc = subprocess.run([sys.executable, "-c", CHILD_SQL,
+                           os.path.dirname(os.path.abspath(__file__)), crash_db],
+                          capture_output=True, text=True)
+    print(f"   子进程写入并提交后立刻 os._exit（退出码 {proc.returncode}，不 CHECKPOINT）")
+    eng = Engine(crash_db)
+    rows = eng.execute("SELECT id, v FROM t ORDER BY id")
+    show("重启后逐条对账（已提交的一条不少）", rows)
+
+    # ---- fsync 的代价（本机实测）
+    def timed_inserts(durable: bool) -> float:
+        db = os.path.join(root, "bench_%s" % ("on" if durable else "off"))
+        e = Engine(db, durable=durable)
+        e.execute("CREATE TABLE t (id INTEGER, v TEXT, PRIMARY KEY id)")
+        t0 = time.perf_counter()
+        for i in range(100):
+            e.execute(f"INSERT INTO t VALUES ({i}, 'x')")
+        return (time.perf_counter() - t0) * 1000
+
+    on_ms = timed_inserts(True)
+    off_ms = timed_inserts(False)
+    print(f"\n   100 次自动提交 INSERT：durable(每次 fsync) {on_ms:>8.3f} ms  |  "
+          f"非 durable {off_ms:>8.3f} ms  （差 {on_ms - off_ms:>8.3f} ms，本机介质实测）")
+
+    # ---- 页大小对照表（文件体积/页数确定性；耗时实测）
+    print("\n   页大小对照（同一份数据 CHECKPOINT 一次）：")
+    print("   " + "页大小".ljust(10) + "文件字节".ljust(12) + "数据页".ljust(8) + "耗时[实测]")
+    for ps in (512, 4096, 16384):
+        db = os.path.join(root, f"ps_{ps}")
+        e = Engine(db, page_size=ps)
+        e.execute("CREATE TABLE big (id INTEGER, v TEXT, PRIMARY KEY id)")
+        for i in range(400):
+            e.execute(f"INSERT INTO big VALUES ({i}, 'row-{i:04d}')")
+        t0 = time.perf_counter()
+        e.execute("CHECKPOINT")
+        ms = (time.perf_counter() - t0) * 1000
+        stats = e.last_checkpoint_stats
+        print("   " + str(ps).ljust(10) + str(stats["file_bytes"]).ljust(12)
+              + str(stats["n_pages"]).ljust(8) + f"{ms:>8.3f} ms")
+
+    # ---- 坏页回退：打坏最新代的一个数据页，读必须回退旧代并留证据
+    from minidb.pager import PageFile
+    db = os.path.join(root, "fallback")
+    pf = PageFile(db, page_size=4096)
+    pf.commit(b"generation-one")
+    stats = pf.commit(b"generation-two")
+    slots, _ = pf._read_slots()
+    with open(db, "r+b") as f:
+        f.seek(slots[0]["gen_offset"] + slots[0]["page_size"] + 7)
+        old = f.read(1)
+        f.seek(slots[0]["gen_offset"] + slots[0]["page_size"] + 7)
+        f.write(bytes([old[0] ^ 0xFF]))
+    payload, meta = pf.load()
+    print(f"\n   打坏最新代（seq={stats['seq']}）一个数据页后重新打开：")
+    print(f"   回退到 seq={meta['seq']}，拿到 {payload!r}；警告：{meta['warnings'][0]}")
+
+
 def main() -> int:
     d = tempfile.mkdtemp(prefix="b10demo")
     path = os.path.join(d, "db")
@@ -180,6 +258,7 @@ def main() -> int:
         demo_join(path)
         demo_txn(path)
         demo_recovery(path)
+        demo_durability(d)
     finally:
         shutil.rmtree(d, ignore_errors=True)
     print(f"\n{'=' * 62}\n演示结束（临时库已删除）。跑自测：python tests\\test_minidb.py\n{'=' * 62}")

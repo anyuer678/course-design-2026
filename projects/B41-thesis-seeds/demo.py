@@ -43,7 +43,7 @@ def _mutated_problems(mutate) -> list[str]:
 
 
 def main() -> int:
-    print("B41-thesis-seeds 演示：毕设 5 个候选的三维可行性（数字现算，选定由你）")
+    print("B41-thesis-seeds 演示：毕设候选的三维可行性（数字现算；④①已选定实施，选定由你）")
 
     # ------------------------------------------------------------------ 1
     section(1, "事实核验：行数重算 + 缺口探针重跑（过期即红）")
@@ -54,12 +54,15 @@ def main() -> int:
     n_files = sum(len(s["files"]) for s in seeds)
     n_probes = sum(len(s["probes"]) for s in seeds)
     show("规模", f"{len(seeds)} 个未选候选、{n_files} 处文件行数、{n_probes} 个探针")
-    chosen = data.get("chosen")
+    chosen = data.get("chosen") or []
+    if isinstance(chosen, dict):
+        chosen = [chosen]
     if chosen:
-        show("已选定并实施", f"{chosen['title']}（{chosen['date']}，见 B38 README）")
-    b10 = next(p for p in seeds[0]["probes"] if "fsync" in p["name"])
+        show("已选定并实施", "；".join(f"{c['title']}（{c['date']}）" for c in chosen))
+    sample = seeds[0]["probes"][0]
+    show(f"抽样：{seeds[0]['id']} 缺口探针",
+         f"{sample['name']}（期望计数 {sample['expected']}）")
     b23 = [p for p in seeds[-1]["probes"]]
-    show("抽样：B10 缺口探针", f"{b10['name']}（期望计数 {b10['expected']}）")
     show("抽样：B23 环境探针", "；".join(
         f"{p['module']} {'在' if p['expected'] else '缺'}" for p in b23))
 

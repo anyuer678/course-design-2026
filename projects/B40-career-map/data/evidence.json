@@ -75,11 +75,11 @@
     },
     {
       "id": "b10-minidb",
-      "claim": "手写 SQL 子集（解析/执行/索引）+ 页式存储与恢复：36 项自测",
+      "claim": "手写 SQL 子集 + WAL/页式快照/事务（B41 候选①：提交即 fsync + 崩溃对账）：53 项自测（36 核心 + 17 持久性）",
       "pointers": [
         "projects/B10-minidb/README.md"
       ],
-      "anchor": "自测（36 项）",
+      "anchor": "自测（53 项：36 核心 + 17 持久性）",
       "commit": "4ccc788"
     },
     {

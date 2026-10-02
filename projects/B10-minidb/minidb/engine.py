@@ -5,12 +5,17 @@
     主键索引：BPlusTree[pk值] = rowid。WHERE pk = x / 范围 走索引扫描，
     其余条件走全表扫描（计划器只做"用不用索引"一个决策——够说明原理）。
 
-持久化 = WAL（write-ahead log，预写日志）：
-    每条**已提交**的写语句先以 JSON 行追加进 .wal 文件，再改内存。
-    启动时回放 WAL 重建内存状态——崩溃后不丢已提交数据。
+持久化 = WAL（write-ahead log，预写日志）+ 页式快照（B41 候选①，2026-10-02）：
+    每条**已提交**的写语句先以 JSON 行（带 lsn 序号）追加进 .wal 文件，
+    **durable 模式下 flush+fsync 之后**才算提交成功，然后才改内存——
+    "提交返回=已落盘"。启动时回放 WAL 重建内存状态。
     WAL 最后一行若是撕裂的（崩溃时只写了一半），丢弃该行：这是 WAL 的
     "最后一次提交可能丢失"标准语义，不能让整个库打不开。
-    CHECKPOINT 把当前全量状态写成快照并清空 WAL；事务未结束时禁止。
+    CHECKPOINT 把全量状态经 **minidb/pager.py** 写成一个**页式快照**：
+    固定页 + 逐页 crc + 双头槽位 + 代追加（新代不覆盖旧代，坏页可回退），
+    数据页 fsync 后才切换头槽位，头落盘后才删除 WAL（写前次序）。
+    快照带 lsn，恢复时只重放 lsn > 快照 lsn 的日志——快照与 WAL 的交界
+    不怕"换了头还没删 WAL"的崩溃（重放会跳过已进快照的记录）。
 
 语句原子性：一条语句要么全做要么全不做。INSERT/UPDATE 先把所有行校验完、
     确认没有主键冲突，才开始改内存和写 WAL（否则中途报错会留下半条语句）。
@@ -21,6 +26,7 @@ import json
 import os
 
 from .btree import BPlusTree
+from .pager import DEFAULT_PAGE_SIZE, PageFile
 from .sqlparser import SqlError, parse
 
 
@@ -35,14 +41,21 @@ class Table:
 
 
 class Engine:
-    def __init__(self, path: str | None = None):
-        self.path = path
+    def __init__(self, path=None, durable: bool = True,
+                 page_size: int = DEFAULT_PAGE_SIZE):
+        self.path = str(path) if path is not None else None   # 接受 str 或 os.PathLike
+        self.durable = durable                  # True=提交 flush+fsync（默认，见 README 对照）
+        self.page_size = page_size
         self.tables: dict[str, Table] = {}
         self.wal: list[dict] = []               # 尚未 CHECKPOINT 的日志（内存视图）
         self.in_txn = False
         self.txn_log: list[dict] = []           # 事务里暂存的写语句
         self.txn_snapshot: dict | None = None   # BEGIN 时的完整状态（回滚用）
-        if path and (os.path.exists(path) or os.path.exists(path + ".wal")):
+        self.next_lsn = 1                       # 日志序号（快照里带走，恢复用）
+        self.snapshot_lsn = -1                  # 最后一次进快照的 lsn
+        self.last_checkpoint_stats: dict | None = None
+        self.last_load_meta: dict | None = None
+        if self.path and (os.path.exists(self.path) or os.path.exists(self.path + ".wal")):
             self._load()                        # 恢复：快照 + WAL 都要找
 
     # ================================================== 表与行
@@ -163,8 +176,9 @@ class Engine:
         if kind == "commit":
             if not self.in_txn:
                 raise SqlError("没有活动事务")
-            for entry in self.txn_log:
-                self._append_wal(entry)
+            # 组提交：事务里所有语句一次 fsync（最后一条 append 时同步）
+            for i, entry in enumerate(self.txn_log):
+                self._append_wal(entry, sync=(i == len(self.txn_log) - 1))
             self.in_txn = False
             self.txn_log = []
             self.txn_snapshot = None
@@ -468,17 +482,22 @@ class Engine:
     # ================================================== WAL 与快照
     def _log(self, entry: dict, sql: str) -> None:
         entry["sql"] = sql
+        entry["lsn"] = self.next_lsn            # 预留序号（回滚浪费序号无妨，单调即可）
+        self.next_lsn += 1
         if self.in_txn:
             self.txn_log.append(entry)           # 事务里先攒着，COMMIT 才落 WAL
         else:
             self._append_wal(entry)
 
-    def _append_wal(self, entry: dict) -> None:
+    def _append_wal(self, entry: dict, sync: bool = True) -> None:
         self.wal.append(entry)
         if self.path:
             # newline="\n"：WAL 一律按 LF 写，跨平台字节数与行数一致
             with open(self.path + ".wal", "a", encoding="utf-8", newline="\n") as f:
                 f.write(json.dumps(entry, ensure_ascii=False) + "\n")
+                f.flush()
+                if self.durable and sync:
+                    os.fsync(f.fileno())         # 提交语义：fsync 返回才算"落了盘"
 
     def _write_snapshot(self) -> None:
         if not self.path:
@@ -489,28 +508,37 @@ class Engine:
                 "cols": t.columns, "pk": t.pk, "next_rowid": t.next_rowid,
                 "rows": {str(r): list(v) for r, v in t.rows.items()},
             }
-        with open(self.path, "w", encoding="utf-8") as f:
-            json.dump(state, f, ensure_ascii=False)
+        state["lsn"] = self.next_lsn - 1         # 本快照包含到哪条日志（恢复据此分界）
+        payload = json.dumps(state, ensure_ascii=False).encode("utf-8")
+        stats = PageFile(self.path, page_size=self.page_size).commit(payload)
+        self.last_checkpoint_stats = stats
+        self.snapshot_lsn = state["lsn"]
         self.wal = []
         if os.path.exists(self.path + ".wal"):
+            # 顺序就是写前规则：数据页 fsync → 头槽位 fsync → 才允许删 WAL。
+            # 若在"换头"与"删 WAL"之间崩溃，恢复时重放会按 lsn 跳过已进快照的记录。
             os.remove(self.path + ".wal")
 
     def _load(self) -> None:
-        """启动恢复：先加载快照，再回放 WAL。"""
+        """启动恢复：先加载页式快照（可回退旧代），再回放 lsn 大于快照的 WAL。"""
         if os.path.exists(self.path):
-            with open(self.path, encoding="utf-8") as f:
-                state = json.load(f)
-            for name, td in state["tables"].items():
-                t = self._new_table([tuple(c) for c in td["cols"]], td["pk"])
-                t.next_rowid = td["next_rowid"]
-                for rid, row in td["rows"].items():
-                    rid = int(rid)
-                    t.rows[rid] = tuple(row)
-                    if t.pk is not None:
-                        key = row[t.col_names.index(t.pk)]
-                        if key is not None:
-                            t.index.insert(key, rid)
-                self.tables[name] = t
+            payload, meta = PageFile(self.path, page_size=self.page_size).load()
+            self.last_load_meta = meta
+            if payload is not None:
+                state = json.loads(payload)
+                for name, td in state["tables"].items():
+                    t = self._new_table([tuple(c) for c in td["cols"]], td["pk"])
+                    t.next_rowid = td["next_rowid"]
+                    for rid, row in td["rows"].items():
+                        rid = int(rid)
+                        t.rows[rid] = tuple(row)
+                        if t.pk is not None:
+                            key = row[t.col_names.index(t.pk)]
+                            if key is not None:
+                                t.index.insert(key, rid)
+                    self.tables[name] = t
+                self.snapshot_lsn = state.get("lsn", -1)
+        self.next_lsn = max(self.next_lsn, self.snapshot_lsn + 1)
         if os.path.exists(self.path + ".wal"):
             with open(self.path + ".wal", encoding="utf-8", newline="") as f:
                 lines = f.readlines()
@@ -523,8 +551,12 @@ class Engine:
                         self._truncate_wal(lines[:n])
                         break
                     raise SqlError(f"WAL 第 {n + 1} 行损坏（不是文件尾部，无法安全恢复）")
+                lsn = entry.get("lsn", self.snapshot_lsn + 1)  # 老格式无 lsn：按须回放处理
+                if lsn <= self.snapshot_lsn:
+                    continue                     # 已包含在快照里（换头后未删 WAL 的窗口）
                 self.wal.append(entry)
                 self._replay(entry)
+                self.next_lsn = max(self.next_lsn, lsn + 1)
 
     def _truncate_wal(self, keep_lines: list[str]) -> None:
         """改写 WAL 只留下完好前缀。

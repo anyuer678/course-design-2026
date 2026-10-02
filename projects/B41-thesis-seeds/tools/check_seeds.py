@@ -49,18 +49,21 @@ def check_seeds_data(seeds_path, repo_root) -> list[str]:
     seeds = data.get("seeds", [])
     if not seeds:
         return ["seeds.json 里没有任何候选"]
-    # 已选定记录（若有）：指针与锚点同样要真实存在
-    chosen = data.get("chosen")
-    if chosen is not None:
+    # 已选定记录（列表）：每条记录的指针与锚点同样要真实存在
+    chosen_list = data.get("chosen") or []
+    if isinstance(chosen_list, dict):          # 兼容旧格式（单条）
+        chosen_list = [chosen_list]
+    for chosen in chosen_list:
+        cid = chosen.get("id", "?")
         for field in ("id", "title", "date", "note"):
             if not chosen.get(field):
-                problems.append(f"chosen：{field} 为空")
+                problems.append(f"chosen/{cid}：{field} 为空")
         ev_path = repo_root / chosen.get("evidence", {}).get("path", "")
         anchor = chosen.get("evidence", {}).get("anchor", "")
         if not ev_path.is_file():
-            problems.append(f"chosen：证据路径不存在：{chosen.get('evidence', {}).get('path')}")
+            problems.append(f"chosen/{cid}：证据路径不存在：{chosen.get('evidence', {}).get('path')}")
         elif anchor and anchor not in ev_path.read_text(encoding="utf-8"):
-            problems.append(f"chosen：证据锚点 {anchor!r} 不在 {chosen.get('evidence', {}).get('path')} 里")
+            problems.append(f"chosen/{cid}：证据锚点 {anchor!r} 不在 {chosen.get('evidence', {}).get('path')} 里")
     seen: set[str] = set()
     for seed in seeds:
         sid = seed.get("id", "")
@@ -129,8 +132,11 @@ def main(argv: list[str]) -> int:
     if not problems:
         n_files = sum(len(s["files"]) for s in seeds)
         n_probes = sum(len(s["probes"]) for s in seeds)
-        chosen = json.loads((root / "data" / "seeds.json").read_text(encoding="utf-8")).get("chosen")
-        tail = f"；已选定 {chosen['id']}" if chosen else ""
+        raw_meta = json.loads((root / "data" / "seeds.json").read_text(encoding="utf-8"))
+        chosen = raw_meta.get("chosen") or []
+        if isinstance(chosen, dict):
+            chosen = [chosen]
+        tail = "；已选定 " + "、".join(c["id"] for c in chosen) if chosen else ""
         print(f"PASS：{len(seeds)} 个未选候选、{n_files} 处文件行数、{n_probes} 个探针"
               f"——全部现算复核通过{tail}")
         return 0
