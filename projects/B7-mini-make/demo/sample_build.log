@@ -1,0 +1,13 @@
+[ 12%] Building CXX object src/CMakeFiles/app.dir/main.cpp.o
+src/main.cpp:14:9: warning: unused parameter 'argc'
+src/main.cpp:31:5: warning: comparison of integer expressions of different signedness: 'int' and 'std::size_t'
+src/util.cpp:7:1: warning: unused parameter 'flag'
+src/util.cpp:52:13: error: 'strnlen' was not declared in this scope
+src/util.cpp:52:13: note: suggested alternative: 'strlen'
+src/io.cpp:88:9: warning: variable 'buf' set but not used
+src/io.cpp:120:5: warning: comparison of integer expressions of different signedness: 'int' and 'std::size_t'
+src/io.cpp:144:9: warning: variable 'tmp' set but not used
+src/io.cpp:166:5: warning: comparison of integer expressions of different signedness: 'int' and 'std::size_t'
+src/io.cpp:201:9: warning: variable 'buf' set but not used
+7 warnings generated.
+1 error generated.
