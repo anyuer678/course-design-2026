@@ -4,8 +4,6 @@ run.bat 的演示步跑的就是这个文件。全程只用标准库与仓库内
 不写任何文件（演示退出后目录快照无新增）。每段末尾的断言失败会计入退出码
 ——演示错了等于没演示。
 """
-import math
-import os
 import sys
 from pathlib import Path
 
