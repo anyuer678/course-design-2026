@@ -3,6 +3,9 @@
 *.o
 *.obj
 *.pdb
+# B8 的 WSL 可执行文件没有扩展名（build/msh 是 ELF，*.exe 管不到）——
+# 各项目 build/ 目录一律是构建产物（2026-10-02 加入，参 B8 重建备注）
+build/
 
 # Python
 __pycache__/
