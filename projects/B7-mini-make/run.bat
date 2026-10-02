@@ -1,29 +1,39 @@
 @echo off
-rem 源码是 UTF-8，中文 Windows 默认代码页 936 会解析错乱/乱码
-chcp 65001 >nul
-rem B7-mini-make 一键脚本：自测 + 增量构建演示 + 日志分析演示
+rem B7-mini-make one-click entry. Body is pure ASCII on purpose (PLAN section 6):
+rem cmd re-reads this file by byte offset, so multi-byte text here can make it
+rem resume in the middle of a line. Chinese output comes from the Python files.
+rem The original script appended a blank line to demo/src/greet.cpp on every run
+rem (unbounded growth); this version touches the file's mtime instead.
+chcp 65001 >/dev/null
 setlocal
 cd /d %~dp0
-rem Python 默认按 GBK 写标准输出，重定向到文件时中文演示会崩
 set PYTHONUTF8=1
-where python >nul 2>nul || (echo [!] 找不到 python & exit /b 1)
 
-echo [1/3] 自测...
-python tests\test_mini_make.py || exit /b 1
+python -c "import shutil,sys; sys.exit(0 if shutil.which('python') else 1)"
+if errorlevel 1 echo [!] python not found in PATH. Install Python 3.10+ first.
+if errorlevel 1 exit /b 1
 
-echo.
-echo [2/3] 增量构建演示（干净起步 → 全量 → up to date → 改源码增量）...
-if exist build rmdir /s /q build
-python src\mm.py -f demo\Makefile || exit /b 1
-python src\mm.py -f demo\Makefile || exit /b 1
-echo. >> demo\src\greet.cpp
-python src\mm.py -f demo\Makefile || exit /b 1
-build\greet.exe || exit /b 1
+echo [1/3] unit tests (15: parsing / ordering / incremental / building / logstat)
+python -m unittest discover -s tests
+if errorlevel 1 exit /b 1
 
 echo.
-echo [3/3] 编译日志分析演示...
+echo [2/3] incremental build demo: clean, full build, up to date, touch source, rebuild
+python src\mm.py -f demo\Makefile clean
+python src\mm.py -f demo\Makefile
+python src\mm.py -f demo\Makefile
+python -c "import os, time; os.utime('demo/src/greet.cpp', (time.time(), time.time()))"
+python src\mm.py -f demo\Makefile
+python src\mm.py -f demo\Makefile run
+if errorlevel 1 exit /b 1
+python src\mm.py -f demo\Makefile clean
+
+echo.
+echo [3/3] build log analysis demo (aggregate by message template)
 python src\logstat.py demo\sample_build.log
+if errorlevel 1 exit /b 1
 
 echo.
-echo 全部完成！试试: python src\mm.py -f demo\Makefile -j 4 clean run
+echo Done. Try parallel + goals: python src\mm.py -f demo\Makefile -j 4 run
 endlocal
+exit /b 0
