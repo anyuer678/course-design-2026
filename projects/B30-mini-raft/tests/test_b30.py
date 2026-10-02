@@ -8,7 +8,6 @@
     3. 一致性哈希 <-- 搬移比例的理论值（朴素 ~4/5 vs 一致性 ~1/n）
     4. RPC <-- 真套接字回声 + 坏帧跳过约定
 """
-import socket
 import sys
 import threading
 import unittest
@@ -113,7 +112,7 @@ class TestRaftBasics(unittest.TestCase):
 
     def test_replication_reaches_all(self):
         sim = Simulation(n=5, seed=2)
-        lid = wait_leader(sim)
+        wait_leader(sim)
         for i in range(1, 6):
             self.assertTrue(sim.submit(f"k{i}", f"v{i}"))
         sim.advance(60)
@@ -232,9 +231,73 @@ class TestPartitionScenarios(unittest.TestCase):
         self.assertEqual(sim.nodes[0].sm.get("k3"), "v3")
 
 
-def wait_leader(sim, max_ticks=400):
-    sim.advance(max_ticks)
-    return sim.leader_id()
+# ---------------------------------------------------------------- 不变式的两侧边界
+class TestLogMatchingIsNotOverStrong(unittest.TestCase):
+    """不变式写强了会把**合法中间态**判成 bug，写松了会把真分叉放过——两侧都要钉住。
+
+    出处：2026-10-02 demo 第 5 段在 seed=5 撞出的现场。当时 `分区表={}`、两节点 `commit=0`、
+    index 1 分别是 term 1 与 term 2：新 leader 还没用自己的条目覆盖 follower 那条**未提交**的
+    旧任期条目。按论文原话（同 index 同任期 ⇒ 该处及之前逐条相同）这是合法的中间态，
+    而第一版 `check_log_matching` 写的是"公共前缀逐条相同"，于是把正确实现判成了 bug。
+    """
+
+    def soak(self, seed: int, steps: int = 60) -> None:
+        """和 demo 第 5 段同一套事件脚本：提交/推进/分区/愈合/重启，每个事件后查三条不变式。"""
+        import random as _random
+        sim = Simulation(n=5, seed=seed)
+        rng = _random.Random(seed)
+        sim.advance(100)
+        for step in range(steps):
+            roll = rng.random()
+            if roll < 0.35:
+                sim.submit(f"k{rng.randint(0, 5)}", f"v{step}")
+            elif roll < 0.7:
+                sim.advance(rng.randint(5, 20))
+            elif roll < 0.8:
+                groups = {i: (i % 2 if rng.random() < 0.5 else 0) for i in range(5)}
+                sim.partition(groups)
+            elif roll < 0.9:
+                sim.heal()
+            else:
+                sim.restart(rng.randrange(5))
+            sim.check_election_safety()
+            sim.check_log_matching()
+            sim.check_applied_consistency()
+        sim.heal()
+        sim.advance(300)
+        sim.check_log_matching()
+
+    def test_historical_seed5_soak_no_longer_trips(self):
+        """seed=5 是当年当场抛红的那一个；再加两个 seed 防止"只给一个种子打补丁"。"""
+        for seed in (5, 41, 77):
+            with self.subTest(seed=seed):
+                self.soak(seed)
+
+    def test_uncommitted_divergence_is_legal(self):
+        """构造合法中间态：同 index 不同 term、两边都没提交 ⇒ 必须**不**抛。"""
+        sim = Simulation(n=3, seed=0)
+        sim.nodes[0].log = [{"term": 1, "cmd": ("set", "a", "1")}]
+        sim.nodes[1].log = [{"term": 2, "cmd": ("set", "b", "2")}]
+        sim.nodes[2].log = []
+        for node in sim.nodes:
+            node.commit_index = 0
+            node.last_applied = 0
+        sim.check_log_matching()
+
+    def test_same_term_divergence_is_still_caught(self):
+        """反向：同 index **同 term** 却分叉，必须抛，而且理由要是"任期相同 ⇒ 前缀应一致"。
+
+        没有这一条，"把断言改宽"和"把牙齿拔掉"就分不出来。
+        """
+        sim = Simulation(n=3, seed=0)
+        sim.nodes[0].log = [{"term": 1, "cmd": ("set", "a", "1")},
+                            {"term": 2, "cmd": ("set", "x", "1")}]
+        sim.nodes[1].log = [{"term": 1, "cmd": ("set", "a", "1")},
+                            {"term": 2, "cmd": ("set", "y", "2")}]
+        sim.nodes[2].log = []
+        with self.assertRaises(AssertionError) as caught:
+            sim.check_log_matching()
+        self.assertIn("任期相同", str(caught.exception))
 
 
 if __name__ == "__main__":
