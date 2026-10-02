@@ -50,7 +50,8 @@
 再按 §3.5 起做 B32-sec-lab；B24/B29/B35/B36 仍等安装决策点。→ 已在下一节执行完毕。
 → 2026-10-02 进展：**B24 已交付**（决策点①以"本机已装 cv2 4.13.0"关闭，零下载）；
 **B29 已交付**（决策点②：用户批准装 pyspark 4.2.0，下载 ~317MB/安装 503MB；
-清洗对拍 + 倾斜实验 + SQL 双实现）；B35/B36 同前（③ 手写 MQTT 零依赖仍为推荐，④ 等开课）。
+清洗对拍 + 倾斜实验 + SQL 双实现）；**B35 已交付**（决策点③：零依赖手写 MQTT 子集，
+真 socket 端到端 + 账本对账 + 曲线产物）；B36 同前（④ 等开课/批准）。
 
 ### 2.0c 2026-10-02（同日第二轮）：B30 交付补齐 + 范围偏离登记
 
@@ -243,16 +244,16 @@
   详见 `projects/B29-bigdata-spark/README.md`。
 - 未做（按 PLAN 原话等预算）：GB 级扩量；Streaming/集群同属范围外。
 
-### 3.13 B35-iot-mqtt（工业物联网技术）—— 决策点 ③
+### 3.13 B35-iot-mqtt（工业物联网技术）—— 决策点 ③【2026-10-02 已交付】
 
-- 建议方案（零依赖）：**手写极简 MQTT broker + client**（CONNECT/CONNACK/
-  PUBLISH/SUBSCRIBE/SUBACK/PINGREQ，QoS0，TCP 复用 B11 的 socket 经验）——
-  "手写协议"正是理解物联网消息层的最短路径，且避开安装服务。
-- 链路：N 个模拟传感器（随机游走 + 注入异常）→ broker → 订阅端入库 SQLite
-  → SVG 实时曲线页；断线重连验证（PLAN 基础范围）。
-- 测试：协议字节级编解码对拍、QoS0 语义、重连后订阅恢复、异常注入的数据
-  完整性。
-- 替代方案：pip 装 paho-mqtt + 本机 mosquitto 服务（Windows 安装较重）。
+- **落实方式：按手写方案交付（零依赖，未装 paho-mqtt / mosquitto）**：
+  CONNECT/CONNACK、PUBLISH(QoS0)、SUBSCRIBE/SUBACK、PINGREQ/PINGRESP、DISCONNECT +
+  通配符完整匹配 + 同 id 顶号 + 坏包隔离 + PING 探活重连。
+- 链路：3 台模拟传感器（随机游走 + spike/freeze/dropout 账本）→ broker → SQLite 入库
+  → 手写 SVG 曲线（异常红圈）；断线重连现场（宕机中发布丢失=QoS0 语义，重启后自动恢复）。
+- 测试：23 项双入口（字节级手写表 / 真 socket 端到端 / QoS0 语义 / 重连恢复 / 完整性账本 /
+  SVG 结构）；`run.bat` 两次退出码 0、规范化日志逐字相同。详见 `projects/B35-iot-mqtt/README.md`。
+- 边界：规范子集自洽；**未与第三方实现互测**（需装 mosquitto，属决策外）。
 
 ### 3.14 B36-harmony-app（鸿蒙移动应用开发）—— 决策点 ④
 
@@ -282,7 +283,7 @@
 | ② | pyspark | **下载 ~317MB / 安装实测 503MB**（JVM 已有） | B29 | 多进程模拟（丢失 shuffle 物理语义） | **已装**（4.2.0，用户批准；B29 已于 2026-10-02 交付） |
 | ③ | Streamlit | ~150MB 依赖树 | B28 | 手写 SVG/HTML 仪表盘（已设计，零依赖） | 不装，用替代 |
 | ④ | DevEco Studio | 数 GB + 模拟器 | B36 | 无（或仅交付未验证源码） | 等开课再定 |
-| ⑤ | paho-mqtt + mosquitto | 小–中 | B35 | **手写极简 MQTT broker**（推荐，教学价值更高） | 不装，手写 |
+| ⑤ | paho-mqtt + mosquitto | 小–中 | B35 | **手写极简 MQTT broker**（推荐，教学价值更高） | **已按手写方案交付**（零依赖，未装任何包；B35 已于 2026-10-02 完成） |
 | ⑥ | scikit-learn（numpy **已装** 2.4.6） | ~20–30MB + 依赖 | B23 第三方对照 / B37 | 已用数值梯度检查 + 独立参照实现替代 | 暂不装 |
 
 安装方式统一 `pip install`（用户级），装前在 PLAN §8 登记体积与用途。
