@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>短链服务 · B31</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.svg">
+</head>
+<body>
+<main>
+  <h1>短链服务</h1>
+  <p class="lede">把长地址变成 <code>/l/&lt;码&gt;</code>。HTTP 层复用 B11 的 <code>netlab</code>，
+     这一页只用原生 DOM 与 <code>fetch</code>。</p>
+
+  <form id="create-form" novalidate>
+    <label for="url">目标地址
+      <input id="url" name="url" type="text" inputmode="url" autocomplete="off"
+             placeholder="https://example.com/a/very/long/path" required></label>
+    <label for="alias">别名（可选，base62）
+      <input id="alias" name="alias" type="text" autocomplete="off" placeholder="docs"></label>
+    <div class="row">
+      <button type="submit">生成短链</button>
+      <button type="button" id="refresh">刷新列表</button>
+    </div>
+    <p id="form-status" role="status" aria-live="polite"></p>
+  </form>
+
+  <section id="result" hidden>
+    <h2>创建成功</h2>
+    <p>短链：<a id="short-link" href="#"></a>
+       <button type="button" id="copy">复制</button></p>
+    <p class="muted">目标：<span id="result-target"></span></p>
+  </section>
+
+  <section>
+    <h2>最近链接 <span id="totals" class="muted"></span></h2>
+    <table id="links">
+      <thead><tr><th>短码</th><th>目标</th><th>命中</th><th>创建时间</th></tr></thead>
+      <tbody></tbody>
+    </table>
+    <p id="empty" hidden>还没有链接。</p>
+  </section>
+
+  <section class="about">
+    <h2>接口</h2>
+    <ul>
+      <li><code>POST /api/links</code> 体：<code>{"url": "...", "alias": "..."}</code> → 201 + <code>Location</code></li>
+      <li><code>GET /l/&lt;码&gt;</code> → 302 <code>Location</code>，并计一次命中；<code>HEAD</code> 不计数</li>
+      <li><code>GET /api/links?limit=20</code> · <code>GET /api/links/&lt;码&gt;</code> · <code>GET /api/stats</code></li>
+    </ul>
+  </section>
+</main>
+<script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# 块作用域与遮蔽：内层的 let 初始值读的是外层那个变量
+let total : int := 100;
+{
+    let total : int := total + 5;
+    print total;
+    {
+        let total : int := total * 2;
+        print total;
+    }
+    print total;
+}
+print total;

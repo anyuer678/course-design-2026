@@ -1,0 +1,8 @@
+# 语义全对、运行期炸：除数为 0。
+# 静态检查挡不住的那部分必须由 VM 带着行号报出来，第 7 行就是第 7 行。
+let stock : int := 0;
+let boxes : int := 12;
+let per_box : int := 5;
+print per_box;
+print boxes / per_box;
+print boxes / stock;

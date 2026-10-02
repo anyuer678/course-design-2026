@@ -1,0 +1,58 @@
+:root {
+  --ink: #1c1f24;
+  --muted: #6b7280;
+  --line: #d7dbe0;
+  --accent: #1d4ed8;
+  --bad: #b91c1c;
+  --good: #15803d;
+  --bg: #fbfbfd;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 2rem 1.25rem 4rem;
+  background: var(--bg);
+  color: var(--ink);
+  font: 16px/1.6 system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+}
+
+main { max-width: 56rem; margin: 0 auto; }
+
+h1 { font-size: 1.6rem; margin: 0 0 .25rem; }
+h2 { font-size: 1.05rem; margin: 2rem 0 .6rem; }
+.lede, .muted { color: var(--muted); font-size: .9rem; }
+code { font-family: ui-monospace, Consolas, monospace; font-size: .88em; background: #eef1f5; padding: .1em .3em; border-radius: 3px; }
+
+form, section { border-top: 1px solid var(--line); padding-top: 1rem; }
+
+label { display: block; margin: .6rem 0; font-size: .9rem; color: var(--muted); }
+input {
+  display: block; width: 100%; margin-top: .3rem; padding: .5rem .6rem;
+  font: inherit; color: var(--ink);
+  border: 1px solid var(--line); border-radius: 6px; background: #fff;
+}
+input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.row { display: flex; gap: .5rem; margin-top: .8rem; }
+button {
+  font: inherit; padding: .45rem .9rem; border: 1px solid var(--line);
+  border-radius: 6px; background: #fff; color: var(--ink); cursor: pointer;
+}
+button:hover { border-color: var(--accent); color: var(--accent); }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+#form-status { min-height: 1.4em; font-size: .9rem; margin: .6rem 0 0; }
+#form-status[data-state="bad"] { color: var(--bad); }
+#form-status[data-state="good"] { color: var(--good); }
+#form-status[data-state="busy"] { color: var(--muted); }
+
+table { width: 100%; border-collapse: collapse; font-size: .9rem; }
+th, td { text-align: left; padding: .45rem .5rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 600; }
+td:nth-child(2) { word-break: break-all; }
+td:nth-child(3) { text-align: right; font-variant-numeric: tabular-nums; }
+
+.about ul { margin: 0; padding-left: 1.2rem; font-size: .9rem; color: var(--muted); }
+@media (max-width: 40rem) { td:nth-child(4), th:nth-child(4) { display: none; } }

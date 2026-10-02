@@ -1,0 +1,12 @@
+# Collatz 猜想走一步看一步：奇偶分支 + 计数器
+let n : int := 27;
+let steps : int := 0;
+let peak : int := n;
+while n != 1 do {
+    if n % 2 = 0 then n := n / 2;
+    else n := 3 * n + 1;
+    steps := steps + 1;
+    if n > peak then peak := n;
+}
+print steps;
+print peak;

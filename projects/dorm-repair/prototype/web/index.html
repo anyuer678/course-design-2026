@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>宿舍报修 · B16 交互原型</title>
+<link rel="stylesheet" href="/style.css">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+</head>
+<body>
+<a class="skip" href="#orders">跳到工单列表</a>
+
+<header>
+  <h1>宿舍报修 · 交互原型</h1>
+  <p class="note" id="identity-note">
+    这是 B16 的走查原型：身份由下面的切换器模拟，<strong>不是登录</strong>（真实认证属 B18）。
+    业务判断全部来自 B15 的可执行模型，前端不自己推规则。
+  </p>
+</header>
+
+<main>
+  <section class="panel" aria-labelledby="id-h">
+    <h2 id="id-h">1 · 身份</h2>
+    <form id="identity-form">
+      <label for="role">角色
+        <select id="role" name="role">
+          <option value="STUDENT">学生（报修人）</option>
+          <option value="WORKER">维修员</option>
+          <option value="ADMIN">管理员（宿管）</option>
+        </select>
+      </label>
+      <label for="actor">我是
+        <select id="actor" name="actor"></select>
+      </label>
+      <button type="submit">切换身份</button>
+      <p id="identity-state" class="muted" role="status" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="new-h">
+    <h2 id="new-h">2 · 我要报修</h2>
+    <form id="create-form" novalidate>
+      <div class="field">
+        <label for="room">宿舍编号 <span class="req" aria-hidden="true">必填</span></label>
+        <input id="room" name="room" type="text" autocomplete="off" placeholder="A01-101"
+               aria-describedby="room-help">
+        <p id="room-help" class="hint">格式：1 位字母 + 2 位数字 - 3 位数字，例如 <code>A01-101</code></p>
+        <p class="err" id="room-err" role="alert" hidden></p>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="category">报修分类</label>
+          <select id="category" name="category" aria-describedby="category-err"></select>
+          <p class="err" id="category-err" role="alert" hidden></p>
+        </div>
+        <div class="field">
+          <label for="priority">紧急程度</label>
+          <select id="priority" name="priority" aria-describedby="priority-help"></select>
+          <p id="priority-help" class="hint">时限由模型给的 SLA 表决定，不是我在这里写死的</p>
+          <p class="err" id="priority-err" role="alert" hidden></p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="description">问题描述 <span class="req" aria-hidden="true">必填</span></label>
+        <textarea id="description" name="description" rows="3"
+                  placeholder="哪里坏了、什么现象、什么时候开始"></textarea>
+        <p class="err" id="description-err" role="alert" hidden></p>
+      </div>
+      <div class="field">
+        <label for="contact">联系方式 <span class="req" aria-hidden="true">必填</span></label>
+        <input id="contact" name="contact" type="tel" inputmode="numeric"
+               placeholder="13800000000" aria-describedby="contact-help">
+        <p id="contact-help" class="hint">本期只接受 11 位手机号；座机与短号待裁决（AQ-08）</p>
+        <p class="err" id="contact-err" role="alert" hidden></p>
+      </div>
+      <div class="row actions">
+        <button type="submit" name="action" value="draft">存为草稿</button>
+        <button type="submit" name="action" value="submit" class="primary">提交报修</button>
+      </div>
+      <p id="create-status" role="status" aria-live="polite"></p>
+      <p id="create-summary" class="summary" role="alert" hidden></p>
+    </form>
+  </section>
+
+  <section class="panel" aria-labelledby="orders-h">
+    <h2 id="orders-h">3 · 工单</h2>
+    <form id="filter-form">
+      <label for="f-state">状态
+        <select id="f-state" name="state"><option value="">全部</option></select>
+      </label>
+      <label for="f-category">分类
+        <select id="f-category" name="category"><option value="">全部</option></select>
+      </label>
+      <label for="f-room">宿舍编号
+        <input id="f-room" name="room" type="text" placeholder="A01-101">
+      </label>
+      <label class="check"><input id="f-overdue" name="overdue" type="checkbox"> 只看逾期</label>
+      <button type="submit">筛选</button>
+      <button type="button" id="reset">清空</button>
+    </form>
+
+    <p id="load-state" class="muted" role="status" aria-live="polite"></p>
+    <div id="empty" class="empty" role="status" hidden>
+      <p><strong>这个视图下暂时没有工单。</strong></p>
+      <p class="muted">空状态是设计的一部分：它必须说清"是没有，还是没加载出来"。</p>
+    </div>
+    <p id="error-state" class="summary" role="alert" hidden></p>
+
+    <table id="orders" hidden>
+      <caption class="muted">可见范围由服务端的可见性矩阵决定，不由这里筛选</caption>
+      <thead>
+        <tr>
+          <th scope="col">编号</th><th scope="col">宿舍</th><th scope="col">分类</th>
+          <th scope="col">紧急</th><th scope="col">状态</th><th scope="col">时限</th>
+          <th scope="col">描述</th><th scope="col">操作</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </section>
+
+  <section class="panel detail" id="detail" aria-labelledby="detail-h" hidden>
+    <h2 id="detail-h" tabindex="-1">工单详情</h2>
+    <button type="button" id="close-detail" class="close">关闭</button>
+    <dl id="detail-fields" class="kv"></dl>
+    <p id="detail-status" role="status" aria-live="polite"></p>
+    <div id="detail-actions" class="row actions"></div>
+    <form id="action-form" hidden>
+      <p id="action-hint" class="hint"></p>
+      <label for="reason" id="reason-label" hidden>理由
+        <textarea id="reason" name="reason" rows="2"></textarea>
+      </label>
+      <label for="note" id="note-label" hidden>完工说明
+        <textarea id="note" name="note" rows="2"></textarea>
+      </label>
+      <label for="assignee" id="assignee-label" hidden>维修员工号
+        <input id="assignee" name="assignee" type="text" placeholder="w-1">
+      </label>
+      <div class="row actions">
+        <button type="submit" class="primary">确认执行</button>
+        <button type="button" id="cancel-action">取消</button>
+      </div>
+    </form>
+    <h3>处理过程</h3>
+    <ol id="detail-history" class="timeline"></ol>
+  </section>
+</main>
+
+<footer class="muted">
+  <p>B16 走查原型 · 线框与状态定义见 <code>docs/06-wireframes.md</code>，走查清单见 <code>docs/07-walkthrough.md</code></p>
+</footer>
+
+<script src="/app.js"></script>
+</body>
+</html>

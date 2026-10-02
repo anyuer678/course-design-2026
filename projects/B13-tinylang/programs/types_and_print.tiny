@@ -1,0 +1,11 @@
+# 类型与打印：real 的除法、bool 的比较、字符串拼接（只有 string + string 合法）
+let width : real := 3;
+let height : real := 4.5;
+let area : real := width * height;
+print area;
+print width / 2;
+print area > 13;
+print area = 13.5;
+let unit : string := "312";
+let prefix : string := "宿舍 ";
+print prefix + unit + " 报修";

@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  B18：报修系统的平台层实现（Java / Spring Boot）。
+
+  两条刻意的约束，都来自 docs/08 与 ADR-02/ADR-03：
+
+  1. **状态机不重写第二遍**。转换表、权限、可见性、SLA、验收宽限期、字段写入时机
+     全部来自 `../contracts/workflow.json`——它由 `tools/export_contract.py` 从 SRS 生成，
+     这里用 maven-resources 在构建时复制进 jar，**不在 Java 里手抄表**。
+     `ContractParityTest` 会拿 jar 内资源与仓库里的契约逐字节比对，抄了旧表就红灯。
+  2. **零下载**。本机 `~/.m2` 已缓存 Spring Boot 3.3.5 / H2 2.2.224 / JUnit 5.10.5 /
+     Maven 3.9.12，所以 `run.bat` 用 `-o`（offline）构建；换机器时 README 写清了要下什么。
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+
+  <parent>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-parent</artifactId>
+    <version>3.3.5</version>
+    <relativePath/>
+  </parent>
+
+  <groupId>course.dormrepair</groupId>
+  <artifactId>repair-platform</artifactId>
+  <version>0.18.0</version>
+  <name>dorm-repair B18 platform</name>
+
+  <properties>
+    <java.version>17</java.version>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+  </properties>
+
+  <dependencies>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-jdbc</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-validation</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+  </dependencies>
+
+  <build>
+    <resources>
+      <!-- 契约是 SRS 的产物，不是本模块的文件：构建时从 ../contracts 复制进来 -->
+      <resource>
+        <directory>${project.basedir}/src/main/resources</directory>
+      </resource>
+      <resource>
+        <directory>${project.basedir}/../contracts</directory>
+        <targetPath>contract</targetPath>
+        <includes>
+          <include>workflow.json</include>
+        </includes>
+      </resource>
+    </resources>
+    <testResources>
+      <testResource>
+        <directory>${project.basedir}/src/test/resources</directory>
+      </testResource>
+      <testResource>
+        <directory>${project.basedir}/../contracts</directory>
+        <targetPath>contract</targetPath>
+      </testResource>
+    </testResources>
+    <plugins>
+      <plugin>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-maven-plugin</artifactId>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <!-- Java 17 在 Windows 上默认 file.encoding 仍是 GBK；中文理由文本必须显式 UTF-8，
+               否则断言会看到乱码（B14 已在同一台机器上踩过这个坑） -->
+          <argLine>-Dfile.encoding=UTF-8 -Dstdout.encoding=UTF-8 -Dstderr.encoding=UTF-8</argLine>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

@@ -1,0 +1,9 @@
+# 欧几里得算法：反复取余直到余数为 0
+let a : int := 1071;
+let b : int := 462;
+while b != 0 do {
+    let t : int := b;
+    b := a % b;
+    a := t;
+}
+print a;
