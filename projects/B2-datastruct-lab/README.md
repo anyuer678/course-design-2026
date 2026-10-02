@@ -46,6 +46,12 @@ build\datastruct.exe --menu                                  # 交互菜单：�
 | `tests/test_ds.cpp` | 428 项断言（手算边界 / 对拍 / 菜单脚本） |
 | `src/main.cpp` | 六段脚本演示 + `--menu` 入口 |
 
+> **为 B33 增补的只读观察口（2026-10-02）**：`include/ds/trace.hpp`——把 `Tracer` 挂到
+> `Heap`/`Graph` 上后，push/pop/build/swap 与 BFS/DFS visit 各记一条事件（含**事件后快照**），
+> 供 `projects/B33-viz-algo` 导出操作记录做动画回放。**默认不挂 = 零行为影响**：增补后
+> 本项目的 428 项断言 0 失败、`run.bat` 两次退出码 0 且**两次日志逐字相同**，均已重跑复核。
+> 矩阵图（`MatrixGraph`）未接观察口——B33 只用邻接表版，README 如实标注。
+
 ## 知识点 ↔ 实现 ↔ 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |

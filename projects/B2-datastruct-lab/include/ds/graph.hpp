@@ -14,6 +14,8 @@
 #include <stdexcept>
 #include <vector>
 
+#include "ds/trace.hpp"
+
 namespace ds {
 
 struct Edge {
@@ -40,6 +42,9 @@ public:
         check(u);
         return adj_[static_cast<std::size_t>(u)];
     }
+
+    // 只读观察口（默认 nullptr = 零影响；矩阵版未接，README 注明）
+    void set_tracer(Tracer* tracer) { tracer_ = tracer; }
 
     void add_edge(int u, int v, int weight = 1) {
         check(u);
@@ -72,6 +77,7 @@ public:
                     queue[tail++] = e.to;
                 }
             }
+            trace("visit", u, dist[static_cast<std::size_t>(u)], queue, head, tail);
         }
     }
 
@@ -93,6 +99,7 @@ public:
                 ++scans_;
                 if (!seen[static_cast<std::size_t>(ns[i].to)]) stack.push_back(ns[i].to);
             }
+            trace("visit", u, -1, stack, 0, stack.size());
         }
     }
 
@@ -119,6 +126,19 @@ private:
     std::vector<std::vector<Edge>> adj_;
     std::size_t edges_ = 0;
     std::size_t scans_ = 0;
+    Tracer* tracer_ = nullptr;
+
+    // 事件后的快照：BFS 取队列 [head, tail) 区间，DFS 取整栈
+    void trace(const char* op, long long a, long long b, const std::vector<int>& frontier,
+               std::size_t from, std::size_t to) {
+        if (tracer_ == nullptr) return;
+        std::vector<long long> snap;
+        snap.reserve(to > from ? to - from : 0);
+        for (std::size_t i = from; i < to; ++i) {
+            snap.push_back(static_cast<long long>(frontier[i]));
+        }
+        tracer_->record(op, a, b, snap);
+    }
 
     void check(int u) const {
         if (u < 0 || u >= n_) throw std::out_of_range("ds::Graph 结点越界");

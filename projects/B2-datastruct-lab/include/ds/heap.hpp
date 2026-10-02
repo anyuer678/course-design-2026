@@ -17,6 +17,8 @@
 #include <utility>
 #include <vector>
 
+#include "ds/trace.hpp"
+
 namespace ds {
 
 template <class T, class Cmp = std::less<T>>
@@ -25,12 +27,16 @@ public:
     Heap() = default;
     explicit Heap(Cmp cmp) : cmp_(cmp) {}
 
+    // 挂上只读观察口后，push/pop/build 与每次交换都会记事件（默认 nullptr = 零影响）
+    void set_tracer(Tracer* tracer) { tracer_ = tracer; }
+
     bool empty() const { return data_.size() == 0; }
     std::size_t size() const { return data_.size(); }
 
     void push(const T& v) {
         data_.push_back(v);
         sift_up(data_.size() - 1);
+        trace("push", static_cast<long long>(data_.size() - 1), -1);
     }
 
     void pop() {
@@ -38,6 +44,7 @@ public:
         std::swap(data_[0], data_[data_.size() - 1]);
         data_.pop_back();
         if (!empty()) sift_down(0);
+        trace("pop", 0, -1);
     }
 
     const T& top() const {
@@ -49,8 +56,10 @@ public:
     void build(const std::vector<T>& items) {
         data_.clear();
         for (const T& v : items) data_.push_back(v);
-        if (data_.size() < 2) return;
-        for (std::size_t i = data_.size() / 2; i-- > 0;) sift_down(i);
+        if (data_.size() >= 2) {
+            for (std::size_t i = data_.size() / 2; i-- > 0;) sift_down(i);
+        }
+        trace("build", -1, -1);
     }
 
     // 整树检查：每对父子都必须满足堆序（测试在每次操作后调用）
@@ -73,6 +82,15 @@ private:
     Cmp cmp_{};
     std::size_t comparisons_ = 0;
     std::size_t swaps_ = 0;
+    Tracer* tracer_ = nullptr;
+
+    void trace(const char* op, long long a, long long b) {
+        if (tracer_ == nullptr) return;
+        std::vector<long long> snap;
+        snap.reserve(data_.size());
+        for (const T& v : data_) snap.push_back(static_cast<long long>(v));
+        tracer_->record(op, a, b, snap);
+    }
 
     void sift_up(std::size_t i) {
         while (i > 0) {
@@ -81,6 +99,7 @@ private:
             if (!cmp_(data_[i], data_[parent])) break;
             std::swap(data_[i], data_[parent]);
             ++swaps_;
+            trace("swap", static_cast<long long>(i), static_cast<long long>(parent));
             i = parent;
         }
     }
@@ -101,6 +120,7 @@ private:
             if (best == i) break;
             std::swap(data_[i], data_[best]);
             ++swaps_;
+            trace("swap", static_cast<long long>(i), static_cast<long long>(best));
             i = best;
         }
     }
