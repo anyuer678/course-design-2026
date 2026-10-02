@@ -2,50 +2,6 @@
   "note": "B41 毕设种子：5 个候选的三维可行性（数据/资源/评价）。facts 段里的每个数字都由 tools/check_seeds.py 现算复核（行数逐字比对、缺口关键词按'计数=0'断言、import 探针实跑）——数字过期就红，防止'可行性分析'变成文艺创作。选定由用户：本文件只做比较，不替你开题。",
   "seeds": [
     {
-      "id": "b13-call-frames",
-      "title": "B13 加函数调用帧与错误恢复",
-      "question": "给只有扁平程序的小语言补上函数定义/调用与调用栈，怎样保持「两条后端逐字节一致」的对拍纪律不破？",
-      "evidence": {
-        "path": "projects/B13-tinylang/README.md",
-        "anchor": "两套完全不同的后端"
-      },
-      "files": [
-        {
-          "path": "projects/B13-tinylang/tinylang/vm.py",
-          "lines": 173
-        },
-        {
-          "path": "projects/B13-tinylang/tinylang/bytecode.py",
-          "lines": 91
-        },
-        {
-          "path": "projects/B13-tinylang/tinylang/codegen.py",
-          "lines": 161
-        },
-        {
-          "path": "projects/B13-tinylang/tinylang/parser.py",
-          "lines": 289
-        },
-        {
-          "path": "projects/B13-tinylang/tinylang/fuzz.py",
-          "lines": 245
-        }
-      ],
-      "probes": [
-        {
-          "name": "字节码里没有调用指令（CALL 计数 0）",
-          "kind": "code-count",
-          "glob": "projects/B13-tinylang/tinylang/*.py",
-          "pattern": "\\bCALL\\b",
-          "expected": 0
-        }
-      ],
-      "data": "300 例随机程序的对拍语料已在 fuzz.py 生成器里（245 行），把生成规则扩到带函数即可，无外部数据。",
-      "resources": "要动 parser（289 行）、codegen（161 行）、vm（173 行）、bytecode（91 行）四处 + 参照解释器同步；估 400–600 行新逻辑，测试增 10–15 项（含栈深度上限/递归语义）；零依赖。时间盒 1–2 会话，是全批次里改动面最均匀的一个。",
-      "evaluation": "①带函数程序的 300+ 例随机对拍在 VM 与参照解释器上逐字节一致；②错误恢复（除零/栈溢出/未定义变量）的错误位置与类型逐条断言；③与 B12 的递归算法互相验证（用 tinylang 写快排/斐波那契）。",
-      "risks": "两条后端的调用约定（帧布局、返回值通道）必须先在纸上定死，否则对拍会陷入「两边各错一半」；栈深度与 Python 递归深度纠缠，需显式上限避免宿主栈溢出。"
-    },
-    {
       "id": "b30-raft-snapshot",
       "title": "B30 Raft 完整化（快照 + 成员变更）",
       "question": "给事件驱动的 Raft 模拟补上日志压缩（快照）与成员变更，§5.4.2 系列不变式还能逐事件成立吗？",
@@ -88,7 +44,7 @@
         }
       ],
       "data": "现有 10 seed × 60 步事件流的「每事件查不变式」骨架直接扩展到快照点与成员变更场景；无需新数据。",
-      "resources": "论文级工作量的两个子问题（InstallSnapshot RPC 与单步成员变更），sim.py（409 行）要扩三到四成；测试从 15 项起增 10–15 项（快照后日志截断、新节点追赶、变更中双多数派安全）；零依赖。时间盒 2–3 会话——五个候选里最重的。",
+      "resources": "论文级工作量的两个子问题（InstallSnapshot RPC 与单步成员变更），sim.py（409 行）要扩三到四成；测试从 15 项起增 10–15 项（快照后日志截断、新节点追赶、变更中双多数派安全）；零依赖。时间盒 2–3 会话——候选里最重的。",
       "evaluation": "①快照后重启：状态机与快照+日志重放逐条一致；②成员变更期间选举/复制不变式每事件 0 失败；③「快照边界上的 §5.4.2」用构造场景证明仍不被违反。",
       "risks": "完整 Raft 的范围没有尽头（本候选刻意止步于快照+成员变更，不做流水线/分批复制）；测试量会逼近现有全套的两倍，时间盒要守死。"
     },
@@ -165,6 +121,16 @@
       "evidence": {
         "path": "projects/B10-minidb/README.md",
         "anchor": "自测（53 项：36 核心 + 17 持久性）"
+      }
+    },
+    {
+      "id": "b13-call-frames",
+      "title": "B13 加函数调用帧与错误恢复",
+      "date": "2026-10-02",
+      "note": "用户选定并实施（三个候选里最后落实的一个）：见 projects/B13-tinylang/——调用约定**先写纸上再动手**（docs/frames-spec.md：帧布局/返回值通道/深度上限 100/逐字错误文本表），再改 parser/codegen/vm/bytecode 与树遍历参照实现；自递归可用、互递归明确不做；宿主栈护栏（树遍历临时提升 sys.setrecursionlimit，实测不提升时约 7 层就被 Python RecursionError 抢先）；原缺口探针「CALL 计数 0」已填平（现 34 处）。85 项测试双入口（72 逐层 + 7 对拍 + 6 递归互证）、run.bat 两次退出码 0、规范化日志逐字相同（各 347 行）。实施中把三个真缺陷当场抓出（词法漏逗号、检查器全局作用域泄漏、树遍历不认识函数定义）——详见 B13 README 坑记 9-13。",
+      "evidence": {
+        "path": "projects/B13-tinylang/README.md",
+        "anchor": "自测（85 项 + 417 subTest）"
       }
     }
   ]

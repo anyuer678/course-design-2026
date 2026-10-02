@@ -102,11 +102,11 @@
     },
     {
       "id": "b13-tinylang",
-      "claim": "语言前端→字节码 VM + 参照解释器：两套完全不同的后端对拍 300 例",
+      "claim": "语言前端→字节码 VM + 参照解释器（含函数调用帧，B41 候选②）：双后端 300 例对拍 + 递归与 Python 参照互证；85 项自测（72 逐层 + 7 对拍 + 6 递归）",
       "pointers": [
         "projects/B13-tinylang/README.md"
       ],
-      "anchor": "两套完全不同的后端",
+      "anchor": "自测（85 项 + 417 subTest）",
       "commit": "16d125f"
     },
     {

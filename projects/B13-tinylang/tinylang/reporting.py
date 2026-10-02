@@ -5,8 +5,8 @@
 """
 from __future__ import annotations
 
-from .nodes import (Assign, Binary, Block, BoolLit, Ident, If, IntLit, Node, Print,
-                    Program, RealLit, StrLit, Unary, VarDecl, While)
+from .nodes import (Assign, Binary, Block, BoolLit, Call, FunDef, Ident, If, IntLit,
+                    Node, Print, Program, RealLit, Return, StrLit, Unary, VarDecl, While)
 
 
 def format_ast(node: Node, indent: int = 0) -> str:
@@ -17,6 +17,16 @@ def format_ast(node: Node, indent: int = 0) -> str:
         return _block_lines("program", node.stmts, indent)
     if isinstance(node, Block):
         return _block_lines("block", node.stmts, indent)
+    if isinstance(node, FunDef):
+        params = ", ".join(f"{p.name} : {p.declared_type}" for p in node.params)
+        head = f"{pad}fun {node.name}({params}) -> {node.return_type}"
+        return head + "\n" + format_ast(node.body, indent + 1)
+    if isinstance(node, Return):
+        return f"{pad}return" + "\n" + format_ast(node.expr, indent + 1)
+    if isinstance(node, Call):
+        lines = [f"{pad}call {node.name}{at}"]
+        lines += [format_ast(arg, indent + 1) for arg in node.args]
+        return "\n".join(lines)
     if isinstance(node, VarDecl):
         head = f"{pad}let {node.name} : {node.declared_type} :="
         return head + "\n" + format_ast(node.init, indent + 1)
@@ -65,6 +75,14 @@ def shape(node: Node) -> str:
         return f"({node.op} {shape(node.left)} {shape(node.right)})"
     if isinstance(node, Unary):
         return f"({node.op} {shape(node.operand)})"
+    if isinstance(node, Call):
+        inner = " ".join(shape(arg) for arg in node.args)
+        return f"(call {node.name}{' ' + inner if inner else ''})"
+    if isinstance(node, Return):
+        return f"(return {shape(node.expr)})"
+    if isinstance(node, FunDef):
+        params = " ".join(f"({p.name} {p.declared_type})" for p in node.params)
+        return (f"(fun {node.name} [{params}] {node.return_type} {shape(node.body)})")
     if isinstance(node, Print):
         return f"(print {shape(node.expr)})"
     if isinstance(node, Assign):

@@ -1,15 +1,23 @@
 """tinylang/parser.py —— 递归下降 + 显式优先级链。
 
-文法（基础范围，没有函数）：
-    program  := stmt* EOF
+文法（基础范围 + B41 候选②的增量）：
+    program  := (fun_def | stmt)*
+    fun_def  := "fun" ident "(" [param ("," param)*] ")" "->" type block
+    param    := ident ":" type
     stmt     := "let" ident ":" type ":=" expr ";"
               | ident ":=" expr ";"
               | "print" expr ";"
               | "if" expr "then" stmt ["else" stmt]
               | "while" expr "do" stmt
+              | "return" expr ";"
               | "{" stmt* "}"
     type     := int | real | bool | string
     expr     := or_expr
+    primary  := … | ident "(" [expr ("," expr)*] ")"      # 函数调用
+
+函数定义只能出现在顶层（块里出现 `fun` 是明确的语法错误，不是"当普通语句解析"）。
+调用实参从左到右求值；调用是表达式，没有"丢弃返回值"的裸调用语句——
+这些选择都写在 docs/frames-spec.md，与两条执行后端共用同一份口径。
 
 优先级（低 → 高），每一级一个函数，链式往下调用：
     or  →  and  →  not(前缀)  →  比较  →  +-  →  */%  →  一元减号  →  primary
@@ -31,8 +39,9 @@
 from __future__ import annotations
 
 from .lexer import Token, tokenize
-from .nodes import (Assign, Binary, Block, BoolLit, If, Ident, IntLit, Node, Print,
-                    Program, RealLit, StrLit, Unary, VarDecl, While)
+from .nodes import (Assign, Binary, Block, BoolLit, Call, FunDef, Ident, If, IntLit,
+                    Node, Param, Print, Program, RealLit, Return, StrLit, Unary,
+                    VarDecl, While)
 from .spans import ParseError, Span
 
 TYPES = ("int", "real", "bool", "string")
@@ -87,7 +96,10 @@ class Parser:
     def parse_program(self) -> Program:
         stmts = []
         while self.peek().kind != "eof":
-            stmts.append(self.parse_statement())
+            if self.peek().is_keyword("fun"):
+                stmts.append(self.parse_fun())
+            else:
+                stmts.append(self.parse_statement())
             if len(stmts) > MAX_STATEMENTS:
                 self._fail(f"语句数不超过 {MAX_STATEMENTS}")
         end = self.peek().span
@@ -103,11 +115,55 @@ class Parser:
             return self.parse_if()
         if token.is_keyword("while"):
             return self.parse_while()
+        if token.is_keyword("return"):
+            return self.parse_return()
+        if token.is_keyword("fun"):
+            # 顶层由 parse_program 处理；能走到这里说明 fun 出现在块里
+            raise ParseError("fun 只能定义在顶层，不能放进块里", token.span,
+                             "把函数定义移到文件最外层；嵌套函数不在本语言范围内")
         if token.is_op("{"):
             return self.parse_block()
         if token.kind == "ident":
             return self.parse_assign()
-        self._fail("语句（let / print / if / while / { … } / 赋值）")
+        self._fail("语句（let / print / if / while / return / { … } / 赋值）")
+
+    def parse_fun(self) -> Node:
+        start = self.eat("keyword", "fun", "fun")
+        name = self.eat("ident", None, "函数名")
+        self.eat("op", "(", "参数列表的左括号 '('")
+        params = []
+        if not self.peek().is_op(")"):
+            params.append(self.parse_param())
+            while self.peek().is_op(","):
+                self.advance()
+                params.append(self.parse_param())
+        self.eat("op", ")", "参数列表的右括号 ')'")
+        self.eat("op", "->", "返回类型箭头 '->'")
+        type_token = self.peek()
+        if type_token.kind != "keyword" or type_token.text not in TYPES:
+            self._fail("返回类型（int / real / bool / string）")
+        self.advance()
+        if not self.peek().is_op("{"):
+            self._fail("函数体的左花括号 '{'")
+        body = self.parse_block()
+        return FunDef(name=name.text, params=params, return_type=type_token.text,
+                      body=body, name_span=name.span, span=start.span.joined_with(body.span))
+
+    def parse_param(self) -> Node:
+        name = self.eat("ident", None, "参数名")
+        self.eat("op", ":", "参数类型标注的冒号 ':'")
+        type_token = self.peek()
+        if type_token.kind != "keyword" or type_token.text not in TYPES:
+            self._fail("参数类型（int / real / bool / string）")
+        self.advance()
+        return Param(name=name.text, declared_type=type_token.text, name_span=name.span,
+                     span=name.span.joined_with(type_token.span))
+
+    def parse_return(self) -> Node:
+        start = self.eat("keyword", "return", "return")
+        expr = self.parse_expression()
+        semicolon = self.eat("op", ";", "语句结束的分号")
+        return Return(expr=expr, span=start.span.joined_with(semicolon.span))
 
     def parse_let(self) -> Node:
         start = self.eat("keyword", "let", "let")
@@ -269,6 +325,9 @@ class Parser:
             self.advance()
             return BoolLit(span=token.span, value=token.text == "true")
         if token.kind == "ident":
+            following = self.tokens[self.i + 1] if self.i + 1 < len(self.tokens) else token
+            if following.is_op("("):
+                return self.parse_call()
             self.advance()
             return Ident(span=token.span, name=token.text, name_span=token.span)
         if token.is_op("("):
@@ -282,7 +341,20 @@ class Parser:
             return inner
         if token.kind == "eof":
             raise ParseError("表达式在文件末尾就结束了", token.span, "少了一个操作数或分号")
-        self._fail("表达式（数字、字符串、true/false、变量或 '(' …）")
+        self._fail("表达式（数字、字符串、true/false、变量、函数调用或 '(' …）")
+
+    def parse_call(self) -> Node:
+        name = self.eat("ident", None, "函数名")
+        self.eat("op", "(", "调用实参的左括号 '('")
+        args = []
+        if not self.peek().is_op(")"):
+            args.append(self.parse_expression())
+            while self.peek().is_op(","):
+                self.advance()
+                args.append(self.parse_expression())
+        close = self.eat("op", ")", "调用实参的右括号 ')'")
+        return Call(name=name.text, args=args, name_span=name.span,
+                    span=name.span.joined_with(close.span))
 
 
 def parse(source: str) -> Program:

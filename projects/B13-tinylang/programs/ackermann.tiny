@@ -1,0 +1,10 @@
+# Ackermann 函数：调用嵌套最深的小整数函数——实测调用帧的真实深度
+# ack(2, 3) = 9、ack(3, 3) = 61（测试里与 Python 参照互证）
+fun ack(m : int, n : int) -> int {
+    if m = 0 then return n + 1;
+    if n = 0 then return ack(m - 1, 1);
+    return ack(m - 1, ack(m, n - 1));
+}
+
+print ack(2, 3);
+print ack(3, 3);

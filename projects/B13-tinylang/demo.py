@@ -2,8 +2,9 @@
 
     python demo.py
 
-六个部分：全链逐阶段展示 → 语言定义 → 五个语义选择的现场 → 错误定位 →
-两条执行路径对拍 → 样例程序。全部只跑本机、不联网、不写文件。
+    七个部分：全链逐阶段展示 → 语言定义 → 错误定位 → 函数与调用帧 →
+    两条执行路径对拍 → 样例程序 → 自己动手。
+    全部只跑本机、不联网、不写文件。
 """
 from __future__ import annotations
 
@@ -25,7 +26,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 
 
 def title(index: int, text: str) -> None:
-    print(f"\n{BAR}\n[{index}/6] {text}\n{BAR}")
+    print(f"\n{BAR}\n[{index}/7] {text}\n{BAR}")
 
 
 def section(text: str) -> None:
@@ -109,6 +110,12 @@ def demo_language_choices() -> None:
         ("块作用域与自引用初始值",
          "let b : int := 7; { let b : int := b + 1; print b; } print b;",
          "内层初始值读的是外层 b；出块后外层值不变"),
+        ("函数看不到全局变量",
+         "let g : int := 1;\nfun f() -> int { return g; }",
+         "语义直接拒绝：函数的作用域只有形参与局部——帧模型因此干净"),
+        ("自递归可以、互递归不行",
+         "fun f(n : int) -> int { return f2(n); }\nfun f2(n : int) -> int { return f(n); }",
+         "先定义后使用：f 的定义点还看不到 f2；互递归需要前向声明（不做）"),
     ]
     for name, source, note in cases:
         built = build(source)
@@ -124,7 +131,7 @@ def demo_language_choices() -> None:
 
 def demo_errors() -> None:
     for name, expected_code in (("error_syntax.tiny", 2), ("error_types.tiny", 2),
-                                ("error_runtime.tiny", 1)):
+                                ("error_runtime.tiny", 1), ("error_depth.tiny", 1)):
         code, text = run_file(name)
         head = text.splitlines()
         print(f"\n  {name}  （退出码 {code}，预期 {expected_code}）")
@@ -132,6 +139,50 @@ def demo_errors() -> None:
             print("    " + line)
         if len(head) > 9:
             print(f"    …（共 {len(head)} 行）")
+
+
+def demo_call_frames() -> None:
+    source = """fun fib(n : int) -> int {
+    if n < 2 then return n;
+    return fib(n - 1) + fib(n - 2);
+}
+print fib(10);
+"""
+    built = build(source)
+    section("1) 函数体的字节码：CALL / RET 与体尾的 NORET（落点保护）")
+    for line in built.code.disassemble().splitlines():
+        if any(op in line for op in ("CALL", "RET", "NORET", ";;")):
+            print("  " + line)
+    print(f"  函数表：{[(f.name, f.entry, f.arity, f.return_type) for f in built.code.functions]}")
+
+    section("2) 执行轨迹：每一步带调用深度（顶层=0，进函数=1…）")
+    traced = run_code(built.code, trace_limit=600)
+    deep = [step for step in traced.trace if step.depth > 0][:5]
+    for step in deep:
+        print("  " + step.render())
+    print(f"  …（共 {traced.steps} 步；完整轨迹用 python tiny.py programs/fib.tiny --trace）")
+
+    section("3) 栈护栏：无限递归在第 100 层、同一条消息上停住（两边后端）")
+    bad = build("fun dive(n : int) -> int {\n    return dive(n + 1);\n}\nprint dive(0);")
+    for name, engine in (("VM    ", lambda: run_code(bad.code)),
+                         ("树遍历", lambda: interpret(bad.program))):
+        try:
+            engine()
+        except TinyError as exc:
+            print(f"  {name}：{exc.message}（第 {exc.span.line} 行）")
+
+    section("4) 缺 return：诚实做法是运行期错误，不做假的静态流分析")
+    missing = build("fun f(x : int) -> int {\n    let y : int := x + 1;\n}\nprint f(1);")
+    try:
+        run_code(missing.code)
+    except TinyError as exc:
+        print(f"  {exc.message}（第 {exc.span.line} 行，指到函数体结尾的右花括号）")
+
+    section("5) 递归互证：fib / 汉诺塔 / Ackermann / 二项式，见 tests/test_recursion.py")
+    code, text = run_file("hanoi.tiny")
+    print(f"  hanoi.tiny 退出码 {code}，输出 {len(text.splitlines())} 行（7 步移动 + 总步数 7）")
+    code, text = run_file("fib.tiny")
+    print(f"  fib.tiny 退出码 {code}，前 8 项：{' '.join(text.splitlines()[:8])}")
 
 
 def demo_two_engines() -> None:
@@ -144,16 +195,16 @@ def demo_two_engines() -> None:
         built = build(source)
         if built.errors:
             mismatch += 1
-            print(f"  ✗ seed={seed} 生成器产出被检查器拒绝：{built.errors[0].message}")
+            print(f"  × seed={seed} 生成器产出被检查器拒绝：{built.errors[0].message}")
             continue
         vm = run_code(built.code, max_steps=200_000)
         walk = interpret(built.program, max_steps=200_000)
         total_lines += len(vm.output)
         if vm.output != walk.output:
             mismatch += 1
-            print(f"  ✗ seed={seed} 两条路输出不同")
-    print(f"  {total_programs} 个随机程序，两条执行路径输出一致；"
-          f"共 {total_lines} 行输出，不一致 {mismatch} 例")
+            print(f"  × seed={seed} 两条路输出不同")
+    print(f"  {total_programs} 个随机程序（1–3 个函数 + 主程序，函数间调用图无环），"
+          f"两条执行路径输出一致；共 {total_lines} 行输出，不一致 {mismatch} 例")
     print("  （完整 300 个程序的语料在 tests/test_against_reference.py 里跑）")
     trap = "(g != 0) and (10 / g > 0)"
     print(f"  随机语料里埋了短路陷阱，例如 {trap}：g 为 0 时右边一算就除零")
@@ -161,7 +212,8 @@ def demo_two_engines() -> None:
 
 def demo_samples() -> None:
     for name in ("gcd.tiny", "collatz.tiny", "sum_of_squares.tiny", "types_and_print.tiny",
-                 "short_circuit.tiny", "scope_shadow.tiny"):
+                 "short_circuit.tiny", "scope_shadow.tiny", "fib.tiny", "hanoi.tiny",
+                 "ackermann.tiny", "binomial.tiny"):
         code, text = run_file(name)
         preview = " / ".join(text.splitlines()[:4])
         print(f"  {name:22s} 退出码 {code}  {preview}")
@@ -175,19 +227,21 @@ def main() -> int:
     demo_language_choices()
     title(3, "错误定位：语法 / 多条语义 / 运行期")
     demo_errors()
-    title(4, "两条独立执行路径互相对拍")
+    title(4, "函数与调用帧：调用约定、栈护栏、缺 return（B41 候选②）")
+    demo_call_frames()
+    title(5, "两条独立执行路径互相对拍")
     demo_two_engines()
-    title(5, "样例程序")
+    title(6, "样例程序")
     demo_samples()
-    title(6, "自己动手")
+    title(7, "自己动手")
     print("  python tiny.py programs/gcd.tiny --tokens     # 看词法")
-    print("  python tiny.py programs/collatz.tiny --ast     # 看 AST")
-    print("  python tiny.py programs/gcd.tiny --asm         # 看字节码")
-    print("  python tiny.py programs/gcd.tiny --trace       # 看执行轨迹")
-    print("  python tiny.py -c 'let x : int := 1.5;'        # 看语义怎么拒")
-    print("  python -m pytest tests -q                      # 55 项测试 + 393 个 subTest")
-    print("\n  练习：实现内置转换函数（int()/round()）、给 if/elif 加错误恢复、")
-    print("        加函数与调用帧、做常量折叠优化——见 README 的练习建议。")
+    print("  python tiny.py programs/fib.tiny --ast         # 看 AST（含函数定义）")
+    print("  python tiny.py programs/fib.tiny --asm         # 看字节码（CALL/RET/NORET）")
+    print("  python tiny.py programs/fib.tiny --trace       # 看轨迹（带调用深度）")
+    print("  python tiny.py programs/error_depth.tiny       # 看栈护栏怎么报错")
+    print("  python -m pytest tests -q                      # 85 项测试 + 300+ 个 subTest")
+    print("\n  练习：给语言加数组与越界检查（有了它才能写快排）、内置转换函数（int()/round()）、")
+    print("        做常量折叠优化——见 README 的练习建议。")
     return 0
 
 

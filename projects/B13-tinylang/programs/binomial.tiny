@@ -1,0 +1,10 @@
+# 二项式系数：朴素双递归（没有记忆化，慢但正确）
+# 与独立参照互证：binom(10, 5) = 252 = math.comb(10, 5)
+fun binom(n : int, k : int) -> int {
+    if k = 0 then return 1;
+    if k = n then return 1;
+    return binom(n - 1, k - 1) + binom(n - 1, k);
+}
+
+print binom(10, 5);
+print binom(1, 1);

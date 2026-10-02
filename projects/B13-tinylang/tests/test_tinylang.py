@@ -17,13 +17,15 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from tinylang import values                                            # noqa: E402
-from tinylang.bytecode import BIN, HALT, I2F, JNZ, JUMP, JZ, LOAD, PRINT, PUSH, Code, Instr  # noqa: E402
+from tinylang.bytecode import (BIN, CALL, HALT, I2F, JNZ, JUMP, JZ, LOAD, NORET, PRINT,
+                               PUSH, RET, Code, Instr, FunctionInfo)  # noqa: E402
 from tinylang.codegen import generate                                  # noqa: E402
 from tinylang.lexer import MAX_SOURCE_BYTES, LexError, tokenize        # noqa: E402
 from tinylang.nodes import Binary, Ident, IntLit, Program              # noqa: E402
 from tinylang.parser import MAX_EXPRESSION_DEPTH, ParseError, parse    # noqa: E402
 from tinylang.pipeline import build, compile_source, run     # noqa: E402
 from tinylang.reporting import shape                                   # noqa: E402
+from tinylang.runtime import DEFAULT_MAX_CALL_DEPTH                    # noqa: E402
 from tinylang.semantics import analyze, MAX_ERRORS                     # noqa: E402
 from tinylang.spans import (CodegenError, RuntimeError_, SemanticError,
                            Span)  # noqa: E402
@@ -90,6 +92,16 @@ class TestLexer(unittest.TestCase):
         tokens = tokenize("")
         self.assertEqual(len(tokens), 1)
         self.assertEqual(tokens[0].kind, "eof")
+
+    def test_fun_return_keywords_and_arrow(self):
+        tokens = tokenize("fun f(a : int) -> int { return a; }")
+        self.assertEqual(tokens[0].kind, "keyword")
+        self.assertEqual(tokens[0].text, "fun")
+        arrow = next(t for t in tokens if t.text == "->")
+        self.assertEqual(arrow.kind, "op")            # -> 是一个记号，不是 - 和 > 两个
+        self.assertTrue(all(t.kind == "keyword" for t in tokens if t.text == "return"))
+        self.assertTrue(any(t.is_op(",") for t in tokenize("f(1, 2);")))
+        self.assertTrue(any(t.is_op("->") for t in tokenize("a -> b")))
 
 
 class TestParserShapes(unittest.TestCase):
@@ -174,6 +186,39 @@ class TestParserShapes(unittest.TestCase):
         with self.assertRaises(ParseError) as ctx:
             parse("print 1 <= 2 <= 3;")
         self.assertIn("1 < x and x < 3", ctx.exception.hint)
+
+    def test_function_and_call_shapes(self):
+        cases = {
+            "fun f(a : int) -> int { return a; }":
+                "(program (fun f [(a int)] int (block (return a))))",
+            "print f(1, 2);":
+                "(program (print (call f 1 2)))",
+            "print f(g(1) + 2);":
+                "(program (print (call f (+ (call g 1) 2))))",
+            "fun pi() -> real { return 3.0; } print pi() * 2;":
+                "(program (fun pi [] real (block (return 3.0))) (print (* (call pi) 2)))",
+        }
+        for source, expected in cases.items():
+            with self.subTest(source=source):
+                self.assertEqual(self.shape_of(source), expected)
+
+    def test_function_parse_errors_point_at_the_real_culprit(self):
+        cases = {
+            "{ fun f() -> int { return 1; } }": "fun 只能定义在顶层",
+            "fun f() int { return 1; }": "->",
+            "fun f(a int) -> int { return a; }": "冒号",
+            "fun f(a : int -> int { return a; }": "右括号 ')'",
+            "fun f() -> int return 1;": "左花括号",
+            "fun f() -> int { return 1;": "块结束的 '}'",
+            "fun f() -> int { return 1 }": "分号",
+            "print f(1;": "右括号 ')'",
+            "print f(,1);": "表达式",
+        }
+        for source, expected in cases.items():
+            with self.subTest(source=source):
+                with self.assertRaises(ParseError) as ctx:
+                    parse(source)
+                self.assertIn(expected, ctx.exception.message)
 
 
 class TestSemantics(unittest.TestCase):
@@ -286,6 +331,85 @@ class TestSemantics(unittest.TestCase):
         self.assertEqual(outer_block.stmts[1].stmts[0].slot, 2)    # 内层的 c
         self.assertEqual(program.locals_count, 3)
 
+    # ------------------------------------------------ 函数（B41 候选②）
+    def test_functions_pass_and_self_recursion_is_visible(self):
+        source = """fun fib(n : int) -> int {
+    if n < 2 then return n;
+    return fib(n - 1) + fib(n - 2);
+}
+print fib(10);
+"""
+        self.assertEqual(self.errors_of(source), [])
+
+    def test_undefined_function_gets_a_suggestion(self):
+        errors = self.errors_of("fun fib(n : int) -> int { return n; }\nprint fibb(1);")
+        self.assertEqual(len(errors), 1, [str(e) for e in errors])
+        self.assertIn("调用了未定义的函数 'fibb'", errors[0].message)
+        self.assertIn("是不是想写 'fib'", errors[0].hint)
+
+    def test_mutual_recursion_is_explicitly_not_supported(self):
+        # f2 在后定义：f1 的体里看不到它——先定义后使用，互递归需要前向声明（不做）
+        source = "fun f1(n : int) -> int { return f2(n); }\nfun f2(n : int) -> int { return f1(n); }"
+        errors = self.errors_of(source)
+        self.assertIn("调用了未定义的函数 'f2'", errors[0].message)
+        self.assertIn("先定义后使用", errors[0].hint)
+
+    def test_calling_a_variable_and_using_a_function_as_value(self):
+        self.assert_single("let x : int := 1;\nprint x(1);", "是变量，不是函数")
+        self.assert_single("fun f() -> int { return 1; }\nprint f;", "不能当值用")
+        self.assert_single("fun f() -> int { return 1; }\nlet x : int := f;", "不能当值用")
+        self.assert_single("fun f() -> int { return 1; }\nf := 2;", "不能作为变量赋值")
+
+    def test_function_and_variable_names_must_not_collide(self):
+        self.assert_single("fun f() -> int { return 1; }\nlet f : int := 1;",
+                           "和函数重名")
+        self.assert_single("let f : int := 1;\nfun f() -> int { return 1; }",
+                           "和已声明的变量重名")
+        self.assert_single("fun f() -> int { return 1; }\nfun f() -> int { return 2; }",
+                           "已经定义过")
+        self.assert_single("fun f() -> int { return 1; }\n"
+                           "fun g(f : int) -> int { return f; }", "和函数重名")
+
+    def test_call_arity_and_argument_types(self):
+        head = "fun add(a : int, b : int) -> int { return a + b; }\n"
+        self.assert_single(head + "print add(1);", "需要 2 个参数，收到 1 个")
+        self.assert_single(head + "print add(1, 2, 3);", "需要 2 个参数，收到 3 个")
+        self.assert_single("fun half(x : real) -> real { return x; }\nprint half(1.0, 2.0);",
+                           "需要 1 个参数")
+        self.assert_single("fun f(x : int) -> int { return x; }\nprint f(1.5);",
+                           "第 1 个参数要求 int")
+        self.assertEqual(self.errors_of(
+            "fun f(x : real) -> real { return x * 2.0; }\nprint f(3);"), [])   # int→real 加宽
+
+    def test_return_rules(self):
+        self.assert_single("return 1;", "return 只能出现在函数体内")
+        self.assert_single("fun f() -> int { return 1.5; }", "return 的值是 real")
+        self.assert_single("fun f() -> bool { return 1; }", "return 的值是 int")
+        # int → real 的加宽在 return 上也允许，和赋值同一套规则
+        self.assertEqual(self.errors_of("fun f() -> real { return 1; }"), [])
+
+    def test_function_body_cannot_see_globals(self):
+        errors = self.errors_of("let g : int := 1;\nfun f() -> int { return g; }")
+        self.assertEqual(len(errors), 1, [str(e) for e in errors])
+        self.assertIn("使用了未声明的变量 'g'", errors[0].message)
+        self.assertIn("没有全局变量", errors[0].hint)
+        errors = self.errors_of("let g : int := 1;\nfun f() -> int { g := 2; return g; }")
+        self.assertEqual(errors[0].span.line, 2)
+        self.assertIn("函数体只能看到形参与自身局部变量", errors[0].hint)
+
+    def test_function_slots_restart_from_zero(self):
+        program = parse("let a : int := 1;\n"
+                        "fun f(p : int) -> int { let q : int := p; return q; }\n"
+                        "let b : int := 2;")
+        self.assertEqual(analyze(program), [])
+        definition = program.stmts[1]
+        self.assertEqual(definition.locals_count, 2)       # 形参 p=0，局部 q=1
+        self.assertEqual(definition.func_index, 0)
+        self.assertEqual(program.locals_count, 2)          # 全局只有 a、b
+        self.assertEqual(definition.body.stmts[0].slot, 1)  # q 的槽位在整个帧里是 1
+        variable = definition.body.stmts[1].expr          # return q 里的 q
+        self.assertEqual(variable.slot, 1)
+
 
 class TestCodegen(unittest.TestCase):
     def ops(self, source: str):
@@ -363,6 +487,40 @@ class TestCodegen(unittest.TestCase):
         with self.assertRaises(Exception) as ctx:
             generate(program)
         self.assertIn("语义检查", str(ctx.exception))
+
+    # ------------------------------------------------ 函数（B41 候选②）
+    def test_functions_layout_call_ret_and_table(self):
+        code = compile_source("""fun add(a : int, b : int) -> int { return a + b; }
+print add(2, 3);
+""")
+        ops = [i.op for i in code.instrs]
+        self.assertIn(CALL, ops)
+        self.assertIn(RET, ops)
+        self.assertIn(NORET, ops)
+        # 主线以 HALT 结束，函数体全部排在它之后（由入口断言间接钉住）
+        self.assertEqual(len(code.functions), 1)
+        info = code.functions[0]
+        self.assertEqual((info.name, info.arity, info.return_type), ("add", 2, "INT"))
+        self.assertGreaterEqual(info.entry, 0)
+        self.assertLess(info.entry, len(code.instrs))
+        self.assertEqual(code.instrs[info.entry - 1].op, HALT)   # 函数体紧跟在主线之后
+        self.assertEqual(code.instrs[-1].op, NORET)              # 体尾的落点保护
+
+    def test_call_renders_with_function_name(self):
+        code = compile_source("fun twice(x : int) -> int { return x * 2; }\nprint twice(21);")
+        text = code.disassemble()
+        self.assertIn("CALL", text)
+        self.assertIn("; twice", text)
+        # CALL 的参数是函数表下标（0），不是地址——反汇编能看到名字
+        self.assertIn(f"CALL   0", text)
+
+    def test_argument_and_return_widening_emit_i2f(self):
+        code = compile_source("fun f(x : real) -> real { return x; }\nprint f(2);")
+        self.assertIn(I2F, [i.op for i in code.instrs])          # 实参 2 在调用点加宽
+        code = compile_source("fun g(x : int) -> int { return x; }\nprint g(2);")
+        self.assertNotIn(I2F, [i.op for i in code.instrs])       # int→int 不加宽
+        code = compile_source("fun h() -> real { return 1; }")   # 返回值层面加宽
+        self.assertIn(I2F, [i.op for i in code.instrs])
 
 
 class TestRuntime(unittest.TestCase):
@@ -456,6 +614,85 @@ class TestRuntime(unittest.TestCase):
         built = build("print y;")
         self.assertIsNone(built.code)
         self.assertFalse(built.ok)
+
+    # ------------------------------------------------ 调用帧（B41 候选②）
+    def test_recursion_computes_and_caller_frame_is_restored(self):
+        source = """fun fib(n : int) -> int {
+    if n < 2 then return n;
+    return fib(n - 1) + fib(n - 2);
+}
+let keep : int := 41;
+print fib(16);
+print keep;
+"""
+        result = run(source)
+        self.assertEqual(result.output, ["987", "41"])    # 调用不动调用者的帧
+        self.assertEqual(result.locals_view, [41])        # keep=41 还在；函数帧不污染全局帧
+
+    def test_missing_return_is_a_runtime_error_at_the_closing_brace(self):
+        source = "fun f(x : int) -> int {\n    let y : int := x + 1;\n}\nprint f(1);"
+        with self.assertRaises(RuntimeError_) as ctx:
+            run(source)
+        self.assertEqual(ctx.exception.message,
+                         "函数 'f' 执行到了函数体结尾也没有遇到 return（返回类型 int）")
+        self.assertEqual(ctx.exception.span.line, 3)
+
+    def test_depth_cap_boundary_is_exact(self):
+        program = ("fun down(n : int) -> int {\n"
+                   "    if n = 0 then return 0;\n"
+                   "    return down(n - 1);\n"
+                   "}\n")
+        # down(99) 恰好 100 层（顶层是第 0 层），通过；down(100) 需要第 101 层，被拒
+        result = run(program + "print down(99);")
+        self.assertEqual(result.output, ["0"])
+        with self.assertRaises(RuntimeError_) as ctx:
+            run(program + "print down(100);")
+        self.assertIn(f"调用深度超过上限 {DEFAULT_MAX_CALL_DEPTH}", ctx.exception.message)
+        self.assertIn("第 101 层调用被拒绝", ctx.exception.message)
+        self.assertEqual(ctx.exception.span.line, 3)
+
+    def test_handcrafted_bad_bytecode_call_defenses(self):
+        """防线测试：绕过前端构造非法调用相关指令，VM 必须报错而不是崩溃。"""
+        def run_instrs(instrs, constants=(), locals_count=1, functions=()):
+            code = Code(instrs=list(instrs), constants=list(constants),
+                        locals_count=locals_count, functions=list(functions))
+            return VM(code).run()
+
+        with self.assertRaises(RuntimeError_) as ctx:
+            run_instrs([Instr(RET, None, 1), Instr(HALT, None, 1)])
+        self.assertIn("RET 被执行时调用栈是空的", ctx.exception.message)
+
+        with self.assertRaises(RuntimeError_) as ctx:
+            run_instrs([Instr(NORET, None, 4), Instr(HALT, None, 1)])
+        self.assertIn("NORET 被执行时不在任何函数体内", ctx.exception.message)
+
+        with self.assertRaises(RuntimeError_) as ctx:
+            run_instrs([Instr(CALL, 7, 1), Instr(HALT, None, 1)])
+        self.assertIn("调用了不存在的函数编号 7", ctx.exception.message)
+
+        bad_entry = FunctionInfo(name="ghost", entry=999, locals_count=1, arity=0)
+        with self.assertRaises(RuntimeError_) as ctx:
+            run_instrs([Instr(PUSH, 0, 1), Instr(CALL, 0, 1), Instr(HALT, None, 1)],
+                       constants=[0], functions=[bad_entry])
+        self.assertIn("入口地址越界", ctx.exception.message)
+
+        with self.assertRaises(RuntimeError_) as ctx:      # 实参没压够就 CALL
+            ok = FunctionInfo(name="f", entry=2, locals_count=2, arity=2)
+            run_instrs([Instr(PUSH, 0, 1), Instr(CALL, 0, 1), Instr(RET, None, 2),
+                        Instr(HALT, None, 1)], constants=[5], functions=[ok])
+        self.assertIn("栈下溢", ctx.exception.message)
+
+    def test_trace_shows_call_depth(self):
+        source = "fun one(x : int) -> int { return x; }\nprint one(1);"
+        result = run(source, trace_limit=50)
+        text = "\n".join(step.render() for step in result.trace)
+        self.assertIn("深度=0", text)     # 主线指令
+        self.assertIn("深度=1", text)     # 函数体里的指令
+        self.assertIn("; one", text)     # CALL 的注释带函数名
+
+    def test_real_return_widening_in_output(self):
+        result = run("fun half(x : int) -> real { return x / 2; }\nprint half(5);")
+        self.assertEqual(result.output, ["2.0"])     # int 除法 floor 得 2，加宽成 real 的 2.0
 
 
 class TestValuesModule(unittest.TestCase):

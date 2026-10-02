@@ -1,0 +1,12 @@
+# 递归斐波那契：函数与调用帧的第一个样例（B41 候选②）
+# 与 B12 同族的递归算法互证：序列必须与迭代版逐项相等（tests/test_recursion.py）
+fun fib(n : int) -> int {
+    if n < 2 then return n;
+    return fib(n - 1) + fib(n - 2);
+}
+
+let i : int := 0;
+while i <= 15 do {
+    print fib(i);
+    i := i + 1;
+}

@@ -1,0 +1,10 @@
+# 汉诺塔：三次自身调用中两次是递归——调用帧最直接的演示
+# 移动次数必须是 2^n - 1（性质在测试里与 Python 参照互证）
+fun hanoi(n : int, a : string, b : string, c : string) -> int {
+    if n = 0 then return 0;
+    let moves : int := hanoi(n - 1, a, c, b);
+    print a + "->" + c;
+    return moves + 1 + hanoi(n - 1, b, a, c);
+}
+
+print hanoi(3, "A", "B", "C");

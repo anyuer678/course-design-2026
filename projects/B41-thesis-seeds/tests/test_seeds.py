@@ -108,14 +108,15 @@ class TestReport(unittest.TestCase):
 
     def test_report_lists_remaining_candidates_and_chosen(self):
         rendered = report_seeds.render_report(report_seeds._load())
-        for i in range(1, 4):
+        for i in range(1, 3):
             self.assertIn(f"| {i} |", rendered)
-        self.assertNotIn("| 4 |", rendered)
-        self.assertIn("B13 加函数调用帧", rendered)
+        self.assertNotIn("| 3 |", rendered)
+        self.assertIn("B13 加函数调用帧", rendered)        # 现在来自"已选定"段
         self.assertIn("B23 + NumPy", rendered)
-        self.assertIn("已选定并实施（2 个）", rendered)
+        self.assertIn("已选定并实施（3 个）", rendered)
         self.assertIn("B38 主从复制", rendered)
         self.assertIn("B10 加 fsync", rendered)
+        self.assertIn("B13 加函数调用帧", rendered)
 
     def test_report_footer_keeps_choice_with_user(self):
         text = report_seeds.render_report(report_seeds._load())
@@ -127,9 +128,9 @@ class TestDesignPins(unittest.TestCase):
     def test_seed_id_set_pinned(self):
         data = report_seeds._load()
         self.assertEqual({s["id"] for s in data["seeds"]},
-                         {"b13-call-frames", "b30-raft-snapshot", "b23-numpy-sklearn"})
+                         {"b30-raft-snapshot", "b23-numpy-sklearn"})
         self.assertEqual([c["id"] for c in data["chosen"]],
-                         ["b38-replication", "b10-fsync-pages"])
+                         ["b38-replication", "b10-fsync-pages", "b13-call-frames"])
 
     def test_chosen_records_pinned(self):
         data = report_seeds._load()

@@ -24,6 +24,10 @@ UN = "UN"                           # 参数：一元运算码下标
 JZ = "JZ"                           # 弹出栈顶：假(False)则跳
 JNZ = "JNZ"                         # 真则跳（and/or 短路用）
 JUMP = "JUMP"
+# 函数调用（B41 候选②：帧布局与调用约定见 docs/frames-spec.md）
+CALL = "CALL"                       # 参数：函数表下标（不是地址——entry 由函数表给出）
+RET = "RET"                         # 弹出返回值、恢复调用者帧与返回地址
+NORET = "NORET"                     # 执行到函数体结尾而没有 return：运行期错误
 # 其它
 PRINT = "PRINT"
 HALT = "HALT"
@@ -38,16 +42,29 @@ NAME_BY_INDEX = {index: name for name, index in OP_INDEX.items()}
 
 
 @dataclass(frozen=True)
+class FunctionInfo:
+    """函数表项：CALL 的参数是这个表的下标，entry 指向函数体第一条指令。"""
+    name: str
+    entry: int
+    locals_count: int               # 帧大小：形参占 0..arity-1，局部从 arity 起
+    arity: int
+    param_types: tuple = ()
+    return_type: str = "INT"
+
+
+@dataclass(frozen=True)
 class Instr:
     op: str
     arg: int | None = None
     line: int = 0
 
-    def render(self, constants=()) -> str:
+    def render(self, constants=(), functions=()) -> str:
         if self.op in ("BIN", "CMP", "UN"):
             return f"{self.op:<6} {NAME_BY_INDEX[self.arg]:<6}".rstrip()
         if self.op == PUSH:
             return f"{'PUSH':<6} {self.arg:<6} ; {constants[self.arg]!r}".rstrip()
+        if self.op == CALL and self.arg is not None and 0 <= self.arg < len(functions):
+            return f"{'CALL':<6} {self.arg:<6} ; {functions[self.arg].name}"
         if self.arg is None:
             return self.op
         return f"{self.op:<6} {self.arg}"
@@ -59,6 +76,7 @@ class Code:
     constants: list = field(default_factory=list)
     locals_count: int = 0
     source: str = ""
+    functions: list = field(default_factory=list)      # [FunctionInfo]，按定义顺序
 
     def add(self, op: str, arg: int | None = None, line: int = 0) -> int:
         self.instrs.append(Instr(op, arg, line))
@@ -87,5 +105,5 @@ class Code:
                 lines.append(f"  ;; 第 {instr.line} 行: {text.strip()}" if text
                              else f"  ;; 第 {instr.line} 行")
                 previous_line = instr.line
-            lines.append(f"{index:>5}  {instr.render(self.constants)}")
+            lines.append(f"{index:>5}  {instr.render(self.constants, self.functions)}")
         return "\n".join(lines)

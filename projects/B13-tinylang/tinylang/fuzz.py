@@ -10,6 +10,16 @@
 * 但保留"短路陷阱"：`(g != 0) and (10 / (g) > 0)`——哪一边把 and 当成两个操作数都要算，
   g 为 0 时就会当场除零，短路语义于是被随机语料反复检查。
 
+函数（B41 候选②的增量）：
+* 程序开头先生成 1–3 个函数：随机形参（0–2 个）、随机返回类型，体里只有
+  let/assign/print + 结尾必有的 return——**不生成循环**，终止性一眼可见；
+* **函数体只调用更早定义的函数**（登记在体生成之后），调用图无环 → 运行必终止、
+  深度自然有界；主程序里可以调用任何已定义函数；
+* 函数体里看不到全局变量（语言规则），生成器的可见名字也要跟着"换地板"，
+  否则会生成"给未声明变量赋值"的坏程序——对拍测试会当场红；
+* 调用作为表达式原子出现；**实参里不再套调用**（call_allowed=False）——
+  嵌套调用（f(g(x))）由手写语料与递归样例覆盖，生成器保持"一眼能读懂"。
+
 **重建说明（2026-10-02）**：本文件在一次误删事故里丢失，且没有任何存储留下逐字全文
 （它当时的生成方式见事故记录：从测试文件里切出类体再拼模块头，而那份测试文件已被同一次
 改动改写）。这里按上面的设计说明与 `tests/test_against_reference.py` 的调用面重建，
@@ -40,6 +50,10 @@ class ProgramGen:
         self.lines: list[str] = []
         self.seq = 0
         self.allow_short_circuit_trap = allow_short_circuit_trap
+        self.functions: dict[str, tuple[list[str], str]] = {}   # 名字 -> (形参类型, 返回类型)
+        self.func_seq = 0
+        self.call_allowed = True      # 实参生成期间临时关掉（不生成嵌套调用）
+        self.visible_floor = 0        # 函数体内只看本函数的作用域（看不到全局）
 
     # ---------------------------------------------------------------- 命名与作用域
     def fresh_name(self) -> str:
@@ -48,7 +62,7 @@ class ProgramGen:
 
     def visible(self, want: str | None = None) -> list[str]:
         names: list[str] = []
-        for scope in self.scopes:
+        for scope in self.scopes[self.visible_floor:]:
             for name, type_name in scope.items():
                 if want is None or type_name == want:
                     names.append(name)
@@ -84,6 +98,10 @@ class ProgramGen:
         return self.atom(want)
 
     def atom(self, want: str) -> tuple[str, str]:
+        if self.call_allowed and self.functions and self.rng.random() < 0.3:
+            call = self.call_atom(want)
+            if call is not None:
+                return call
         candidates = self.visible(want)
         if want == REALS:
             candidates = candidates + self.visible(INTS)      # 唯一允许的自动加宽
@@ -106,6 +124,59 @@ class ProgramGen:
             if name in scope:
                 return scope[name]
         raise KeyError(name)
+
+    # ---------------------------------------------------------------- 函数（B41 候选②）
+    def call_atom(self, want: str) -> tuple[str, str] | None:
+        """挑一个返回类型兼容的函数生成调用；实参里不再套调用（nesting 交给手写语料）。"""
+        candidates = [name for name, (_, return_type) in self.functions.items()
+                      if return_type == want
+                      or (return_type == INTS and want == REALS)]    # 唯一允许的加宽
+        if not candidates:
+            return None
+        name = self.rng.choice(candidates)
+        param_types, return_type = self.functions[name]
+        saved = self.call_allowed
+        self.call_allowed = False
+        try:
+            args = []
+            for type_name in param_types:
+                text, _ = self.expr(type_name, 2)     # 参数保持浅：深处只出原子
+                args.append(text)
+        finally:
+            self.call_allowed = saved
+        return f"{name}({', '.join(args)})", return_type
+
+    def declare_function(self) -> None:
+        self.func_seq += 1
+        name = f"f{self.func_seq}"
+        param_types = [self.rng.choice((INTS, INTS, REALS, BOOLS))
+                       for _ in range(self.rng.randint(0, 2))]
+        return_type = self.rng.choice((INTS, INTS, REALS, BOOLS))
+        params = ", ".join(f"p{index} : {LOWER[type_name]}"
+                           for index, type_name in enumerate(param_types, 1))
+        self._emit(0, f"fun {name}({params}) -> {LOWER[return_type]} {{")
+        self.scopes.append({f"p{index}": type_name
+                            for index, type_name in enumerate(param_types, 1)})
+        saved_floor = self.visible_floor
+        self.visible_floor = len(self.scopes) - 1      # 函数体看不到全局
+        try:
+            for _ in range(self.rng.randint(1, 3)):
+                roll = self.rng.random()
+                if roll < 0.4:
+                    self.declare()
+                elif roll < 0.8:
+                    self.assign()
+                else:
+                    self.print_stmt(0)
+            text, _ = self.expr(return_type, 0)
+            self._emit(0, f"return {text};")
+        finally:
+            self.visible_floor = saved_floor
+            self.scopes.pop()
+        self._emit(0, "}")
+        self._emit(0, "")
+        # 登记放在体生成之后：函数体只能调用更早定义的函数，调用图无环 → 运行必终止
+        self.functions[name] = (param_types, return_type)
 
     def arith(self, want: str, depth: int) -> tuple[str, str]:
         op = self.rng.choice(("+", "-", "*", "/", "%")) if want == INTS else \
@@ -239,6 +310,8 @@ class ProgramGen:
     # ---------------------------------------------------------------- 入口
     def program(self, n_statements: int) -> str:
         self.lines = []
+        for _ in range(self.rng.randint(1, 3)):
+            self.declare_function()
         for _ in range(max(1, n_statements)):
             self.stmt(0)
             self._emit(0, "")

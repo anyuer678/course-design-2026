@@ -18,14 +18,22 @@
 作用域：块 `{ … }` 新开一层，允许遮蔽外层同名变量（遮蔽时分配新槽位）；
 同一层重复 `let` 是错误。初始化表达式在**外层**作用域求值，
 所以块里的 `let x : int := x;` 用的是外面那个 x——这条也写了测试。
+
+函数（B41 候选②，完整规则见 docs/frames-spec.md）：
+* 单遍检查、**先定义后使用**；函数体检查时自身已登记，所以自递归可用，互递归不支持。
+* 函数名与变量名禁止重名（两个命名空间，但撞名一律报错——规则简单好解释）。
+* **函数体看不到全局变量**：形参 + 自身局部就是全部（没有闭包、没有全局）。
+  每个函数的槽位从 0 独立分配：形参占 0..arity-1，局部从 arity 起。
+* `return` 只能在函数体内；缺 return 不做静态流分析，交给运行期报（两个后端同一句话）。
 """
 from __future__ import annotations
 
 import difflib
 from dataclasses import dataclass
 
-from .nodes import (Assign, Binary, Block, BoolLit, Ident, If, IntLit, Node, Print,
-                    Program, RealLit, StrLit, Unary, VarDecl, While)
+from .nodes import (Assign, Binary, Block, BoolLit, Call, FunDef, Ident, If, IntLit,
+                    Node, Param, Print, Program, RealLit, Return, StrLit, Unary,
+                    VarDecl, While)
 from .spans import NO_SPAN, SemanticError, Span
 
 ARITHMETIC = ("+", "-", "*", "/", "%")
@@ -49,6 +57,11 @@ class Checker:
         self.errors: list = []
         self.truncated = False
         self.next_slot = 0
+        self.functions: dict = {}               # 函数名 → {index, param_types, return_type}
+        self.next_func = 0
+        self.function_depth = 0                 # >0 表示正在检查函数体（return 合法性）
+        self.current_return_type: str | None = None
+        self.visible_floor = 0                  # 函数体内把全局作用域遮住（没有全局变量）
 
     # ---------------------------------------------------- 入口
     def run(self) -> list:
@@ -69,13 +82,14 @@ class Checker:
 
     # ---------------------------------------------------- 作用域
     def lookup(self, name: str):
-        for scope in reversed(self.scopes):
+        for scope in reversed(self.scopes[self.visible_floor:]):
             if name in scope:
                 return scope[name]
         return None
 
     def _suggest(self, name: str) -> str:
-        known = [symbol.name for scope in self.scopes for symbol in scope.values()]
+        known = [symbol.name for scope in self.scopes[self.visible_floor:]
+                 for symbol in scope.values()]
         close = difflib.get_close_matches(name, known, n=1, cutoff=0.6)
         return f"是不是想写 {close[0]!r}？" if close else f"当前可见的变量：{known or '（无）'}"
 
@@ -108,8 +122,79 @@ class Checker:
                     self.visit_statement(statement)
             finally:
                 self.scopes.pop()
+        elif isinstance(node, Return):
+            self.visit_return(node)
+        elif isinstance(node, FunDef):
+            self.visit_fundef(node)
         else:
             self._error(f"不支持的语句节点 {type(node).__name__}", node.span)
+
+    # ---------------------------------------------------- 函数
+    def visit_fundef(self, node: FunDef) -> None:
+        if len(self.scopes) != 1:
+            self._error("函数只能在顶层定义", node.span, "嵌套函数不在本语言范围内")
+            return
+        if node.name in self.functions:
+            self._error(f"函数 {node.name!r} 已经定义过", node.name_span)
+        if node.name in self.scopes[0]:
+            self._error(f"函数名 {node.name!r} 和已声明的变量重名", node.name_span,
+                        "函数名与变量名是两个命名空间，但本语言禁止重名")
+        # 先登记再检查函数体：自递归因此天然可用；元组顺序保证互递归不可用（后定义不可见）
+        node.func_index = self.next_func
+        self.next_func += 1
+        self.functions[node.name] = {"index": node.func_index,
+                                     "param_types": [p.declared_type.upper() for p in node.params],
+                                     "return_type": node.return_type.upper()}
+        # 形参与函数体在**独立的槽位空间**里检查：帧从 0 开始，装得下函数能看到的一切；
+        # visible_floor 同时把全局作用域遮住（函数体看不到全局变量）
+        self.scopes.append({})
+        saved_next_slot = self.next_slot
+        saved_return_type = self.current_return_type
+        saved_floor = self.visible_floor
+        self.next_slot = 0
+        self.current_return_type = node.return_type.upper()
+        self.visible_floor = len(self.scopes) - 1
+        self.function_depth += 1
+        try:
+            for param in node.params:
+                self.visit_param(param)
+            self.visit_statement(node.body)
+            node.locals_count = self.next_slot
+        finally:
+            self.function_depth -= 1
+            self.current_return_type = saved_return_type
+            self.next_slot = saved_next_slot
+            self.visible_floor = saved_floor
+            self.scopes.pop()
+
+    def visit_param(self, param: Param) -> None:
+        current = self.scopes[-1]
+        if param.name in current:
+            self._error(f"参数 {param.name!r} 重复", param.name_span)
+            return
+        if param.name in self.functions:
+            self._error(f"参数 {param.name!r} 和函数重名", param.name_span,
+                        "函数名与变量名不能重名")
+            # 仍然照常登记：函数体里引用它按参数理解，不再级联报一条"函数名当值用"
+        current[param.name] = Symbol(param.name, param.declared_type.upper(),
+                                     self.next_slot, param.name_span)
+        self.next_slot += 1
+
+    def visit_return(self, node: Return) -> None:
+        if self.function_depth == 0:
+            self._error("return 只能出现在函数体内", node.span,
+                        "顶层语句写到结尾自然结束，没有可返回的值")
+            self.type_of(node.expr)              # 表达式仍然检查，错误不互相掩盖
+            return
+        found = self.type_of(node.expr)
+        if found is not None and not self.assignable(found, self.current_return_type):
+            self._error(f"return 的值是 {found.lower()}，函数声明的返回类型是 "
+                        f"{self.current_return_type.lower()}", node.span,
+                        self.widening_hint(found, self.current_return_type))
+
+    def _suggest_function(self, name: str) -> str:
+        close = difflib.get_close_matches(name, list(self.functions), n=1, cutoff=0.6)
+        return f"是不是想写 {close[0]!r}？" if close else f"已定义的函数：{list(self.functions) or '（无）'}"
 
     def visit_let(self, node: VarDecl) -> None:
         # 语法里的类型名是小写（int），表达式类型内部用大写（INT）。
@@ -125,6 +210,10 @@ class Checker:
             self._error(f"变量 {node.name!r} 在本作用域已经声明过", node.name_span,
                         "换个名字，或者把它放进 { } 块里遮蔽外层变量")
             return
+        if node.name in self.functions:
+            self._error(f"变量名 {node.name!r} 和函数重名", node.name_span,
+                        "函数名与变量名不能重名：换一个变量名")
+            return
         node.slot = self.next_slot
         self.next_slot += 1
         current[node.name] = Symbol(node.name, declared, node.slot, node.name_span)
@@ -132,8 +221,15 @@ class Checker:
     def visit_assign(self, node: Assign) -> None:
         symbol = self.lookup(node.name)
         if symbol is None:
-            self._error(f"给未声明的变量 {node.name!r} 赋值", node.name_span,
-                        "先用 let 声明；本语言不允许隐式创建全局变量。" + self._suggest(node.name))
+            if node.name in self.functions:
+                self._error(f"函数名 {node.name!r} 不能作为变量赋值", node.name_span,
+                            f"函数不是一等值；要调用请写 {node.name}(…)")
+            else:
+                hint = "先用 let 声明；本语言不允许隐式创建变量。"
+                if self.function_depth > 0:
+                    hint += "函数体只能看到形参与自身局部变量（没有全局变量）。"
+                self._error(f"给未声明的变量 {node.name!r} 赋值", node.name_span,
+                            hint + self._suggest(node.name))
             self.type_of(node.expr)              # 仍然检查右端，错误不互相掩盖
             return
         value_type = self.type_of(node.expr)
@@ -151,12 +247,20 @@ class Checker:
         if isinstance(node, Ident):
             symbol = self.lookup(node.name)
             if symbol is None:
-                self._error(f"使用了未声明的变量 {node.name!r}", node.span,
-                            self._suggest(node.name))
+                if node.name in self.functions:
+                    self._error(f"函数名 {node.name!r} 不能当值用", node.span,
+                                f"要调用请写 {node.name}(…)；函数不是一等值（见 docs/frames-spec.md）")
+                    return None
+                hint = self._suggest(node.name)
+                if self.function_depth > 0:
+                    hint += "。函数体只能看到形参与自身局部变量——本语言没有全局变量"
+                self._error(f"使用了未声明的变量 {node.name!r}", node.span, hint)
                 return None
             node.type = symbol.type
             node.slot = symbol.slot
             return symbol.type
+        if isinstance(node, Call):
+            return self.type_of_call(node)
         if isinstance(node, Unary):
             operand = self.type_of(node.operand)
             if node.op == "not":
@@ -174,6 +278,37 @@ class Checker:
             return self.type_of_binary(node)
         self._error(f"不支持的表达式节点 {type(node).__name__}", node.span)
         return None
+
+    def type_of_call(self, node: Call) -> str | None:
+        info = self.functions.get(node.name)
+        if info is None:
+            if self.lookup(node.name) is not None:
+                self._error(f"{node.name!r} 是变量，不是函数，不能调用", node.name_span,
+                            "只有 fun 定义的名字可以调用")
+            else:
+                self._error(f"调用了未定义的函数 {node.name!r}", node.name_span,
+                            "本语言要求函数先定义后使用（互递归不支持）。"
+                            + self._suggest_function(node.name))
+            for arg in node.args:
+                self.type_of(arg)                # 实参里的错误也要报出来
+            return None
+        param_types = info["param_types"]
+        node.func_index = info["index"]
+        node.type = info["return_type"]
+        node.param_types = tuple(param_types)
+        if len(node.args) != len(param_types):
+            self._error(f"函数 {node.name!r} 需要 {len(param_types)} 个参数，"
+                        f"收到 {len(node.args)} 个", node.span,
+                        "个数要对上；本语言没有默认参数与可变参数")
+            for arg in node.args:
+                self.type_of(arg)
+            return node.type
+        for index, (arg, want) in enumerate(zip(node.args, param_types), 1):
+            found = self.type_of(arg)
+            if found is not None and not self.assignable(found, want):
+                self._error(f"函数 {node.name!r} 的第 {index} 个参数要求 {want.lower()}，"
+                            f"收到 {found.lower()}", arg.span, self.widening_hint(found, want))
+        return node.type
 
     def type_of_binary(self, node: Binary) -> str | None:
         left = self.type_of(node.left)

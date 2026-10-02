@@ -93,6 +93,17 @@ class Binary(Node):
     operand_type: str | None = None  # 算术/比较的操作数类型（BOOL 结果时才有意义）
 
 
+@dataclass
+class Call(Node):
+    """函数调用是表达式：返回值走操作数栈（VM）/ 直接返回（树遍历）。"""
+    name: str = ""
+    args: list = None
+    name_span: Span = NO_SPAN
+    type: str | None = None        # 声明的返回类型（检查器标注）
+    func_index: int | None = None  # 函数表下标（检查器标注）
+    param_types: tuple | None = None  # 形参类型（检查器标注，代码生成据此加宽实参）
+
+
 # ---------------------------------------------------------------- 语句
 
 
@@ -135,6 +146,30 @@ class While(Node):
 @dataclass
 class Block(Node):
     stmts: list = None
+
+
+@dataclass
+class Return(Node):
+    expr: Node = None
+
+
+@dataclass
+class Param(Node):
+    name: str = ""
+    declared_type: str = ""
+    name_span: Span = NO_SPAN
+
+
+@dataclass
+class FunDef(Node):
+    """函数定义（只能出现在顶层）。locals_count 与 func_index 由检查器分配。"""
+    name: str = ""
+    params: list = None            # [Param]
+    return_type: str = ""
+    body: Block = None
+    name_span: Span = NO_SPAN
+    func_index: int | None = None
+    locals_count: int = 0
 
 
 @dataclass

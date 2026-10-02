@@ -15,10 +15,10 @@
 """
 from __future__ import annotations
 
-from .bytecode import (BIN, CMP, HALT, I2F, JNZ, JUMP, JZ, OP_INDEX, PRINT, PUSH,
-                       LOAD, STORE, UN, Code)
-from .nodes import (Assign, Binary, Block, BoolLit, Ident, If, IntLit, Node, Print,
-                    Program, RealLit, StrLit, Unary, VarDecl, While)
+from .bytecode import (BIN, CALL, CMP, HALT, I2F, JNZ, JUMP, JZ, NORET, OP_INDEX,
+                       PRINT, PUSH, RET, LOAD, STORE, UN, Code, FunctionInfo)
+from .nodes import (Assign, Binary, Block, BoolLit, Call, FunDef, Ident, If, IntLit,
+                    Node, Print, Program, RealLit, Return, StrLit, Unary, VarDecl, While)
 from .spans import CodegenError
 
 
@@ -27,13 +27,43 @@ class Compiler:
         self.program = program
         self.code = Code(locals_count=program.locals_count, source=source)
         self.line = 0
+        self.current_return_type: str | None = None
 
     # ---------------------------------------------------- 入口
     def compile(self) -> Code:
+        """布局：主线在前（含全局槽位），函数体按定义顺序排在主线 HALT 之后。
+        CALL 的参数是函数表下标而不是地址，所以主线里发出的 CALL 不需要回填——
+        entry 是函数表项在函数体生成完时填的。"""
         for statement in self.program.stmts:
+            if isinstance(statement, FunDef):
+                continue
             self.statement(statement)
         self.emit(HALT)
+        for statement in self.program.stmts:
+            if isinstance(statement, FunDef):
+                self.function(statement)
         return self.code
+
+    def function(self, node: FunDef) -> None:
+        if node.func_index is None:
+            raise CodegenError(f"函数 {node.name!r} 没有编号（语义检查没跑过？）", node.span)
+        if node.func_index != len(self.code.functions):
+            raise CodegenError(f"函数编号 {node.func_index} 与定义顺序不一致"
+                               f"（表里已有 {len(self.code.functions)} 个）", node.span)
+        self.code.functions.append(FunctionInfo(
+            name=node.name, entry=len(self.code.instrs), locals_count=node.locals_count,
+            arity=len(node.params),
+            param_types=tuple(p.declared_type.upper() for p in node.params),
+            return_type=node.return_type.upper()))
+        saved_return_type = self.current_return_type
+        self.current_return_type = node.return_type.upper()
+        try:
+            self._at(node)
+            self.statement(node.body)
+            end_line = node.body.span.end_line or self.line
+            self.code.add(NORET, None, end_line)     # 走到这里 = 缺 return，运行期报
+        finally:
+            self.current_return_type = saved_return_type
 
     def emit(self, op: str, arg=None) -> int:
         return self.code.add(op, arg, self.line)
@@ -60,6 +90,11 @@ class Compiler:
         elif isinstance(node, Block):
             for statement in node.stmts:
                 self.statement(statement)
+        elif isinstance(node, Return):
+            if self.current_return_type is None:
+                raise CodegenError("return 出现在函数体之外（语义检查没跑过？）", node.span)
+            self.expr(node.expr, want=self.current_return_type)
+            self.emit(RET)
         else:
             raise CodegenError(f"不支持的语句节点 {type(node).__name__}", node.span)
 
@@ -123,6 +158,14 @@ class Compiler:
             return node.type
         if isinstance(node, Binary):
             return self.binary(node)
+        if isinstance(node, Call):
+            if node.func_index is None or node.type is None or node.param_types is None:
+                raise CodegenError(f"调用 {node.name!r} 缺少函数编号或类型标注"
+                                   "（语义检查没跑过？）", node.span)
+            for arg, want in zip(node.args, node.param_types):
+                self.expr(arg, want=want)        # 实参加宽在调用点显式发生
+            self.emit(CALL, node.func_index)
+            return node.type
         raise CodegenError(f"不支持的表达式节点 {type(node).__name__}", node.span)
 
     def binary(self, node: Binary) -> str:

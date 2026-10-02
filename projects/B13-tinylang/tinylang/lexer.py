@@ -7,7 +7,8 @@
 语言定义（本阶段只看形状，不看意义）：
     关键字（全小写、区分大小写）：let int real bool string print if then else
                                   while do true false and or not
-    运算符：:= = != < <= > >= + - * / % ( ) { } : ;
+                                  fun return
+    运算符：:= = != < <= > >= -> + - * / % ( ) { } : ; ,
     数字：  123        整数
             1.5        实数（小数点后必须有数字；不支持 1e5、.5、1.）
     字符串："双引号"，转义 \\ \" \n \t \0；不允许裸换行
@@ -20,10 +21,10 @@ from dataclasses import dataclass
 from .spans import LexError, Span
 
 KEYWORDS = {"let", "int", "real", "bool", "string", "print", "if", "then", "else",
-            "while", "do", "true", "false", "and", "or", "not"}
+            "while", "do", "true", "false", "and", "or", "not", "fun", "return"}
 
-OPERATORS = [":=", "!=", "<=", ">=", "=", "<", ">", "+", "-", "*", "/", "%",
-             "(", ")", "{", "}", ":", ";"]
+OPERATORS = [":=", "!=", "<=", ">=", "->", "=", "<", ">", "+", "-", "*", "/", "%",
+             "(", ")", "{", "}", ":", ";", ","]
 
 ESCAPES = {"\\": "\\", '"': '"', "n": "\n", "t": "\t", "0": "\0", "r": "\r"}
 

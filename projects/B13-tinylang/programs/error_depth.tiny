@@ -1,0 +1,6 @@
+# 无限递归：故意写错的样例——两条后端都必须在第 100 层停住（运行期错误，退出码 1）
+fun dive(n : int) -> int {
+    return dive(n + 1);
+}
+
+print dive(0);
