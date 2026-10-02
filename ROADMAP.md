@@ -19,7 +19,8 @@
 | 6 | **B23** | G1 完成（2026-10-02 复核实测） | run.bat 退出码 0、`not recognized` 0；**33 tests 全过**（含梯度检查）；README/docs/data/ml/tests 齐备 |
 | 6 | B25-nlp-lab / B26-datamining / B27-course-kg | 见下方 §2.0b 对账结论 | B25 16 tests、B26 19 tests、B27 14 tests；三者 run.bat 均退出码 0。**B27 交付自包含 HTML 交互图，浏览器表现待用户实跑**（同 B14/B31 的处置） |
 | 6/7 | **B30-mini-raft** | G1 完成（2026-10-02 补交付） | 15 tests 双入口、六段 demo 跑两遍逐字一致、run.bat 连跑两次退出码 0；真修复=写强的 `check_log_matching`。**不是完整 Raft**（无快照/成员变更/压缩/多进程） |
-| 6/7/8 | 其余 18 项 | 待开始 | 本文件 §3 逐项设计 |
+| 7 | **B32-sec-lab** | G1 完成（2026-10-02） | 四组 vuln/fixed + 静态扫描器；50 tests 双入口（pytest 50 + 41 subTest）、run.bat 连跑两次退出码 0；事故源头与沙箱守卫见 README 与 ACCIDENT 文档 |
+| 6/7/8 | 其余 17 项 | 待开始 | 本文件 §3 逐项设计 |
 
 扫描方法论与教训：本轮先用 mtime 全量扫描、再读 PLAN/README 全文、再实跑抽查
 （B9 183✔、B10 run.bat 退出码 0✔、B11 91✔、B12 57✔、B13 55✔、B31 73✔、dorm-repair 198✔，
