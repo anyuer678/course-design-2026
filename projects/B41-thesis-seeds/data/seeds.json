@@ -2,53 +2,6 @@
   "note": "B41 毕设种子：5 个候选的三维可行性（数据/资源/评价）。facts 段里的每个数字都由 tools/check_seeds.py 现算复核（行数逐字比对、缺口关键词按'计数=0'断言、import 探针实跑）——数字过期就红，防止'可行性分析'变成文艺创作。选定由用户：本文件只做比较，不替你开题。",
   "seeds": [
     {
-      "id": "b30-raft-snapshot",
-      "title": "B30 Raft 完整化（快照 + 成员变更）",
-      "question": "给事件驱动的 Raft 模拟补上日志压缩（快照）与成员变更，§5.4.2 系列不变式还能逐事件成立吗？",
-      "evidence": {
-        "path": "projects/B30-mini-raft/README.md",
-        "anchor": "双入口同数：15 项"
-      },
-      "files": [
-        {
-          "path": "projects/B30-mini-raft/raft30/sim.py",
-          "lines": 409
-        },
-        {
-          "path": "projects/B30-mini-raft/raft30/rpc.py",
-          "lines": 118
-        },
-        {
-          "path": "projects/B30-mini-raft/raft30/hashing.py",
-          "lines": 76
-        },
-        {
-          "path": "projects/B30-mini-raft/tests/test_b30.py",
-          "lines": 304
-        }
-      ],
-      "probes": [
-        {
-          "name": "没有快照（snapshot 计数 0）",
-          "kind": "code-count",
-          "glob": "projects/B30-mini-raft/raft30/*.py",
-          "pattern": "snapshot",
-          "expected": 0
-        },
-        {
-          "name": "没有成员变更（membership/add_server/remove_server 计数 0）",
-          "kind": "code-count",
-          "glob": "projects/B30-mini-raft/raft30/*.py",
-          "pattern": "membership|add_server|remove_server",
-          "expected": 0
-        }
-      ],
-      "data": "现有 10 seed × 60 步事件流的「每事件查不变式」骨架直接扩展到快照点与成员变更场景；无需新数据。",
-      "resources": "论文级工作量的两个子问题（InstallSnapshot RPC 与单步成员变更），sim.py（409 行）要扩三到四成；测试从 15 项起增 10–15 项（快照后日志截断、新节点追赶、变更中双多数派安全）；零依赖。时间盒 2–3 会话——候选里最重的。",
-      "evaluation": "①快照后重启：状态机与快照+日志重放逐条一致；②成员变更期间选举/复制不变式每事件 0 失败；③「快照边界上的 §5.4.2」用构造场景证明仍不被违反。",
-      "risks": "完整 Raft 的范围没有尽头（本候选刻意止步于快照+成员变更，不做流水线/分批复制）；测试量会逼近现有全套的两倍，时间盒要守死。"
-    },
-    {
       "id": "b23-numpy-sklearn",
       "title": "B23 + NumPy/scikit-learn 对拍扩展到更大网络",
       "question": "手写 ML 与成熟库在同一批数据/同一套指标下对拍，差距究竟在数值、在工程还是在数据规模？",
@@ -131,6 +84,16 @@
       "evidence": {
         "path": "projects/B13-tinylang/README.md",
         "anchor": "自测（85 项 + 417 subTest）"
+      }
+    },
+    {
+      "id": "b30-raft-snapshot",
+      "title": "B30 Raft 完整化（快照 + 成员变更）",
+      "date": "2026-10-02",
+      "note": "用户选定并实施（候选表上最重的一个）：见 projects/B30-mini-raft/——口径先写纸上（docs/snapshot-membership-spec.md：快照记录与索引抽象/安装语义与陈旧守卫/配置进日志与一次一个/发送集并集与偏差登记），实现只做翻译；快照**只压缩已提交**（阈值触发、日志有界）、InstallSnapshot（进度只许前进 + 被压缩节点追赶）、单步成员变更（提交后生效、一次一个、新节点不自荐、被移除者学会后安静）、哈希链诊断账本替代压缩后不可见的已应用前缀；原缺口探针「snapshot 计数 0」「membership 计数 0」已填平（现 83 处与 3 处）。28 项测试双入口（15 原有 + 13 新增）、run.bat 两次退出码 0、规范化日志逐字相同（各 197 行）；逐事件不变式含配置交叠检查（600 事件 × 4 条 = 2400 次 0 失败）。实施中把两个真缺陷当场抓出（follower 日志更长时回执越界、第二次过强断言被 churn 证伪）——详见 B30 README 坑 6-8。",
+      "evidence": {
+        "path": "projects/B30-mini-raft/README.md",
+        "anchor": "双入口同数：28 项"
       }
     }
   ]

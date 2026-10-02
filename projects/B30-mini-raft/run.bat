@@ -23,7 +23,7 @@ python tests\test_b30.py
 if errorlevel 1 exit /b 1
 
 echo.
-echo [3/3] Six-part demo (all numbers computed at runtime)...
+echo [3/3] Eight-part demo (all numbers computed at runtime)...
 python demo.py
 if errorlevel 1 exit /b 1
 

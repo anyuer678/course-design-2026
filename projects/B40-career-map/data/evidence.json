@@ -192,11 +192,11 @@
     },
     {
       "id": "b30-raft",
-      "claim": "事件驱动 Raft（逐事件不变式检查）+ 真套接字 mini-RPC：双入口同数：15 项",
+      "claim": "事件驱动 Raft（逐事件不变式检查）+ 快照/InstallSnapshot + 单步成员变更（B41 候选③）+ 真套接字 mini-RPC：双入口同数 28 项",
       "pointers": [
         "projects/B30-mini-raft/README.md"
       ],
-      "anchor": "双入口同数：15 项",
+      "anchor": "双入口同数：28 项",
       "commit": "e94f56b"
     },
     {

@@ -52,12 +52,23 @@ class TestSeedsChecker(unittest.TestCase):
         self.assertTrue(any("行数对不上" in p for p in problems), problems)
 
     def test_probe_expected_mismatch_turns_red(self):
-        problems = self.problems(lambda s: s[0]["probes"][0].__setitem__("expected", 1))
+        """代码计数探针的"计数不符"规则：候选表里已没有现役 code-count 探针，
+        现场注入一条指向真文件的探针来钉规则（glob 能匹配、计数故意写错）。"""
+        def mutate(seeds):
+            seeds[0]["probes"].append({
+                "name": "注入的计数探针", "kind": "code-count",
+                "glob": "projects/B23-ml-from-scratch/ml/*.py",
+                "pattern": "def ", "expected": 0})
+        problems = self.problems(mutate)
         self.assertTrue(any("计数不符" in p for p in problems), problems)
 
     def test_glob_without_match_turns_red(self):
-        problems = self.problems(lambda s: s[0]["probes"][0].__setitem__(
-            "glob", "projects/B10-minidb/nope/*.py"))
+        def mutate(seeds):
+            seeds[0]["probes"].append({
+                "name": "注入的假 glob 探针", "kind": "code-count",
+                "glob": "projects/B10-minidb/nope/*.py",
+                "pattern": "def ", "expected": 0})
+        problems = self.problems(mutate)
         self.assertTrue(any("没匹配到任何文件" in p for p in problems), problems)
 
     def test_missing_anchor_turns_red(self):
@@ -74,7 +85,9 @@ class TestSeedsChecker(unittest.TestCase):
         self.assertTrue(any("probes 为空" in p for p in problems), problems)
 
     def test_duplicate_id_turns_red(self):
-        problems = self.problems(lambda s: s[1].__setitem__("id", s[0]["id"]))
+        def mutate(seeds):
+            seeds.append(json.loads(json.dumps(seeds[0])))   # 复制一条 → id 重复
+        problems = self.problems(mutate)
         self.assertTrue(any("id 重复" in p for p in problems), problems)
 
     def test_chosen_bad_anchor_turns_red(self):
@@ -108,15 +121,14 @@ class TestReport(unittest.TestCase):
 
     def test_report_lists_remaining_candidates_and_chosen(self):
         rendered = report_seeds.render_report(report_seeds._load())
-        for i in range(1, 3):
-            self.assertIn(f"| {i} |", rendered)
-        self.assertNotIn("| 3 |", rendered)
-        self.assertIn("B13 加函数调用帧", rendered)        # 现在来自"已选定"段
+        self.assertIn("| 1 |", rendered)
+        self.assertNotIn("| 2 |", rendered)
+        self.assertIn("B13 加函数调用帧", rendered)        # 来自"已选定"段
         self.assertIn("B23 + NumPy", rendered)
-        self.assertIn("已选定并实施（3 个）", rendered)
+        self.assertIn("已选定并实施（4 个）", rendered)
         self.assertIn("B38 主从复制", rendered)
         self.assertIn("B10 加 fsync", rendered)
-        self.assertIn("B13 加函数调用帧", rendered)
+        self.assertIn("B30 Raft 完整化", rendered)
 
     def test_report_footer_keeps_choice_with_user(self):
         text = report_seeds.render_report(report_seeds._load())
@@ -127,10 +139,10 @@ class TestReport(unittest.TestCase):
 class TestDesignPins(unittest.TestCase):
     def test_seed_id_set_pinned(self):
         data = report_seeds._load()
-        self.assertEqual({s["id"] for s in data["seeds"]},
-                         {"b30-raft-snapshot", "b23-numpy-sklearn"})
+        self.assertEqual({s["id"] for s in data["seeds"]}, {"b23-numpy-sklearn"})
         self.assertEqual([c["id"] for c in data["chosen"]],
-                         ["b38-replication", "b10-fsync-pages", "b13-call-frames"])
+                         ["b38-replication", "b10-fsync-pages", "b13-call-frames",
+                          "b30-raft-snapshot"])
 
     def test_chosen_records_pinned(self):
         data = report_seeds._load()
