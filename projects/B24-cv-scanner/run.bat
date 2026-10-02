@@ -1,0 +1,30 @@
+@echo off
+rem B24-cv-scanner one-click entry. Body is pure ASCII on purpose (PLAN section 6):
+rem cmd re-reads this file by byte offset, so multi-byte text here can make it
+rem resume in the middle of a line. Chinese output comes from the Python files.
+rem Null device is >nul - the bash-style >/dev/null would create C:\dev\null here.
+chcp 65001 >nul
+setlocal
+cd /d %~dp0
+set PYTHONUTF8=1
+
+python -c "import shutil,sys; sys.exit(0 if shutil.which('python') else 1)"
+if errorlevel 1 echo [!] python not found in PATH. Install Python 3.10+ first.
+if errorlevel 1 exit /b 1
+
+python -c "import cv2, numpy; print('[env] opencv', cv2.__version__, '/ numpy', numpy.__version__)"
+if errorlevel 1 exit /b 1
+
+echo [1/2] unit tests (14: synth truth / detection / rectify / binarize / failure paths)
+python -m unittest discover -s tests
+if errorlevel 1 exit /b 1
+
+echo.
+echo [2/2] demo (six sections, numbers computed live; writes PNGs into build\)
+python demo.py
+if errorlevel 1 exit /b 1
+
+echo.
+echo Done. Open build\demo_rectified.png and build\demo_binary.png to eyeball the result.
+endlocal
+exit /b 0
