@@ -65,7 +65,7 @@ def standardize(train: list[list[float]],
 
 
 def one_hot(labels: list[str], classes: list[str]) -> list[list[int]]:
-    # 陌生标签 ⇒ 全 0 行（保持原行为；改成 idx[lab] 会在未知标签上抛 KeyError，那是行为变更）
+    # 陌生标签 -> 全 0 行（保持原行为；改成 idx[lab] 会在未知标签上抛 KeyError，那是行为变更）
     return [[1 if c == lab else 0 for c in classes] for lab in labels]
 
 

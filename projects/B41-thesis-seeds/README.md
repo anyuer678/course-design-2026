@@ -8,24 +8,26 @@
 `tools/check_seeds.py` 每次运行都**重算复核**——谁动了候选对应的代码，这里立刻红。
 **选定哪一个是用户的决定，本工具只负责让比较有据可依。**
 
-**当前状态**：**④、①、②、③ 四个候选均已由用户选定并于 2026-10-02 实施完成**——
+**当前状态（2026-10-02 收官）**：**5 个候选全部由用户选定并实施完成，候选表已清零**——
 ④ B38 主从复制（`projects/B38-mini-redis/`：复制语义表、49 项测试双入口）、
 ① B10 fsync + 页式存储（`projects/B10-minidb/`：提交即 fsync、双头页式快照、
 真子进程崩溃对账、53 项测试双入口）、② B13 调用帧（`projects/B13-tinylang/`：
 调用约定先写纸上、深度上限 100、双后端对拍含函数、85 项测试双入口）、
 ③ B30 Raft 完整化（`projects/B30-mini-raft/`：快照只压已提交、InstallSnapshot、
-单步成员变更一次一个、28 项测试双入口）；
+单步成员变更一次一个、28 项测试双入口）、⑤ B23 + sklearn 对拍（`projects/B23-ml-from-scratch/`：
+口径先写纸上、四组模型同参对照 + 四条负面对照、45 项测试双入口，安装双口径 8.7MB/47.0MB）；
 `chosen` 里各挂**机验锚点**，同样受现算复核。
-其余 1 个候选仍在桌上：
-
-5. **B23 + NumPy/scikit-learn 对拍扩展到更大网络**（sklearn 属安装决策点，未批不装）
+**候选清零是收官状态而不是"没有数据"**：核验器允许"候选空 + chosen 非空"（双空才红），
+负面对照改用**注入式夹具**（`tools/check_seeds.py::synthetic_seed`）继续钉住全部规则；
+缺口探针没剩下一条——B10-fsync、B13-CALL、B30-snapshot/membership、B38-replica、B23-sklearn
+全部随选定轮次填平。如要加新候选，把方向告诉助手。
 
 ## 运行
 
 ```
-run.bat                                   # 两步：18 项测试 → demo（四段；唯一实测=fsync 基准两行）
-python -m unittest discover -s tests      # 18 项（双入口同数）
-python tests/test_seeds.py                # 直跑同 18 项
+run.bat                                   # 两步：19 项测试 → demo（四段；唯一实测=fsync 基准两行）
+python -m unittest discover -s tests      # 19 项（双入口同数）
+python tests/test_seeds.py                # 直跑同 19 项
 python demo.py                            # 核验 → 负面对照 → 三维比较表 → fsync 基准【实测】
 python tools/check_seeds.py               # 只跑事实核验（行数/探针/锚点，过期即红）
 python tools/report_seeds.py --write      # 比较表写到 build/seeds.md
@@ -38,32 +40,33 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（基准
 
 | 路径 | 是什么 |
 |---|---|
-| `data/seeds.json` | 5 个候选：研究问题 / 数据·资源·评价三维 / 风险 / 基线证据锚点 / **实测事实**（文件行数 + 探针） |
-| `tools/check_seeds.py` | 事实核验器：行数重算逐字比对、`code-count` 缺口探针（含"glob 必须匹配到文件"规则）、`import-check` 实跑、锚点检查 |
-| `tools/report_seeds.py` | 三维比较表生成器（markdown，含风险对照与实测基线） |
+| `data/seeds.json` | 候选表（现为**清零收官态**）+ 5 条已选定记录：研究问题 / 数据·资源·评价三维 / 风险 / 基线证据锚点 / **实测事实**（文件行数 + 探针） |
+| `tools/check_seeds.py` | 事实核验器：行数重算逐字比对、`code-count` 缺口探针（含"glob 必须匹配到文件"规则）、`import-check` 实跑、锚点检查；另带注入夹具 `synthetic_seed`（候选清零态的负面对照用） |
+| `tools/report_seeds.py` | 三维比较表生成器（markdown，含风险对照与实测基线；候选清零时渲染收官段落） |
 | `tools/bench_io.py` | 候选① 的资源基准：写盘 vs 写盘+fsync 的每操作中位数（本机实测） |
-| `tests/test_seeds.py` | 18 项：核验器 1 正 + 10 负（含 chosen 记录）、比较表 3、设计钉住 4、基准 1 |
+| `tests/test_seeds.py` | 19 项：核验器 2 正（含清零态）+ 10 负（含 chosen 记录）、比较表 3、设计钉住 4、基准 1 |
 | `demo.py` · `run.bat` · `tools/logdiff.py` | 演示与交付三件套（本仓库通例） |
 
 ## 知识点 与 实现 与 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
-| 可行性要有数字 | `seeds.json` 的 files/probes | 6 处文件行数、2 个探针全部现算复核（PASS 行打印计数） |
-| 数字会过期 | 行数**逐字比对** | 改错一行 → RED（负面对照钉住）；动代码不改 JSON 也会红 |
-| 缺口要有证明 | `code-count` 探针 | 历史缺口（B10-fsync、B13-CALL、B30-snapshot/membership、B38-replica）已随选定轮次逐一填平；现役只剩环境探针（numpy 在位 / sklearn 缺失）；`code-count` 规则本身由"注入式负面对照"继续钉住（候选表里没有现役 code-count 探针也能测） |
-| 环境是决策点 | `import-check` 探针 | numpy 可导入 / sklearn 不可导入实跑判定；期望与现状不符即红 |
+| 可行性要有数字 | `seeds.json` 的 files/probes | 收官态：0 个未选候选；5 条已选定记录的锚点全部现算复核（PASS 行打印计数） |
+| 数字会过期 | 行数**逐字比对** | 改错一行 → RED（注入式夹具钉住）；动代码不改 JSON 也会红 |
+| 缺口要有证明 | `code-count` 探针 | 历史缺口（B10-fsync、B13-CALL、B30-snapshot/membership、B38-replica、B23-sklearn）**全部随选定轮次填平，一条不剩**；候选清零后规则由注入式夹具继续钉住（负面对照不因数据清空而失效） |
+| 环境是决策点 | `import-check` 探针 | numpy/sklearn 在位判定曾用于决策（sklearn 装前为缺口、获批安装后转在位——安装双口径登记在 B23 README） |
 | 基准要标口径 | `bench_io.py` | 60 次中位数、8KB 记录、同目录——demo 打印 plain/fsync 两行【实测】 |
-| 选定留给用户 | 报告页脚 | `test_report_footer_keeps_choice_with_user` 钉住"选定由你/不等于开题" |
+| 选定留给用户 | 报告页脚 | `test_report_footer_keeps_choice_with_user` 钉住"选定由你/不等于开题"；候选清零后页脚改为"如要加新候选把方向告诉我" |
 
-## 实测（2026-10-02，首次交付；数字均为本轮现算）
+## 实测（2026-10-02 收官；数字均为本轮现算）
 
-- **18 项测试双入口同数**（`discover` 与直跑均 18 OK）；`run.bat` **两次退出码 0**、
-  **无任何新增文件**、两次日志经 `tools/logdiff.py` 规范化后**逐字相同**
-  （各 101 行；规范项 = 基准 ms 3 处 + unittest 计时 1 条）。
-- 核验：**1 个未选候选、6 处文件行数、2 个探针 + 4 条已选定记录（④ B38 主从复制、
-  ① B10 fsync+页式、② B13 调用帧、③ B30 Raft 完整化）**全部现算通过；负面对照
-  （改错行数/注入式探针/假锚点/chosen 假锚点）全红。
+- **19 项测试双入口同数**（`discover` 与直跑均 19 OK，含新增的"候选清零态"正/负两条）；
+  `run.bat` **两次退出码 0**、**无任何新增文件**、两次日志经 `tools/logdiff.py`
+  规范化后**逐字相同**（各 92 行；规范项 = 基准 ms 3 处 + unittest 计时 1 条）。
+- 核验：**0 个未选候选、0 处文件行数、0 个探针 + 5 条已选定记录（④ B38 主从复制、
+  ① B10 fsync+页式、② B13 调用帧、③ B30 Raft 完整化、⑤ B23 + sklearn 对拍）**
+  全部现算通过；负面对照（注入式夹具改错行数/探针/假锚点/chosen 假锚点）全红；
+  "候选与已选定同时为空"必须红（专门一条）。
 - 本机基准（60 次中位数，8KB 记录）：**plain ≈ 0.40 ms / +fsync ≈ 0.76 ms**——
   「提交即持久」的边际成本 ≈ 0.36 ms/条（本机介质相关，demo 每次现算）。
 

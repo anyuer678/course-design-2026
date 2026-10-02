@@ -1,7 +1,11 @@
 """tests/test_seeds.py —— B41 自测：事实核验器（正/负例）+ 比较表 + 基准
 
-纪律：核验器的每条规则配一条"改坏必须红"；五候选的 id 集合与"每条都有文件+探针"
+纪律：核验器的每条规则配一条"改坏必须红"；候选 id 集合与"每条都有文件+探针"
 是刻意钉住的（改动数据必须来这里改——防悄悄变化）。
+
+**候选清零态（2026-10-02 收官）**：5 个候选全部选定实施后 seeds=[]；核验器允许
+"候选空、chosen 非空"（双空才红）。负面对照的夹具因此改为**注入式**：先往空表里
+注入一条必然通过的最小候选，再对它改坏——规则不因数据清空而失去牙齿。
 """
 from __future__ import annotations
 
@@ -30,6 +34,11 @@ def make_tmp(name: str) -> pathlib.Path:
     return base
 
 
+def synthetic_seed() -> dict:
+    """注入夹具（工厂在 tools/check_seeds.py——测试与演示共用，防两处漂移）。"""
+    return check_seeds.synthetic_seed()
+
+
 class TestSeedsChecker(unittest.TestCase):
     def setUp(self):
         self.tmp = make_tmp("chk")
@@ -38,6 +47,8 @@ class TestSeedsChecker(unittest.TestCase):
 
     def problems(self, mutate) -> list[str]:
         data = json.loads(json.dumps(self.seeds))         # 深拷贝
+        if not data["seeds"]:
+            data["seeds"].append(synthetic_seed())        # 候选清零态：先注入再改坏
         mutate(data["seeds"])
         path = self.tmp / "seeds.json"
         path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
@@ -45,6 +56,16 @@ class TestSeedsChecker(unittest.TestCase):
 
     def test_real_data_passes(self):
         self.assertEqual(check_seeds.check_seeds_data(SEEDS_PATH, REPO_ROOT), [])
+
+    def test_empty_candidates_allowed_but_double_empty_turns_red(self):
+        data = json.loads(json.dumps(self.seeds))
+        self.assertEqual(data["seeds"], [])              # 真实数据就是收官态
+        self.assertTrue(data["chosen"])
+        data["chosen"] = []                              # 双空则红
+        path = self.tmp / "seeds.json"
+        path.write_text(json.dumps(data, ensure_ascii=False), encoding="utf-8")
+        problems = check_seeds.check_seeds_data(path, REPO_ROOT)
+        self.assertTrue(any("同时为空" in p for p in problems), problems)
 
     def test_wrong_line_count_turns_red(self):
         problems = self.problems(lambda s: s[0]["files"].__setitem__(
@@ -121,11 +142,11 @@ class TestReport(unittest.TestCase):
 
     def test_report_lists_remaining_candidates_and_chosen(self):
         rendered = report_seeds.render_report(report_seeds._load())
-        self.assertIn("| 1 |", rendered)
-        self.assertNotIn("| 2 |", rendered)
+        self.assertNotIn("| 1 |", rendered)               # 候选表已清零，没有数据行
+        self.assertIn("候选表已清零", rendered)
         self.assertIn("B13 加函数调用帧", rendered)        # 来自"已选定"段
         self.assertIn("B23 + NumPy", rendered)
-        self.assertIn("已选定并实施（4 个）", rendered)
+        self.assertIn("已选定并实施（5 个）", rendered)
         self.assertIn("B38 主从复制", rendered)
         self.assertIn("B10 加 fsync", rendered)
         self.assertIn("B30 Raft 完整化", rendered)
@@ -139,10 +160,10 @@ class TestReport(unittest.TestCase):
 class TestDesignPins(unittest.TestCase):
     def test_seed_id_set_pinned(self):
         data = report_seeds._load()
-        self.assertEqual({s["id"] for s in data["seeds"]}, {"b23-numpy-sklearn"})
+        self.assertEqual({s["id"] for s in data["seeds"]}, set())    # 收官：候选清零
         self.assertEqual([c["id"] for c in data["chosen"]],
                          ["b38-replication", "b10-fsync-pages", "b13-call-frames",
-                          "b30-raft-snapshot"])
+                          "b30-raft-snapshot", "b23-numpy-sklearn"])
 
     def test_chosen_records_pinned(self):
         data = report_seeds._load()

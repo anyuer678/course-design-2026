@@ -1,60 +1,6 @@
 {
-  "note": "B41 毕设种子：5 个候选的三维可行性（数据/资源/评价）。facts 段里的每个数字都由 tools/check_seeds.py 现算复核（行数逐字比对、缺口关键词按'计数=0'断言、import 探针实跑）——数字过期就红，防止'可行性分析'变成文艺创作。选定由用户：本文件只做比较，不替你开题。",
-  "seeds": [
-    {
-      "id": "b23-numpy-sklearn",
-      "title": "B23 + NumPy/scikit-learn 对拍扩展到更大网络",
-      "question": "手写 ML 与成熟库在同一批数据/同一套指标下对拍，差距究竟在数值、在工程还是在数据规模？",
-      "evidence": {
-        "path": "projects/B23-ml-from-scratch/README.md",
-        "anchor": "自测（33 项）"
-      },
-      "files": [
-        {
-          "path": "projects/B23-ml-from-scratch/ml/neuralnet.py",
-          "lines": 167
-        },
-        {
-          "path": "projects/B23-ml-from-scratch/ml/tree.py",
-          "lines": 126
-        },
-        {
-          "path": "projects/B23-ml-from-scratch/ml/linear.py",
-          "lines": 118
-        },
-        {
-          "path": "projects/B23-ml-from-scratch/ml/data.py",
-          "lines": 101
-        },
-        {
-          "path": "projects/B23-ml-from-scratch/tests/test_ml.py",
-          "lines": 405
-        },
-        {
-          "path": "projects/B23-ml-from-scratch/data/iris.csv",
-          "lines": 151
-        }
-      ],
-      "probes": [
-        {
-          "name": "numpy 在位（对拍底座）",
-          "kind": "import-check",
-          "module": "numpy",
-          "expected": true
-        },
-        {
-          "name": "sklearn 缺失（安装决策点，未批不装）",
-          "kind": "import-check",
-          "module": "sklearn",
-          "expected": false
-        }
-      ],
-      "data": "iris（150 行）已转写并被公开统计锚定；扩规模需要更大数据集——MNIST 子集等需联网下载（按 PLAN §8 先问），或程序化合成（月牙/blobs 生成器已在 data.py）。",
-      "resources": "核心工作是与 sklearn 的对拍台（训练同参、指标逐项比、数值梯度对照），估 300–500 行；**需安装 scikit-learn（约 20–30MB + 依赖，决策点⑥原表口径，未获批不装）**；网络规模放大到「手写实现跑得动」的上限（千级样本、几百参数）。时间盒 1 会话（装好后）+ 半天规模实验。",
-      "evaluation": "①同数据同超参：手写 vs sklearn 的精度/损失差在声明容差内；②规模曲线（n=200→2000）两类实现的时间与内存对照；③反向：把 sklearn 换成故意错参，对拍台必须变红（防「对拍只对得齐不报错」）。",
-      "risks": "20–30MB 只是下载口径，装后磁盘占用以实测为准并双口径登记；sklearn 版本行为差异（默认参、随机种子）会制造假分歧，必须写死全部随机源。"
-    }
-  ],
+  "note": "B41 毕设种子：5 个候选的三维可行性（数据/资源/评价）。facts 段里的每个数字都由 tools/check_seeds.py 现算复核（行数逐字比对、缺口关键词按'计数=0'断言、import 探针实跑）——数字过期就红，防止'可行性分析'变成文艺创作。选定由用户：本文件只做比较，不替你开题。**当前状态：候选表已清零——5 个候选全部由用户选定并实施完成（见 chosen）**；候选为空是收官状态，核验器允许（但候选与已选定不能同时为空）。",
+  "seeds": [],
   "chosen": [
     {
       "id": "b38-replication",
@@ -94,6 +40,16 @@
       "evidence": {
         "path": "projects/B30-mini-raft/README.md",
         "anchor": "双入口同数：28 项"
+      }
+    },
+    {
+      "id": "b23-numpy-sklearn",
+      "title": "B23 + NumPy/scikit-learn 对拍扩展到更大网络",
+      "date": "2026-10-02",
+      "note": "用户选定并实施（候选表上最后一个）：见 projects/B23-ml-from-scratch/——口径先写纸上（docs/sklearn-compare-spec.md：四组模型同参口径/容差表/不可比项/陷阱参数/负面对照设计），核心五模块保持纯标准库，对拍台 ml/compare_sklearn.py 是唯一 import sklearn 的地方；安装登记双口径（下载 8.7MB / 安装 47.0MB；numpy 2.4.6 与 scipy 1.17.1 本已在位、安装未动任何已有包）；原缺口探针「sklearn 缺失」随安装获批转为在位。45 项测试双入口（33 核心 + 12 对拍）、run.bat 两次退出码 0、规范化日志逐字相同（各 166 行）；负面对照四条（LR 乱标签/树 depth=1/KNN k=1 平票/MLP 单隐元+lr0.001）全部红在该原因上；规模曲线 n=200→2000（n=2000 时树约 500 倍、KNN 约 70 倍、BP 约 18 倍差距，闭式回归同量级）。实施中把 sklearn 默认早停截胡、'坏参要实测选'等坑当场抓出——详见 B23 README 坑 7-11。",
+      "evidence": {
+        "path": "projects/B23-ml-from-scratch/README.md",
+        "anchor": "45 项双入口同数"
       }
     }
   ]

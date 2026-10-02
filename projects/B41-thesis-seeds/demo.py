@@ -32,6 +32,8 @@ def show(label: str, value: object) -> None:
 
 def _mutated_problems(mutate) -> list[str]:
     data = json.loads(SEEDS_PATH.read_text(encoding="utf-8"))
+    if not data["seeds"]:
+        data["seeds"].append(check_seeds.synthetic_seed())   # 候选清零态：注入夹具再改坏
     mutate(data["seeds"])
     tmp = pathlib.Path(tempfile.mkdtemp(prefix="b41-demo-"))
     try:
@@ -43,7 +45,7 @@ def _mutated_problems(mutate) -> list[str]:
 
 
 def main() -> int:
-    print("B41-thesis-seeds 演示：毕设候选的三维可行性（数字现算；④①②③已选定实施，选定由你）")
+    print("B41-thesis-seeds 演示：毕设候选的三维可行性（数字现算；5 个候选全部已选定实施，候选表清零）")
 
     # ------------------------------------------------------------------ 1
     section(1, "事实核验：行数重算 + 缺口探针重跑（过期即红）")
@@ -59,12 +61,13 @@ def main() -> int:
         chosen = [chosen]
     if chosen:
         show("已选定并实施", "；".join(f"{c['title']}（{c['date']}）" for c in chosen))
-    sample = seeds[0]["probes"][0]
-    show(f"抽样：{seeds[0]['id']} 缺口探针",
-         f"{sample['name']}（期望计数 {sample['expected']}）")
-    b23 = [p for p in seeds[-1]["probes"]]
-    show("抽样：B23 环境探针", "；".join(
-        f"{p['module']} {'在' if p['expected'] else '缺'}" for p in b23))
+    if seeds:
+        sample = seeds[0]["probes"][0]
+        show(f"抽样：{seeds[0]['id']} 缺口探针",
+             f"{sample['name']}（期望计数 {sample['expected']}）")
+    else:
+        show("候选表状态",
+             "已清零（5 个候选全部选定实施）——负面对照改用注入式夹具继续钉规则")
 
     # ------------------------------------------------------------------ 2
     section(2, "负面对照：改坏一处，核验器必须报红（否则数字就是装饰）")
@@ -94,8 +97,8 @@ def main() -> int:
     print(f"  {'解读':<30}「提交即持久」的边际成本 ≈ "
           f"{result['fsync_ms'] - result['plain_ms']:.3f} ms/条（本机介质相关，仅供参考）")
     print()
-    print("  选定哪一个是你的决定：把候选 id（或'都不选'）告诉我，下一轮按它开题。")
-    print("  候选题清单不等于开题；任何一条候选开工前，先跑 run.bat 把基线与本基准过一遍。")
+    print("  候选表已清零（5 个候选全部选定实施）；如要加新候选或调整方向，把方向告诉我。")
+    print("  候选题清单不等于开题；任何新候选开工前，先跑 run.bat 把基线与本基准过一遍。")
     return 0
 
 

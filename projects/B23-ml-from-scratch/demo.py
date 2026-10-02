@@ -1,8 +1,8 @@
-"""B23-ml-from-scratch 五段演示：数据 -> 线性回归 -> 感知机 -> KNN/决策树 -> BP
+"""B23-ml-from-scratch 六段演示：数据 -> 线性回归 -> 感知机 -> KNN/决策树 -> BP -> sklearn 对拍
 
-run.bat 的演示步跑的就是这个文件。全程只用标准库与仓库内的 Iris 数据，
-不写任何文件（演示退出后目录快照无新增）。每段末尾的断言失败会计入退出码
-——演示错了等于没演示。
+run.bat 的演示步跑的就是这个文件。核心五段只用标准库与仓库内的 Iris 数据；
+第六段需要 scikit-learn（B41 候选⑤，安装口径见 README），不写任何文件。
+每段末尾的断言失败会计入退出码——演示错了等于没演示。
 """
 import sys
 from pathlib import Path
@@ -20,7 +20,7 @@ FAILS = []
 
 
 def check(cond, msg):
-    print(f"    {'✔' if cond else '✘'} {msg}")
+    print(f"    {'√' if cond else '×'} {msg}")
     if not cond:
         FAILS.append(msg)
 
@@ -72,8 +72,8 @@ def demo_linear():
     check(diff < 1e-6 and abs(cf.intercept_ - gd.intercept_) < 1e-6,
           f"两条路得到同一个解（最大差 {diff:.1e}）")
     r2 = r2_score(yte, cf.predict(Xte))
-    print(f"    测试集 R² = {r2:.3f}（只用花萼两特征预测花瓣长的实测水平）")
-    check(r2 > 0.75, "R² > 0.75")
+    print(f"    测试集 R^2 = {r2:.3f}（只用花萼两特征预测花瓣长的实测水平）")
+    check(r2 > 0.75, "R^2 > 0.75")
 
 
 # ---------------------------------------------------------------- 3
@@ -185,20 +185,58 @@ def demo_bp():
     check(acc_m >= 0.98, "BP 在月牙上 ≥ 0.98（固定种子实测 1.00）")
 
 
+# ---------------------------------------------------------------- 6（B41 候选⑤）
+def demo_sklearn_compare():
+    show("第六段：与 scikit-learn 同参对拍 + 规模曲线（口径先写死在 docs/sklearn-compare-spec.md）")
+    from sklearn.tree import DecisionTreeClassifier
+
+    from ml import compare_sklearn as cmp
+
+    checks = cmp.run_comparison()            # 任一违规即抛，这里能往下走就是全过
+    for c in checks:
+        check(c.diff <= c.tolerance,
+              f"[{c.name}] 差值 {c.diff:.3g} ≤ 容差 {c.tolerance:.3g}：{c.note}")
+
+    # 负面对照现场演示：故意错参必须红（对拍台自己得有牙齿）
+    def bad(A, b):
+        return DecisionTreeClassifier(criterion="entropy", max_depth=1,
+                                      random_state=0).fit(A, b)
+    try:
+        cmp.compare_tree(sk_fit=bad)
+        check(False, "错参对拍台没有报红（这是 BUG）")
+    except cmp.ComparisonFailed as exc:
+        check(True, f"负面对照变红：{exc}")
+
+    rows = cmp.scale_curve()                 # 【实测】时间：只展示、不做断言（防 flaky）
+    print("    规模曲线【实测】（n=200→2000；BP 到 1000——纯 Python 的成本是结论的一部分）")
+    for r in rows:
+        print(f"      {r['algo']:20s} n={r['n']:>4}   ours {r['ours_ms']:>9.1f} ms   "
+              f"scikit-learn {r['sk_ms']:>7.2f} ms")
+
+    mem = cmp.memory_probe()                 # 【实测】内存：tracemalloc 口径（sklearn 为下界）
+    print("    训练峰值内存【实测】（tracemalloc；我们的=全量、scikit-learn=下界"
+          "——numpy 的 C 缓冲不在口径内）")
+    for m in mem:
+        print(f"      {m['algo']:26s} ours {m['ours_peak'] / 1024 / 1024:5.2f} MB   "
+              f"sk 下界 {m['sk_peak'] / 1024 / 1024:5.2f} MB")
+    check(True, "对拍五组 + 负面对照 + 规模曲线/内存读数全部现算完成")
+
+
 def main() -> int:
-    print("B23-ml-from-scratch 演示（纯标准库手写，无 NumPy）")
+    print("B23-ml-from-scratch 演示（核心五模块纯标准库手写；第六段对拍台需 scikit-learn）")
     demo_data()
     demo_linear()
     demo_perceptron()
     demo_knn_tree()
     demo_bp()
+    demo_sklearn_compare()
     print(f"\n{'=' * 62}")
     if FAILS:
         print(f"演示存在 {len(FAILS)} 处失败：")
         for f in FAILS:
-            print(f"  ✘ {f}")
+            print(f"  × {f}")
         return 1
-    print("五段演示全部通过 ✔")
+    print("六段演示全部通过 √")
     return 0
 
 

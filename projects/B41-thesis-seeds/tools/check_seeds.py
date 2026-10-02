@@ -42,17 +42,36 @@ def _import_ok(module: str) -> bool:
     return proc.returncode == 0
 
 
+def synthetic_seed() -> dict:
+    """候选清零态的**注入夹具**：一条必然通过的最小候选（测试与演示的负面对照用）。
+
+    收官后 seeds=[]，但"改坏必须红"的规则不能因此失去牙齿——负面对照先注入这条
+    夹具再改坏。钉在 data/iris.csv（151 行，结构稳定）；锚点用 B23 README 的现役短语。
+    """
+    return {
+        "id": "synthetic-fixture", "title": "合成夹具（注入用）",
+        "question": "夹具问题？",
+        "evidence": {"path": "projects/B23-ml-from-scratch/README.md",
+                     "anchor": "45 项双入口同数"},
+        "files": [{"path": "projects/B23-ml-from-scratch/data/iris.csv", "lines": 151}],
+        "probes": [{"name": "夹具探针", "kind": "import-check",
+                    "module": "numpy", "expected": True}],
+        "data": "夹具", "resources": "夹具", "evaluation": "夹具", "risks": "夹具",
+    }
+
+
 def check_seeds_data(seeds_path, repo_root) -> list[str]:
     repo_root = pathlib.Path(repo_root)
     problems: list[str] = []
     data = json.loads(pathlib.Path(seeds_path).read_text(encoding="utf-8"))
     seeds = data.get("seeds", [])
-    if not seeds:
-        return ["seeds.json 里没有任何候选"]
     # 已选定记录（列表）：每条记录的指针与锚点同样要真实存在
     chosen_list = data.get("chosen") or []
     if isinstance(chosen_list, dict):          # 兼容旧格式（单条）
         chosen_list = [chosen_list]
+    # 候选表允许清零（全部选定实施后的收官状态）——但"候选与已选定"不能同时为空
+    if not seeds and not chosen_list:
+        return ["seeds.json 里既没有候选、也没有已选定记录（两边不能同时为空）"]
     for chosen in chosen_list:
         cid = chosen.get("id", "?")
         for field in ("id", "title", "date", "note"):

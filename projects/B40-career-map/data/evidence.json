@@ -129,11 +129,11 @@
     },
     {
       "id": "b23-ml",
-      "claim": "纯标准库手写五算法（回归/感知机/KNN/决策树/BP）：33 项自测",
+      "claim": "手写五算法（回归/感知机/KNN/决策树/BP）+ 与 scikit-learn 同参对拍台（B41 候选⑤：容差表先行、四条负面对照、规模曲线）：45 项自测（33 核心 + 12 对拍）",
       "pointers": [
         "projects/B23-ml-from-scratch/README.md"
       ],
-      "anchor": "自测（33 项）",
+      "anchor": "45 项双入口同数",
       "commit": "d274eb4"
     },
     {

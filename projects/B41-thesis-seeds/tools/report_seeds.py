@@ -33,7 +33,10 @@ def render_report(data: dict) -> str:
             lines += [f"### {c['title']}（{c['date']}）", "",
                       c["note"], "",
                       f"证据：`{c['evidence']['path']}`（锚点 {c['evidence']['anchor']}）", ""]
-        lines += [f"## 其余候选比较（如果你还想调整方向，下面 {len(seeds)} 个仍然可选）", ""]
+        if seeds:
+            lines += [f"## 其余候选比较（如果你还想调整方向，下面 {len(seeds)} 个仍然可选）", ""]
+        else:
+            lines += ["## 候选表已清零（5 个候选全部选定实施完成）", ""]
     lines += ["| # | 候选 | 研究问题 | 数据面 | 资源面 | 评价面 |",
               "|---|---|---|---|---|---|"]
     for i, seed in enumerate(seeds, 1):
@@ -61,8 +64,10 @@ def render_report(data: dict) -> str:
             lines.append(f"- 探针：**{probe['name']}**（{detail}）")
         lines.append("")
     ids = "、".join(c["id"] for c in chosen) if chosen else "（无）"
+    tail = ("候选表已清零；如要加新候选或调整方向，把方向告诉我即可。"
+            if not seeds else "其余候选如要改选，把 id 告诉我即可。")
     lines += ["---",
-              f"已选定并实施：{ids}（2026-10-02）；其余候选如要改选，把 id 告诉我即可。",
+              f"已选定并实施：{ids}（2026-10-02）。{tail}",
               "选定前建议先跑 `run.bat` 把基线与 fsync 基准都过一遍。"]
     return "\n".join(lines)
 

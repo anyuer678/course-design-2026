@@ -1,10 +1,10 @@
 """ml/linear.py —— 线性回归：闭式解与梯度下降是同一个答案的两条路
 
 课程要点：
-    - 模型 y = w·x + b；损失 MSE = (1/n)Σ(yi - ŷi)²
-    - 闭式解（正规方程）：对 w 求导置零得 (XᵀX)w = Xᵀy —— 解线性方程组
+    - 模型 y = w·x + b；损失 MSE = (1/n)Σ(yi - y_hati)^2
+    - 闭式解（正规方程）：对 w 求导置零得 (X^TX)w = X^Ty —— 解线性方程组
     - 梯度下降：沿负梯度迭代。两种解法答案必须一致（对拍的天然素材）
-    - R² = 1 - SS_res/SS_tot：衡量"比拿均值瞎猜好多少"
+    - R^2 = 1 - SS_res/SS_tot：衡量"比拿均值瞎猜好多少"
 
 实现全部手写：高斯消元（带部分主元）解正规方程，不用 numpy。
 """
@@ -51,7 +51,7 @@ def mse_loss(X: list[list[float]], y: list[float], params: list[float]) -> float
 
 def mse_gradient(X: list[list[float]], y: list[float],
                  params: list[float]) -> list[float]:
-    """MSE 对每个参数的解析梯度：∂/∂θ = -(2/n)Σ(yi - ŷi)·xi。
+    """MSE 对每个参数的解析梯度：d/dθ = -(2/n)Σ(yi - y_hati)·xi。
     与数值梯度（中心差分）对拍是测试的一部分。"""
     n = len(X)
     d = len(params)
@@ -77,7 +77,7 @@ class LinearRegression:
         self.intercept_ = params[-1]
 
     def fit_closed_form(self, X: list[list[float]], y: list[float]) -> "LinearRegression":
-        """正规方程 (XᵀX)θ = Xᵀy。加 1e-10 的对角扰动防奇异（数值保险）。"""
+        """正规方程 (X^TX)θ = X^Ty。加 1e-10 的对角扰动防奇异（数值保险）。"""
         Xb = add_bias(X)
         d = len(Xb[0])
         AtA = [[sum(Xb[k][i] * Xb[k][j] for k in range(len(Xb))) for j in range(d)]
@@ -106,7 +106,7 @@ class LinearRegression:
 
 
 def r2_score(y_true: list[float], y_pred: list[float]) -> float:
-    """R² = 1 - SS_res/SS_tot。1 是完美，0 等于拿均值猜，负数不如均值。"""
+    """R^2 = 1 - SS_res/SS_tot。1 是完美，0 等于拿均值猜，负数不如均值。"""
     mean = sum(y_true) / len(y_true)
     ss_res = sum((t - p) ** 2 for t, p in zip(y_true, y_pred))
     ss_tot = sum((t - mean) ** 2 for t in y_true)

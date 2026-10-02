@@ -2,8 +2,8 @@
 
 课程要点：
     - 前向：z = Wx + b，隐藏层 tanh/ReLU，输出层 softmax
-    - 损失：交叉熵 CE = -(1/n)ΣΣ y·log(ŷ)。softmax + 交叉熵的梯度
-      恰好是 (ŷ - y)——两者"天生一对"，这是推导笔记里的重点
+    - 损失：交叉熵 CE = -(1/n)ΣΣ y·log(y_hat)。softmax + 交叉熵的梯度
+      恰好是 (y_hat - y)——两者"天生一对"，这是推导笔记里的重点
     - 反向传播 = 链式法则的动态规划：误差信号从输出层逐层回传，
       每层的梯度只依赖下一层的 delta 和本层的输入
     - 梯度检查：解析梯度 vs 数值梯度（中心差分）——手写 BP 的第一道
@@ -71,7 +71,7 @@ class MLP:
         return _tanh(z) if self.hidden_act == "tanh" else (z if z > 0 else 0.0)
 
     def _act_grad(self, z: float, a: float) -> float:
-        # tanh' = 1 - a²（用激活值算，省一次 tanh）；relu' = z > 0
+        # tanh' = 1 - a^2（用激活值算，省一次 tanh）；relu' = z > 0
         if self.hidden_act == "tanh":
             return 1.0 - a * a
         return 1.0 if z > 0 else 0.0
