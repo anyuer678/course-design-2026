@@ -21,7 +21,8 @@ class SnapshotError(Exception):
     """快照文件坏了/版本不对：message 是一句人话（不吞错、不带病启动）。"""
 
 
-def _encode(entries: list[tuple[bytes, bytes, float | None]]) -> bytes:
+def encode_snapshot(entries: list[tuple[bytes, bytes, float | None]]) -> bytes:
+    """条目 → 快照字节（复制全量同步在内存里复用同一格式）。"""
     parts = [MAGIC, b"\n", str(len(entries)).encode("ascii"), b"\n"]
     for key, value, deadline in entries:
         parts.append(str(len(key)).encode("ascii"))
@@ -44,7 +45,7 @@ def _encode(entries: list[tuple[bytes, bytes, float | None]]) -> bytes:
 def save_snapshot(path, entries: list[tuple[bytes, bytes, float | None]]) -> int:
     """原子写：同目录临时文件 + fsync + os.replace。返回文件字节数。"""
     path = pathlib.Path(path)
-    payload = _encode(entries)
+    payload = encode_snapshot(entries)
     tmp = path.with_name(path.name + ".tmp")
     with open(tmp, "wb") as handle:
         handle.write(payload)
@@ -54,27 +55,25 @@ def save_snapshot(path, entries: list[tuple[bytes, bytes, float | None]]) -> int
     return len(payload)
 
 
-def load_snapshot(path) -> list[tuple[bytes, bytes, float | None]]:
-    """读快照；版本/结构/校验和任何一项不过就抛 SnapshotError（带人话）。"""
-    path = pathlib.Path(path)
-    raw = path.read_bytes()
+def decode_snapshot(raw: bytes, name="<bytes>") -> list[tuple[bytes, bytes, float | None]]:
+    """快照字节 → 条目；版本/结构/校验和任何一项不过就抛 SnapshotError（带人话）。"""
     lines = raw.split(b"\n")
     if not lines or lines[0] != MAGIC:
-        raise SnapshotError(f"不是 REDISLITE 快照（魔数不符）：{path}")
+        raise SnapshotError(f"不是 REDISLITE 快照（魔数不符）：{name}")
     # 找校验行：最后一行形如 b"SHA256 <64hex>"，之前是 payload
     if len(lines) < 3 or not lines[-2].startswith(b"SHA256 "):
-        raise SnapshotError(f"快照缺少校验行：{path}")
+        raise SnapshotError(f"快照缺少校验行：{name}")
     digest = lines[-2][7:]
     payload = raw[: len(raw) - len(lines[-2]) - 1]
     if hashlib.sha256(payload).hexdigest().encode("ascii") != digest:
-        raise SnapshotError(f"快照校验和不符（文件被改坏过？）：{path}")
+        raise SnapshotError(f"快照校验和不符（文件被改坏过？）：{name}")
     # 解析 payload（此时已确认完整）
     body = payload[len(MAGIC) + 1:]
     try:
         count_line, rest = body.split(b"\n", 1)
         count = int(count_line)
     except ValueError as err:
-        raise SnapshotError(f"快照头部坏了：{path}") from err
+        raise SnapshotError(f"快照头部坏了：{name}") from err
     entries: list[tuple[bytes, bytes, float | None]] = []
     for _ in range(count):
         try:
@@ -93,8 +92,13 @@ def load_snapshot(path) -> list[tuple[bytes, bytes, float | None]]:
             else:
                 raise ValueError("bad deadline flag")
         except (ValueError, IndexError) as err:
-            raise SnapshotError(f"快照条目结构坏了：{path}") from err
+            raise SnapshotError(f"快照条目结构坏了：{name}") from err
         entries.append((key, value, deadline))
     if rest:
-        raise SnapshotError(f"快照尾部有多余字节：{path}")
+        raise SnapshotError(f"快照尾部有多余字节：{name}")
     return entries
+
+
+def load_snapshot(path) -> list[tuple[bytes, bytes, float | None]]:
+    path = pathlib.Path(path)
+    return decode_snapshot(path.read_bytes(), name=str(path))

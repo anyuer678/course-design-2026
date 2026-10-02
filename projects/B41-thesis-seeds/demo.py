@@ -47,14 +47,18 @@ def main() -> int:
 
     # ------------------------------------------------------------------ 1
     section(1, "事实核验：行数重算 + 缺口探针重跑（过期即红）")
-    seeds = report_seeds._load()
+    data = report_seeds._load()
+    seeds = data["seeds"]
     problems = check_seeds.check_seeds_data(SEEDS_PATH, REPO_ROOT)
     show("核验结果", "PASS（0 个问题）" if not problems else f"RED：{problems}")
     n_files = sum(len(s["files"]) for s in seeds)
     n_probes = sum(len(s["probes"]) for s in seeds)
-    show("规模", f"{len(seeds)} 个候选、{n_files} 处文件行数、{n_probes} 个探针")
+    show("规模", f"{len(seeds)} 个未选候选、{n_files} 处文件行数、{n_probes} 个探针")
+    chosen = data.get("chosen")
+    if chosen:
+        show("已选定并实施", f"{chosen['title']}（{chosen['date']}，见 B38 README）")
     b10 = next(p for p in seeds[0]["probes"] if "fsync" in p["name"])
-    b23 = [p for p in seeds[4]["probes"]]
+    b23 = [p for p in seeds[-1]["probes"]]
     show("抽样：B10 缺口探针", f"{b10['name']}（期望计数 {b10['expected']}）")
     show("抽样：B23 环境探针", "；".join(
         f"{p['module']} {'在' if p['expected'] else '缺'}" for p in b23))
@@ -73,7 +77,7 @@ def main() -> int:
 
     # ------------------------------------------------------------------ 3
     section(3, "三维比较表（数据/资源/评价 + 风险；现算自 data/seeds.json）")
-    print(report_seeds.render_report(seeds))
+    print(report_seeds.render_report(data))
 
     # ------------------------------------------------------------------ 4
     section(4, "候选①的资源基准【实测】与本机读数 + 选定指引")

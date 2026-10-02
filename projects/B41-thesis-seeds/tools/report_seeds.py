@@ -16,15 +16,22 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 
 def _load():
     import json
-    return json.loads((ROOT / "data" / "seeds.json").read_text(encoding="utf-8"))["seeds"]
+    return json.loads((ROOT / "data" / "seeds.json").read_text(encoding="utf-8"))
 
 
-def render_report(seeds: list[dict]) -> str:
-    lines = ["# B41 毕设种子：5 个候选的三维可行性比较", "",
+def render_report(data: dict) -> str:
+    seeds = data["seeds"]
+    chosen = data.get("chosen")
+    lines = ["# B41 毕设种子：候选三维可行性比较（选定由你）", "",
              "> 数字全部由 `tools/check_seeds.py` 现算复核（行数重算、缺口探针重跑）；",
-             "> **选定由你**——本表不替你开题，候选题清单不等于开题。", "",
-             "| # | 候选 | 研究问题 | 数据面 | 资源面 | 评价面 |",
-             "|---|---|---|---|---|---|"]
+             "> **选定由你**——本表不替你开题，候选题清单不等于开题。", ""]
+    if chosen:
+        lines += [f"## 已选定并实施（{chosen['date']}）：{chosen['title']}", "",
+                  chosen["note"], "",
+                  f"证据：`{chosen['evidence']['path']}`（锚点 {chosen['evidence']['anchor']}）", "",
+                  "## 其余候选比较（如果你还想调整方向，下面 4 个仍然可选）", ""]
+    lines += ["| # | 候选 | 研究问题 | 数据面 | 资源面 | 评价面 |",
+              "|---|---|---|---|---|---|"]
     for i, seed in enumerate(seeds, 1):
         lines.append(f"| {i} | **{seed['title']}** | {seed['question']} | "
                      f"{seed['data']} | {seed['resources']} | {seed['evaluation']} |")
@@ -50,8 +57,8 @@ def render_report(seeds: list[dict]) -> str:
             lines.append(f"- 探针：**{probe['name']}**（{detail}）")
         lines.append("")
     lines += ["---",
-              "比较完毕后的动作：**选定一个**（或都不选、等更多信息）——把选择告诉我，",
-              "下一轮按该候选开题；选定前建议先跑 `run.bat` 把 5 条基线与 fsync 基准都过一遍。"]
+              "④ 已选定（B38 主从复制，2026-10-02 实施完成）；其余候选如要改选，把 id 告诉我即可。",
+              "选定前建议先跑 `run.bat` 把基线与 fsync 基准都过一遍。"]
     return "\n".join(lines)
 
 

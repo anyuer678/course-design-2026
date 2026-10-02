@@ -8,19 +8,21 @@
 `tools/check_seeds.py` 每次运行都**重算复核**——谁动了候选对应的代码，这里立刻红。
 **选定哪一个是用户的决定，本工具只负责让比较有据可依。**
 
-**五个候选（详见 `data/seeds.json` 与比较表）**：
+**当前状态**：**④ B38 主从复制 已由用户选定并于 2026-10-02 实施完成**
+（见 `projects/B38-mini-redis/`：复制语义表、49 项测试双入口；本工具的
+`chosen` 记录里挂着它的证据锚点，同样受现算复核）。其余 4 个候选仍在桌上：
+
 1. **B10 加 fsync + 页式存储**（持久性工程化）
 2. **B13 加函数调用帧与错误恢复**
 3. **B30 Raft 完整化**（快照 + 成员变更）
-4. **B38 主从复制**（RESP 内复制协议子集）
 5. **B23 + NumPy/scikit-learn 对拍扩展到更大网络**（sklearn 属安装决策点，未批不装）
 
 ## 运行
 
 ```
-run.bat                                   # 两步：16 项测试 → demo（四段；唯一实测=fsync 基准两行）
-python -m unittest discover -s tests      # 16 项（双入口同数）
-python tests/test_seeds.py                # 直跑同 16 项
+run.bat                                   # 两步：18 项测试 → demo（四段；唯一实测=fsync 基准两行）
+python -m unittest discover -s tests      # 18 项（双入口同数）
+python tests/test_seeds.py                # 直跑同 18 项
 python demo.py                            # 核验 → 负面对照 → 三维比较表 → fsync 基准【实测】
 python tools/check_seeds.py               # 只跑事实核验（行数/探针/锚点，过期即红）
 python tools/report_seeds.py --write      # 比较表写到 build/seeds.md
@@ -37,10 +39,10 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（基准
 | `tools/check_seeds.py` | 事实核验器：行数重算逐字比对、`code-count` 缺口探针（含"glob 必须匹配到文件"规则）、`import-check` 实跑、锚点检查 |
 | `tools/report_seeds.py` | 三维比较表生成器（markdown，含风险对照与实测基线） |
 | `tools/bench_io.py` | 候选① 的资源基准：写盘 vs 写盘+fsync 的每操作中位数（本机实测） |
-| `tests/test_seeds.py` | 16 项：核验器 1 正 + 9 负、比较表 3、设计钉住 3、基准 1 |
+| `tests/test_seeds.py` | 18 项：核验器 1 正 + 10 负（含 chosen 记录）、比较表 3、设计钉住 4、基准 1 |
 | `demo.py` · `run.bat` · `tools/logdiff.py` | 演示与交付三件套（本仓库通例） |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 与 实现 与 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -53,11 +55,11 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（基准
 
 ## 实测（2026-10-02，首次交付；数字均为本轮现算）
 
-- **16 项测试双入口同数**（`discover` 与直跑均 16 OK）；`run.bat` **两次退出码 0**、
+- **18 项测试双入口同数**（`discover` 与直跑均 18 OK）；`run.bat` **两次退出码 0**、
   **无任何新增文件**、两次日志经 `tools/logdiff.py` 规范化后**逐字相同**
-  （各 121 行；规范项 = 基准 ms 3 处 + unittest 计时 1 条）。
-- 核验：**5 个候选、24 处文件行数、9 个探针**全部现算通过；三条负面对照
-  （改错行数/探针期望/假锚点）全红。
+  （各 117 行；规范项 = 基准 ms 3 处 + unittest 计时 1 条）。
+- 核验：**4 个未选候选、19 处文件行数、7 个探针 + 1 条已选定记录（④ B38 主从复制）**
+  全部现算通过；负面对照（改错行数/探针期望/假锚点/chosen 假锚点）全红。
 - 本机基准（60 次中位数，8KB 记录）：**plain ≈ 0.40 ms / +fsync ≈ 0.76 ms**——
   「提交即持久」的边际成本 ≈ 0.36 ms/条（本机介质相关，demo 每次现算）。
 

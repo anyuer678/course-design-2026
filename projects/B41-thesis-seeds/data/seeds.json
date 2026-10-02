@@ -5,18 +5,43 @@
       "id": "b10-fsync-pages",
       "title": "B10 加 fsync + 页式存储（持久性工程化）",
       "question": "把「最后一次提交可能丢」的 JSON 日志库改成「提交即持久、崩溃后逐条对账」的页式存储，要动哪些层、代价在哪儿？",
-      "evidence": {"path": "projects/B10-minidb/README.md", "anchor": "自测（36 项）"},
+      "evidence": {
+        "path": "projects/B10-minidb/README.md",
+        "anchor": "自测（36 项）"
+      },
       "files": [
-        {"path": "projects/B10-minidb/minidb/engine.py", "lines": 629},
-        {"path": "projects/B10-minidb/minidb/btree.py", "lines": 226},
-        {"path": "projects/B10-minidb/minidb/sqlparser.py", "lines": 356},
-        {"path": "projects/B10-minidb/tests/test_minidb.py", "lines": 672}
+        {
+          "path": "projects/B10-minidb/minidb/engine.py",
+          "lines": 629
+        },
+        {
+          "path": "projects/B10-minidb/minidb/btree.py",
+          "lines": 226
+        },
+        {
+          "path": "projects/B10-minidb/minidb/sqlparser.py",
+          "lines": 356
+        },
+        {
+          "path": "projects/B10-minidb/tests/test_minidb.py",
+          "lines": 672
+        }
       ],
       "probes": [
-        {"name": "代码里没有 fsync（README 自述缺点）", "kind": "code-count",
-         "glob": "projects/B10-minidb/minidb/*.py", "pattern": "fsync", "expected": 0},
-        {"name": "没有页式存储概念（page 计数为 0）", "kind": "code-count",
-         "glob": "projects/B10-minidb/minidb/*.py", "pattern": "\\bpage\\b", "expected": 0}
+        {
+          "name": "代码里没有 fsync（README 自述缺点）",
+          "kind": "code-count",
+          "glob": "projects/B10-minidb/minidb/*.py",
+          "pattern": "fsync",
+          "expected": 0
+        },
+        {
+          "name": "没有页式存储概念（page 计数为 0）",
+          "kind": "code-count",
+          "glob": "projects/B10-minidb/minidb/*.py",
+          "pattern": "\\bpage\\b",
+          "expected": 0
+        }
       ],
       "data": "现有测试与演示已覆盖崩溃前后对账的数据面（36 项 + 账本式 demo）；扩展用同一批用例加「提交后立刻重启」场景，无需新数据源。",
       "resources": "改动集中在 minidb/engine.py（629 行，存储与提交路径）+ 新页文件模块（估 250–400 行）；在现有 36 项上增 8–12 项崩溃/页边界测试；零外部依赖。时间盒 1–2 会话（与 ROADMAP 3.8 完全同构——B38 的快照已提前示范了「原子写+校验」写法可参考）。",
@@ -27,17 +52,40 @@
       "id": "b13-call-frames",
       "title": "B13 加函数调用帧与错误恢复",
       "question": "给只有扁平程序的小语言补上函数定义/调用与调用栈，怎样保持「两条后端逐字节一致」的对拍纪律不破？",
-      "evidence": {"path": "projects/B13-tinylang/README.md", "anchor": "两套完全不同的后端"},
+      "evidence": {
+        "path": "projects/B13-tinylang/README.md",
+        "anchor": "两套完全不同的后端"
+      },
       "files": [
-        {"path": "projects/B13-tinylang/tinylang/vm.py", "lines": 173},
-        {"path": "projects/B13-tinylang/tinylang/bytecode.py", "lines": 91},
-        {"path": "projects/B13-tinylang/tinylang/codegen.py", "lines": 161},
-        {"path": "projects/B13-tinylang/tinylang/parser.py", "lines": 289},
-        {"path": "projects/B13-tinylang/tinylang/fuzz.py", "lines": 245}
+        {
+          "path": "projects/B13-tinylang/tinylang/vm.py",
+          "lines": 173
+        },
+        {
+          "path": "projects/B13-tinylang/tinylang/bytecode.py",
+          "lines": 91
+        },
+        {
+          "path": "projects/B13-tinylang/tinylang/codegen.py",
+          "lines": 161
+        },
+        {
+          "path": "projects/B13-tinylang/tinylang/parser.py",
+          "lines": 289
+        },
+        {
+          "path": "projects/B13-tinylang/tinylang/fuzz.py",
+          "lines": 245
+        }
       ],
       "probes": [
-        {"name": "字节码里没有调用指令（CALL 计数 0）", "kind": "code-count",
-         "glob": "projects/B13-tinylang/tinylang/*.py", "pattern": "\\bCALL\\b", "expected": 0}
+        {
+          "name": "字节码里没有调用指令（CALL 计数 0）",
+          "kind": "code-count",
+          "glob": "projects/B13-tinylang/tinylang/*.py",
+          "pattern": "\\bCALL\\b",
+          "expected": 0
+        }
       ],
       "data": "300 例随机程序的对拍语料已在 fuzz.py 生成器里（245 行），把生成规则扩到带函数即可，无外部数据。",
       "resources": "要动 parser（289 行）、codegen（161 行）、vm（173 行）、bytecode（91 行）四处 + 参照解释器同步；估 400–600 行新逻辑，测试增 10–15 项（含栈深度上限/递归语义）；零依赖。时间盒 1–2 会话，是全批次里改动面最均匀的一个。",
@@ -48,18 +96,43 @@
       "id": "b30-raft-snapshot",
       "title": "B30 Raft 完整化（快照 + 成员变更）",
       "question": "给事件驱动的 Raft 模拟补上日志压缩（快照）与成员变更，§5.4.2 系列不变式还能逐事件成立吗？",
-      "evidence": {"path": "projects/B30-mini-raft/README.md", "anchor": "双入口同数：15 项"},
+      "evidence": {
+        "path": "projects/B30-mini-raft/README.md",
+        "anchor": "双入口同数：15 项"
+      },
       "files": [
-        {"path": "projects/B30-mini-raft/raft30/sim.py", "lines": 409},
-        {"path": "projects/B30-mini-raft/raft30/rpc.py", "lines": 118},
-        {"path": "projects/B30-mini-raft/raft30/hashing.py", "lines": 76},
-        {"path": "projects/B30-mini-raft/tests/test_b30.py", "lines": 304}
+        {
+          "path": "projects/B30-mini-raft/raft30/sim.py",
+          "lines": 409
+        },
+        {
+          "path": "projects/B30-mini-raft/raft30/rpc.py",
+          "lines": 118
+        },
+        {
+          "path": "projects/B30-mini-raft/raft30/hashing.py",
+          "lines": 76
+        },
+        {
+          "path": "projects/B30-mini-raft/tests/test_b30.py",
+          "lines": 304
+        }
       ],
       "probes": [
-        {"name": "没有快照（snapshot 计数 0）", "kind": "code-count",
-         "glob": "projects/B30-mini-raft/raft30/*.py", "pattern": "snapshot", "expected": 0},
-        {"name": "没有成员变更（membership/add_server/remove_server 计数 0）", "kind": "code-count",
-         "glob": "projects/B30-mini-raft/raft30/*.py", "pattern": "membership|add_server|remove_server", "expected": 0}
+        {
+          "name": "没有快照（snapshot 计数 0）",
+          "kind": "code-count",
+          "glob": "projects/B30-mini-raft/raft30/*.py",
+          "pattern": "snapshot",
+          "expected": 0
+        },
+        {
+          "name": "没有成员变更（membership/add_server/remove_server 计数 0）",
+          "kind": "code-count",
+          "glob": "projects/B30-mini-raft/raft30/*.py",
+          "pattern": "membership|add_server|remove_server",
+          "expected": 0
+        }
       ],
       "data": "现有 10 seed × 60 步事件流的「每事件查不变式」骨架直接扩展到快照点与成员变更场景；无需新数据。",
       "resources": "论文级工作量的两个子问题（InstallSnapshot RPC 与单步成员变更），sim.py（409 行）要扩三到四成；测试从 15 项起增 10–15 项（快照后日志截断、新节点追赶、变更中双多数派安全）；零依赖。时间盒 2–3 会话——五个候选里最重的。",
@@ -67,49 +140,67 @@
       "risks": "完整 Raft 的范围没有尽头（本候选刻意止步于快照+成员变更，不做流水线/分批复制）；测试量会逼近现有全套的两倍，时间盒要守死。"
     },
     {
-      "id": "b38-replication",
-      "title": "B38 主从复制（RESP 内复制协议子集）",
-      "question": "给手写 Redis 子集加主从复制：断连重连后「从库追平」如何被逐字节证明？",
-      "evidence": {"path": "projects/B38-mini-redis/README.md", "anchor": "36 项测试双入口同数"},
-      "files": [
-        {"path": "projects/B38-mini-redis/redislite/resp.py", "lines": 346},
-        {"path": "projects/B38-mini-redis/redislite/server.py", "lines": 220},
-        {"path": "projects/B38-mini-redis/redislite/store.py", "lines": 224},
-        {"path": "projects/B38-mini-redis/redislite/dbsnap.py", "lines": 100},
-        {"path": "projects/B38-mini-redis/tests/test_redis.py", "lines": 523}
-      ],
-      "probes": [
-        {"name": "没有复制概念（replica/slave/REPLCONF/SLAVEOF 计数 0）", "kind": "code-count",
-         "glob": "projects/B38-mini-redis/redislite/*.py", "pattern": "replica|slave|replconf|slaveof", "expected": 0},
-        {"name": "快照组件已存在（全量同步的传输底座）", "kind": "file-exists",
-         "path": "projects/B38-mini-redis/redislite/dbsnap.py"}
-      ],
-      "data": "复制状态就是键空间+过期表——现有 store 的 export_state 已给出可序列化全量；增量=命令流（服务器已有串行化命令序列的天然日志点）。",
-      "resources": "server.py（220 行）加「从库连接」状态与命令广播、新增复制握手（简化 REPLCONF/PSYNC 语义）；快照（dbsnap.py，100 行）直接做全量同步载荷；测试增 8–12 项（全量+增量追平、断连重连、过期语义在从库的表现）。时间盒 1–2 会话；无真 Redis 对照，语义表要自己写死（B38 的 case-study 方法论直接复用）。",
-      "evaluation": "①从库数据与主库逐键逐值相等（全量后与增量后各测一遍）；②断连 2 秒重连：追平且不丢不重（用两库对账器）；③主库故障窗口内的写入在重连后被补齐（复制偏移量的边界测试）。",
-      "risks": "真实 PSYNC 语义（部分重同步/复制积压缓冲）很远，明确声明只做「简化全量+命令流」；过期键在从库的读行为要显式定语义（真实 Redis 从库不主动过期）。"
-    },
-    {
       "id": "b23-numpy-sklearn",
       "title": "B23 + NumPy/scikit-learn 对拍扩展到更大网络",
       "question": "手写 ML 与成熟库在同一批数据/同一套指标下对拍，差距究竟在数值、在工程还是在数据规模？",
-      "evidence": {"path": "projects/B23-ml-from-scratch/README.md", "anchor": "自测（33 项）"},
+      "evidence": {
+        "path": "projects/B23-ml-from-scratch/README.md",
+        "anchor": "自测（33 项）"
+      },
       "files": [
-        {"path": "projects/B23-ml-from-scratch/ml/neuralnet.py", "lines": 167},
-        {"path": "projects/B23-ml-from-scratch/ml/tree.py", "lines": 126},
-        {"path": "projects/B23-ml-from-scratch/ml/linear.py", "lines": 118},
-        {"path": "projects/B23-ml-from-scratch/ml/data.py", "lines": 101},
-        {"path": "projects/B23-ml-from-scratch/tests/test_ml.py", "lines": 405},
-        {"path": "projects/B23-ml-from-scratch/data/iris.csv", "lines": 151}
+        {
+          "path": "projects/B23-ml-from-scratch/ml/neuralnet.py",
+          "lines": 167
+        },
+        {
+          "path": "projects/B23-ml-from-scratch/ml/tree.py",
+          "lines": 126
+        },
+        {
+          "path": "projects/B23-ml-from-scratch/ml/linear.py",
+          "lines": 118
+        },
+        {
+          "path": "projects/B23-ml-from-scratch/ml/data.py",
+          "lines": 101
+        },
+        {
+          "path": "projects/B23-ml-from-scratch/tests/test_ml.py",
+          "lines": 405
+        },
+        {
+          "path": "projects/B23-ml-from-scratch/data/iris.csv",
+          "lines": 151
+        }
       ],
       "probes": [
-        {"name": "numpy 在位（对拍底座）", "kind": "import-check", "module": "numpy", "expected": true},
-        {"name": "sklearn 缺失（安装决策点，未批不装）", "kind": "import-check", "module": "sklearn", "expected": false}
+        {
+          "name": "numpy 在位（对拍底座）",
+          "kind": "import-check",
+          "module": "numpy",
+          "expected": true
+        },
+        {
+          "name": "sklearn 缺失（安装决策点，未批不装）",
+          "kind": "import-check",
+          "module": "sklearn",
+          "expected": false
+        }
       ],
       "data": "iris（150 行）已转写并被公开统计锚定；扩规模需要更大数据集——MNIST 子集等需联网下载（按 PLAN §8 先问），或程序化合成（月牙/blobs 生成器已在 data.py）。",
       "resources": "核心工作是与 sklearn 的对拍台（训练同参、指标逐项比、数值梯度对照），估 300–500 行；**需安装 scikit-learn（约 20–30MB + 依赖，决策点⑥原表口径，未获批不装）**；网络规模放大到「手写实现跑得动」的上限（千级样本、几百参数）。时间盒 1 会话（装好后）+ 半天规模实验。",
       "evaluation": "①同数据同超参：手写 vs sklearn 的精度/损失差在声明容差内；②规模曲线（n=200→2000）两类实现的时间与内存对照；③反向：把 sklearn 换成故意错参，对拍台必须变红（防「对拍只对得齐不报错」）。",
       "risks": "20–30MB 只是下载口径，装后磁盘占用以实测为准并双口径登记；sklearn 版本行为差异（默认参、随机种子）会制造假分歧，必须写死全部随机源。"
     }
-  ]
+  ],
+  "chosen": {
+    "id": "b38-replication",
+    "title": "B38 主从复制（RESP 内复制协议子集）",
+    "date": "2026-10-02",
+    "note": "用户选定并实施：见 projects/B38-mini-redis/——复制语义表（case-study §8，含 6 条偏差声明）、PSYNC 全量+命令流、断连重连全量重同步并追平（两库对账器逐键逐值+逐到期时刻，自带牙齿）、-READONLY 拒写、从库被动过期语义；49 项测试双入口（36 核心 + 13 复制）、run.bat 两次退出码 0、规范化日志逐字相同。实施中还把两条潜伏缺陷照了出来（DEL 不清 expires、export_state 迭代中被改字典）——详见 B38 README 坑记。",
+    "evidence": {
+      "path": "projects/B38-mini-redis/README.md",
+      "anchor": "49 项测试双入口同数"
+    }
+  }
 }

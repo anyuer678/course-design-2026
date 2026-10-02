@@ -17,6 +17,9 @@ import time
 INT64_MAX = 2 ** 63 - 1
 INT64_MIN = -(2 ** 63)
 
+#: 会被传播到从库的写类命令（case-study §8.1；SAVE/REPLICAOF/PSYNC 不传播）
+WRITE_COMMANDS = {"SET", "DEL", "EXPIRE", "INCR"}
+
 
 class CommandError(Exception):
     """命令级错误：message 是 `-` 后的完整错误文本（不含 `-`）。"""
@@ -47,7 +50,8 @@ def parse_int64(token: bytes) -> int:
 
 class Store:
     def __init__(self, clock=time.time, active_sample: int = 20,
-                 active_rounds: int = 4, rng_seed: int = 20261002):
+                 active_rounds: int = 4, rng_seed: int = 20261002,
+                 passive_expire: bool = False, on_expire=None):
         self.clock = clock
         self.active_sample = active_sample
         self.active_rounds = active_rounds
@@ -55,20 +59,31 @@ class Store:
         self.data: dict[bytes, bytes] = {}
         self.expires: dict[bytes, float] = {}
         self.stats = {"expired_lazy": 0, "expired_active": 0, "active_cycles": 0}
+        # 从库模式（case-study §8.1）：读过期键表现为"不存在"但**不删除**；
+        # 不跑主动周期；等主库传播 DEL。see docs/case-study.md
+        self.passive_expire = passive_expire
+        # 主库真正删除过期键时的回调（服务器据此向从库补发合成 DEL）
+        self.on_expire = on_expire
 
     # ---------------------------------------------------------------- 过期
     def _check_expired(self, key: bytes) -> bool:
-        """惰性：到期就删（顺带计数）。"""
+        """惰性：到期就删（顺带计数）。从库模式只回答"已过期"，不动数据。"""
         deadline = self.expires.get(key)
         if deadline is not None and deadline <= self.clock():
+            if self.passive_expire:
+                return True
             del self.expires[key]
             self.data.pop(key, None)
             self.stats["expired_lazy"] += 1
+            if self.on_expire:
+                self.on_expire(key)
             return True
         return False
 
     def active_expire_cycle(self) -> int:
-        """主动采样一轮（可由服务器每 N 条命令调一次）：返回删除个数。"""
+        """主动采样一轮（可由服务器每 N 条命令调一次）：返回删除个数。从库不跑。"""
+        if self.passive_expire:
+            return 0
         deleted = 0
         self.stats["active_cycles"] += 1
         for _ in range(self.active_rounds):
@@ -80,6 +95,8 @@ class Store:
             for key in expired:
                 del self.expires[key]
                 self.data.pop(key, None)
+                if self.on_expire:
+                    self.on_expire(key)
             deleted += len(expired)
             if len(expired) / len(sample) <= 0.25:     # 过期率低：这一轮收工
                 break
@@ -102,6 +119,7 @@ class Store:
             self._check_expired(key)
             if key in self.data:
                 del self.data[key]
+                self.expires.pop(key, None)            # 一起清（曾被对账器抓出的残留）
                 count += 1
         return count
 
@@ -110,6 +128,7 @@ class Store:
             return 0
         if seconds <= 0:
             del self.data[key]                         # 非正数：立即删除（语义表）
+            self.expires.pop(key, None)
             return 1
         self.expires[key] = self.clock() + seconds
         return 1
@@ -180,6 +199,22 @@ class Store:
             if len(args) != 1:
                 raise self._arity("save")
             return _Save()
+        if upper == "PSYNC":
+            if len(args) != 3:
+                raise self._arity("psync")
+            return _Psync()
+        if upper == "REPLICAOF":
+            if len(args) != 3:
+                raise self._arity("replicaof")
+            if args[1].upper() == b"NO" and args[2].upper() == b"ONE":
+                return _Replicaof(host=None, port=None)
+            try:
+                port = parse_int64(args[2])
+            except ValueError as err:
+                raise CommandError("ERR Invalid master port") from err
+            if not 1 <= port <= 65535:
+                raise CommandError("ERR Invalid master port")
+            return _Replicaof(host=args[1].decode("utf-8", "replace"), port=port)
         raise CommandError(f"ERR unknown command '{name}'")
 
     @staticmethod
@@ -188,9 +223,13 @@ class Store:
 
     # ---------------------------------------------------------------- 快照
     def export_state(self) -> list[tuple[bytes, bytes, float | None]]:
-        """导出未过期键（(key, value, 绝对到期时刻|None)）——快照用。"""
+        """导出未过期键（(key, value, 绝对到期时刻|None)）——快照用。
+
+        注意 `list(...)`：循环里的 `_check_expired` 会删键，
+        直接迭代 `self.data.items()` 会 RuntimeError（复制的全量同步把这条炸出来过）。
+        """
         out = []
-        for key, value in self.data.items():
+        for key, value in list(self.data.items()):
             if self._check_expired(key):
                 continue
             out.append((key, value, self.expires.get(key)))
@@ -222,3 +261,15 @@ class _Pong:
 
 class _Save:
     """SAVE 命令的返回值哨兵（服务器据此落盘）。"""
+
+
+class _Psync:
+    """PSYNC 命令的哨兵（服务器据此回 FULLRESYNC + 快照并标记复制链接）。"""
+
+
+class _Replicaof:
+    """REPLICAOF 命令的哨兵（服务器据此配置/解除复制链路）。"""
+
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port

@@ -44,7 +44,7 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则
 | `tests/test_career.py` | 20 项：核验器 1 正 + 9 负、映射口径 7、诚实设计钉住 3 |
 | `demo.py` · `run.bat` · `tools/logdiff.py` | 演示与交付三件套（本仓库通例） |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 与 实现 与 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
