@@ -25,7 +25,7 @@ Java 侧只许**读契约**不许抄表，最后两边逐格对判定——
 | `docs/03-use-cases.md` | 用例 6 个：角色、前后置、主流程、扩展流、异常流 | 检查器（覆盖关系） |
 | `docs/04-user-stories.md` | 故事 13 个 + 验收标准 40 条（Given/When/Then） | 检查器（每条 AC 的验证入口必须能落地） |
 | `docs/05-open-questions.md` | **12 条待决问题**：我替真实用户做的判断、默认值、影响面、谁裁决 | 人工（需求评审） |
-| `docs/06-wireframes.md` | B16：五个视图的文字线框 + 元素↔需求回链 + **四态（正常/加载/空/错误）约定** + 可访问性规范 | `tests/test_prototype.py`（落点与契约） |
+| `docs/06-wireframes.md` | B16：五个视图的文字线框 + 元素与需求回链 + **四态（正常/加载/空/错误）约定** + 可访问性规范 | `tests/test_prototype.py`（落点与契约） |
 | `docs/07-walkthrough.md` | B16：20 步浏览器走查清单，**结果列全部留空**等用户填写 | 覆盖率有测试（13 个故事都要有条目），**结果由人填** |
 | `docs/08-architecture.md` | B17：约束、三种风格的**实测指标表**、分层职责、**依赖方向表**、横切关注点、不做清单 | `checks/check_arch.py`（两张表都要与实测相等） |
 | `docs/adr/ADR-01…03` | B17：三条决策记录（单体 / 判定源唯一 / 契约文件），每条含背景·决定·备选·后果·验证方式 | `check_arch.py::check_adrs`（五节齐全、被引用、无孤儿） |
@@ -34,14 +34,14 @@ Java 侧只许**读契约**不许抄表，最后两边逐格对判定——
 | `tools/export_verdict_table.py` | 用固定序列从 `spec` 现算判定表（**故意只测拒绝路径**） | `tests/test_architecture.py`（含"改坏模型必须让表变红"） |
 | `docs/10-soa.md` | B19：为什么选 SOAP 不选 gRPC（**本机依赖实测**）、双接口覆盖范围、**状态字面量白名单**、WSDL 由契约生成、本轮真缺陷 4 条、明确不做 | `check_arch.py::check_java_state_literals`（双向）+ Java 对拍 |
 | `docs/09-platform.md` | B18：环境实测数字、**Java 分层表（与真实 import 双向比对）**、契约消费点、事务边界、对拍结论、**本轮真缺陷 11 条**、明确不做 | `check_arch.py::check_java` |
-| `java/` | B18：Spring Boot 3.3.5 分层单体（`contract/domain/infra/app/web/config`），H2 + JdbcTemplate + 乐观锁 + REST | 23 项 JUnit 测试（离线 `mvn -o test`）+ `check_arch.py` 扫 import |
+| `java/` | B18：Spring Boot 3.3.5 分层单体（`contract/domain/infra/app/web/config`），H2 + JdbcTemplate + 乐观锁 + REST | 37 项 JUnit 测试（离线 `mvn -o test`）+ `check_arch.py` 扫 import |
 | `tools/export_contract.py` | 文档 → 契约的导出器；三方不一致就拒绝产出 | `tests/test_architecture.py` |
-| `checks/check_arch.py` | 架构核对器：真实 import 边 ↔ 文档声明、契约三方、ADR 完整性、新文档 ID 不悬空 | `tests/test_architecture.py`（含故意改坏的反向测试） |
+| `checks/check_arch.py` | 架构核对器：真实 import 边与文档声明、契约三方、ADR 完整性、新文档 ID 不悬空 | `tests/test_architecture.py`（含故意改坏的反向测试） |
 | `arch/style_probe.py` | 同一个用例在三种风格下的结构指标对照（**共用同一份 `spec`**） | `test_style_metrics` 等；文档表必须等于实测输出 |
 | `prototype/server.py` | B16：走查原型的服务（复用 B11 的 netlab + B15 的模型） | `tests/test_prototype.py` |
 | `prototype/web/` | B16：`index.html` / `app.js` / `style.css` / `favicon.svg`，只用 `textContent` 建节点 | 静态契约测试 + `node --check` |
 | `spec/workorder.py` | 可执行需求模型：状态机、权限、可见性、字段校验、SLA、只追加留痕；B16 又加了 `attemptable()` / `required_inputs()` 供界面读取 | `tests/` |
-| `checks/check_docs.py` | 文档↔模型↔矩阵三方一致性检查器（`--write` 重新生成矩阵） | `tests/test_docs_consistency.py` |
+| `checks/check_docs.py` | 文档-模型-矩阵三方一致性检查器（`--write` 重新生成矩阵） | `tests/test_docs_consistency.py` |
 | `traceability.csv` | 追踪矩阵，**由文档生成**，不是手工维护的账本 | 检查器比对内容 |
 | `docs/11-testing.md` | B20：四件验证产物各自"能被什么弄红"、流水线 9 层实测耗时、本轮 4 次自欺记录、14 条反向探针清单、明确不覆盖什么 | `tests/test_pipeline.py` + `tools/pipeline.py` 的 mutation 层 |
 | `tools/shrink.py` | B20：把反例动作序列缩到最小（ddmin），并用 BFS **独立**算一遍最短；两者必须相等 | `tests/test_shrink.py`（10 项 / 23 subTest） |
@@ -61,6 +61,8 @@ Java 侧只许**读契约**不许抄表，最后两边逐格对判定——
 | `tools/quality_gate.py` | 门禁执行器：口径过期就**拒判**；blocking 全绿才 PASS；advisory 红了点名不放空 | 实跑 PASS（8 个 blocking 层全绿，50.04 s） |
 | `checks/check_qa.py` | QA 层核对器：门禁契约新鲜、走查证据列不许吹牛、结果列必须仍是『未验证』 | `tests/test_gate.py::WalkthroughEvidence`（假测试名 / 看不懂的证据 / 代填 / 缺证据） |
 | `docs/07-walkthrough.md` | B21 加第 4 列『自动证据』：要么 `T:文件::方法`（会去源码核实），要么明写『只能人工』；**『你的结果』仍归用户填** | `checks/check_qa.py`（本轮就是它抓出我 12 条引用漏了 `test_` 前缀） |
+| `tools/walkthrough_pack.py` | B16 backlog ①：按**规范序列**在真原型上重放 20 步，从 spec + 种子现算每步期望；并核对 docs/07 的关键断言（说法过期即红，红在步号上） | `tests/test_walkthrough_pack.py`（18 项，四种改坏各有负面对照） |
+| `docs/16-walkthrough-pack.md` | B16 backlog ①：走查**现算期望值对照表**（生成物，20 步与 docs/07 逐号对应；『你的实际/一致？』两列留空给你填） | `walkthrough_pack.py --check` + run.bat 第 3 步 |
 | `demo.py` / `say.py` / `run.bat` | 需求 + 原型走查演示（12 段）；中文提示（见『踩过的坑』第 1 条）；一键核对（8 步，另有 `run.bat pipeline` / `run.bat gate`） | 实跑 |
 
 ## 运行与核对
@@ -68,7 +70,7 @@ Java 侧只许**读契约**不许抄表，最后两边逐格对判定——
 ```
 run.bat                                  八步：环境 → 文档一致性 → 架构核对 → 测试 → 演示 → Java 构建+双接口对拍 → B20 三层自检 → 起原型
 run.bat no-web                           前七步跑完就停（不开浏览器也能核对全部可自动部分，含 Java）
-run.bat pipeline                         只跑 `tools/pipeline.py`：10 层一条命令，本地离线，约 48 秒
+run.bat pipeline                         只跑 `tools/pipeline.py`：11 层一条命令，本地离线，约 50 秒
 run.bat gate                             只跑质量门禁：读 contracts/gate.json 判 PASS / BLOCKED 并分诊
                                          （门禁共 11 层，其中 blocking 9 层；B22 加了 `pm` 层）
 python checks/check_docs.py              只核对文档、模型与矩阵
@@ -76,6 +78,8 @@ python checks/check_docs.py --write      改完文档后重新生成 traceabilit
 python checks/check_arch.py              核对 Python 依赖图、契约三方、ADR、以及 Java 分层
 python tools/export_contract.py --write  改完 SRS 的表后重新导出 contracts/workflow.json
 python tools/export_verdict_table.py --write   重新生成 1680 格判定表（跨语言对拍基准）
+python tools/walkthrough_pack.py --check      核对 docs/16 没过期、docs/07 每步关键断言与现算一致
+python tools/walkthrough_pack.py --write      改过 spec/种子/原型后，重生成 docs/16 走查期望对照表
 python -m unittest discover -s tests -v
 python demo.py                            十一段演示（9 平台层与对拍、10 两种接口、11 验证工程）
 python tools/pipeline.py --list           十层流水线：每层管什么、什么改动会让它红
@@ -87,7 +91,7 @@ python tools/export_gate.py --write       改完 docs/12 的门禁/分诊表后�
 python tools/pipeline.py --only docs      只跑一层（可重复 --only）
 python tools/mutation_check.py --verbose  12 条变异逐条印 diff、副本指纹与核对器完整输出
 python -m prototype.server --port 8010    只起 B16 原型，浏览器打开 http://127.0.0.1:8010/
-cd java && mvn -o -B test                 只跑 Java 平台层（离线，23 项）
+cd java && mvn -o -B test                 只跑 Java 平台层（离线，37 项）
 cd java && java -jar target/repair-platform-0.18.0.jar   真起平台层，HTTP 在 :8083
 ```
 
@@ -118,12 +122,17 @@ Java 侧依赖 Spring Boot 3.3.5 + H2 + JUnit 5，**全部已在 `~/.m2` 缓存*
   条真实失败样本落到声明的类别；`contracts/gate.json` = 11 层 / blocking 9 / advisory 2 / 8 类分诊。
 * 项目台账：**27 个键**全部现算、全部被 `docs/13` 第 8 节引用；本轮新增 4 条坑后台账算出 50，
   `--refresh` 自动写回 **4 处** `L:` 标记，`pm` 层随即核对通过——数字不手抄是机制不是口号。
-* Python 测试：**198 项 + 242 个 subTest 通过**（`pytest` 与 `unittest` 同数），`ruff --select F,E9` 干净。
+* Python 测试（**B16 backlog ① 本轮重测**）：**216 项 + 298 个 subTest 通过**（`pytest` 与 `unittest` 同数；
+  198 + 新增 `test_walkthrough_pack.py` 18 项），`ruff --select F,E9` 干净。
+* 走查期望值生成器（B16 backlog ①）：`walkthrough_pack.py --check` **通过**——docs/16 与现算逐字一致、
+  docs/07 的 20 步 41 条窄断言全对上（四种改坏各有负面对照）；**它抓出并修掉了 docs/07 三处过期期望**
+  （第 8 步把接单链切断的 `R006`、第 13 步沿用 AQ-03 裁决前的"随时能关"、第 16 步徽章文案），
+  另精修第 6/7/9/15 步的说法。run.bat 两次退出码 0、规范化日志逐字相同（各 279 行）。
 * 40 条验收标准里：**40 条都有可执行测试**（AC-24 本轮从"待验证（B18）"转可执行）；
   7 条非功能需求：4 条可执行、2 条待验证（B20 等）、1 条只能人工确认（中文显示，NFR-04）。
   **没有一个验证入口是空的，也没有一个指向不存在的测试**——检查器会去源码里核实方法真的在。
 
-## 课程知识点 ↔ 产物 ↔ 验证
+## 课程知识点、产物、验证
 
 | 知识点 | 落在哪里 | 怎么被验证 |
 |---|---|---|
@@ -132,7 +141,7 @@ Java 侧依赖 Spring Boot 3.3.5 + H2 + JUnit 5，**全部已在 `~/.m2` 缓存*
 | 用例建模（角色、前后置、扩展流、异常流） | `03-use-cases.md` | 覆盖关系被机器读进追踪矩阵；异常流大多有对应测试 |
 | 用户故事与验收标准（Given/When/Then） | `04-user-stories.md` | 每个 US 至少一条 AC（缺了红灯）；AC 的验证入口必须能解析 |
 | 需求追踪矩阵 | `traceability.csv` | **由文档生成并与提交内容比对**，过期即红灯（PLAN 里原本列为"选做扩展"） |
-| 状态机 / 工作流建模 | 第 3 节转换表 + `spec` 的 `TRANSITIONS` | 文档↔模型逐格比对；穷举深度 6 走查所有合法序列并核对四条不变式 |
+| 状态机 / 工作流建模 | 第 3 节转换表 + `spec` 的 `TRANSITIONS` | 文档与模型逐格比对；穷举深度 6 走查所有合法序列并核对四条不变式 |
 | 权限模型（RBAC 的最小版本） | 第 5 节权限矩阵 | 与转换表**彼此**一致；测试再独立誊一份表做第三方 |
 | 数据可见性与越权 | 第 6 节可见性矩阵 | 样例 12 单穷举 `工单 × 角色`，与手誊谓词逐个相同；另有一条"先收口再筛选"的泄漏测试 |
 | 字段校验与错误报告策略 | 第 9 节 + `validate_order` | 一次报全（五个错就是五个），且失败后状态与留痕不变 |
@@ -358,6 +367,19 @@ Java 侧依赖 Spring Boot 3.3.5 + H2 + JUnit 5，**全部已在 `~/.m2` 缓存*
     `"12 | 1, 8, 11, 12,"` 这种字面量定位，B22 一加分类条目它们就悄悄失效（改成断言"文档没错"了）。
     发现方式是**跑一遍就红**——红在测试而不是产品上。已改成从表里现取行再改坏，
     于是"探针不许依赖具体数字"和"文档不许手抄数字"这两条其实是同一个毛病，我在同一轮里各犯一次。
+
+### B16 backlog ① 追加的坑（走查期望值生成器）
+
+52. **期望也会过期，而且没有任何东西会红**：docs/07 的「期望」列是 B16 手写的；B18 把验收
+    宽限期落成 168 小时后，第 13 步还写着"现在任何时刻都能关"——你按旧期望走查，会把
+    **正确的拒绝**当成缺陷记下来。直到 `tools/walkthrough_pack.py` 第一次重放才暴露。
+    修法不是"这次改对"：期望改成现算（`--write`），并在 `--check` 里核对 docs/07 的关键
+    断言——说法过期就红，红在步号上。**手写的东西要有人重算，否则它就是会过期的**。
+53. **单步都对、连起来断链**：第 8 步"对 R006 退回公共池"（要理由——没错）、第 9 步"w-2 对
+    R006 接单"（要 ASSIGNED——也没错）：每一步单独看都成立；连起来是死路——第 8 步成功后 R006 已在
+    `SUBMITTED`，第 9 步的"接单"在 `SUBMITTED` 下**根本没有这个动作**。这个错只有在
+    **整条规范序列重放**时才露头（单步核对永远发现不了）。修法：第 8 步改对第 7 步刚派出的
+    那张（`R009`），R006 留给接单链；生成器的负面对照钉住"第 8 步不许再出现 R006"。
 
 ## 已知局限（说清楚，不含糊）
 

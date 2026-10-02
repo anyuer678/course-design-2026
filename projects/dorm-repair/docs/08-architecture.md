@@ -87,7 +87,7 @@
 | `spec` | — |
 | `prototype` | `spec`, `netlab` |
 | `checks` | `spec`, `tools`, `arch` |
-| `tools` | `spec`, `checks` |
+| `tools` | `spec`, `checks`, `prototype`, `netlab` |
 | `arch` | `spec` |
 | `tests` | `spec`, `checks`, `tools`, `arch`, `prototype`, `netlab` |
 | `demo` | `spec`, `checks`, `tools`, `arch`, `prototype`, `netlab` |
@@ -99,6 +99,9 @@
    领域层就从"规则的唯一出处"降级成"其中一种写法"。核对器把这条单独查了一遍。
 2. **外壳之间不许横向依赖**。`prototype` 不能 import `tools`，界面不能 import 契约文件——
    它们只能各自依赖领域。横向边一多，B18 换 Java 时就没人能判断哪块能一起搬走。
+   唯一的例外是**声明过的**一条：验证类工具（`walkthrough_pack` 按规范序列重放、
+   从服务端响应现算期望）要**驱动** `prototype` 走真链路，所以 `tools → prototype/netlab`
+   写在上表里；`prototype → tools` 仍被禁止（上面第 1 列测得出）。
 3. **契约文件是"出口"，不是"入口"**。`contracts/workflow.json` 由文档生成、供 B18/B20 消费；
    仓库内部谁也不许反过来靠读它拼规则（那样文档一改要先重生成才能跑，等于把编译期检查变成运行期）。
 
@@ -118,7 +121,7 @@ spec/workorder.py（Python 侧判定源，B16 原型直接调它）
 
 * 文档改了没重生成契约 → `--check` 过期红灯；
 * 文档改了没改 `spec` → 导出时的三方比对红灯；
-   （同一条链路在 B15 的 `check_docs.py` 里也有，所以文档↔模型↔矩阵↔契约四者互为约束）
+   （同一条链路在 B15 的 `check_docs.py` 里也有，所以文档、模型、矩阵、契约四者互为约束）
 * 有人在别处（Java 或前端）自己写了一份转换表 → 契约与实现的对拍测试红灯（B20 落地；
   本期先把"Python 侧只有一份"这条测住了）。
 

@@ -86,13 +86,13 @@
 | `rounds_done` | `L:rounds_done=21` | PLAN §7 的『已完成』标题 | 全项目有 G1 记录的轮次数 |
 | `rounds_dorm` | `L:rounds_dorm=8` | 同上，限批次 5 | 同一套代码上连做的轮数（批次 5 已收尾） |
 | `rounds_dates` | `L:rounds_dates=3` | 标题里的日期去重 | **日历跨度只有两天**：说明排期是执行假设，不是课表 |
-| `doc_count` | `L:doc_count=15` | `docs/*.md` | 需求/架构/平台/SOA/测试/QA/管理共 15 篇 |
+| `doc_count` | `L:doc_count=16` | `docs/*.md` | 需求/架构/平台/SOA/测试/QA/管理/走查期望对照共 16 篇 |
 | `adr_count` | `L:adr_count=3` | `docs/adr/*.md` | 三条决策记录，五节齐全由 `check_arch` 核对 |
 | `aq_total` | `L:aq_total=12` | `docs/05` 表 | 替真实用户做的判断数 |
 | `aq_ruled` | `L:aq_ruled=3` | 同上（默认列含『已裁决』） | 三条都是"无偏好"下由我按推荐值定的，仍是假设 |
 | `aq_open` | `L:aq_open=9` | 同上 | 每条都必须在 `docs/14` 登记，少一条就红 |
-| `pitfalls` | `L:pitfalls=51` | README 坑编号 | 分类见 `docs/15`；断号/重号都算红 |
-| `pitfall_max` | `L:pitfall_max=51` | 同上（最大编号） | 与 `pitfalls` 相等 ⇒ 没有重号 |
+| `pitfalls` | `L:pitfalls=53` | README 坑编号 | 分类见 `docs/15`；断号/重号都算红 |
+| `pitfall_max` | `L:pitfall_max=53` | 同上（最大编号） | 与 `pitfalls` 相等 → 没有重号 |
 | `pitfall_gaps` | `L:pitfall_gaps=0` | 同上（1..max 的缺口数） | 0 = 编号连续；本轮刚从 1 修到 0（B21 段插错了位置） |
 | `gate_layers` | `L:gate_layers=11` | `contracts/gate.json` | 必须等于流水线层数（`pipeline_layers`） |
 | `gate_blocking` | `L:gate_blocking=9` | 同上 | 不绿就不放行的层数 |
@@ -107,7 +107,7 @@
 | `contract_preconditions` | `L:contract_preconditions=8` | 同上 | 前置条件代码数 |
 | `verdict_cells` | `L:verdict_cells=1680` | `verdict_table.json` | 跨语言逐格对拍的格子数 |
 | `ac_total` | `L:ac_total=40` | `docs/04` 验收标准 | 每条都必须有可解析的验证入口 |
-| `ac_executable` | `L:ac_executable=40` | 同上（`T:` 引用） | 等于总数 ⇒ 没有"待验证"悬空条目 |
+| `ac_executable` | `L:ac_executable=40` | 同上（`T:` 引用） | 等于总数 → 没有"待验证"悬空条目 |
 | `ac_pending` | `L:ac_pending=0` | 同上（`待验证(Bxx)`） | 0 是本轮事实：AC-24 已在 B18 转可执行 |
 | `ac_manual` | `L:ac_manual=0` | 同上（`人工确认(Bxx)`） | 注意：界面走查在 `docs/07`，不占用 AC 出口 |
 
