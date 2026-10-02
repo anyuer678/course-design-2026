@@ -1,0 +1,84 @@
+"""扫描每个项目的 run.bat，检查其引用的文件是否真的存在。
+
+运行: python scan_refs.py   （在 projects/ 目录下执行）
+这是仓库文化里"引用一个不存在的东西比留空更危险"的一次落实。
+"""
+import re
+import sys
+from pathlib import Path
+
+# 默认扫**仓库根的 projects/**，而不是当前工作目录。
+# 2026-10-02 实测出的坑：从仓库根直接 `python scan_refs.py` 时，"." 不是 projects/，
+# 于是 `*/run.bat` 匹配到 0 个、项目目录匹配到 0 个，两遍检查都"全绿"——
+# 那是**什么都没看的绿**，比红更危险。现在路径按本文件位置算，并且扫描数为 0 就报错退出。
+HERE = Path(__file__).resolve().parent
+root = Path(sys.argv[1]) if len(sys.argv) > 1 else HERE / "projects"
+if not root.is_dir():
+    print(f"[x] 要扫的目录不存在：{root}")
+    raise SystemExit(2)
+missing = []
+TOOLS = {"g++.exe", "python", "python3", "javac", "java", "node", "mvn",
+         "objdump", "gcc", "make", "pip"}
+
+for bat in sorted(root.glob("*/run.bat")):
+    d = bat.parent
+    text = bat.read_text(encoding="utf-8", errors="replace").replace("\\", "/")
+    refs = set()
+    for line in text.splitlines():
+        ls = line.strip()
+        if ls.startswith("rem") or ls.startswith("::") or not ls:
+            continue
+        for m in re.finditer(r"[\w./-]+\.(?:py|exe|json|s|cpp|asm|h)\b", line):
+            refs.add(m.group(0))
+        for m in re.finditer(r"(?:python|py|java|node)\s+([\w./-]+)", line):
+            refs.add(m.group(1))
+    for ref in sorted(refs):
+        ref = ref.lstrip("./")
+        if ref.startswith("-") or "." not in ref:
+            continue               # 参数(-m/-c)和纯单词(not/make)不是文件引用
+        if ref in TOOLS:
+            continue
+        if not (d / ref).exists() and not (d / "build" / ref).exists():
+            missing.append(f"{bat} -> {ref}")
+
+print("缺失引用:" if missing else "全部 run.bat 引用的文件都存在")
+for m in missing:
+    print(" ", m)
+
+# 第二遍：交付物齐全度。上面那遍只看得見"有 run.bat 的项目"，
+# 所以 B30 缺 run.bat/README 时它照样报"全部存在"——这是 2026-10-02 实测出的盲点。
+# 判据分两级，都是量出来的（不是我想当然）：
+#   硬性 = README.md + run.bat（16 个老项目全部都有，没有例外）
+#   软性 = 演示入口与测试入口。各语言形态不同：Python 用 demo.py/tests，
+#          C/C++/Java 的演示是 src 里的可执行程序，测试可能在 src 或 tests。
+#          所以软性只报"没找到"，让人去看一眼，不冒充"这就是缺陷"。
+HARD = ("README.md", "run.bat")
+DEMO_HINTS = ("demo.py", "demo", "src", "programs", "msh", "out")
+TEST_HINTS = ("tests", "src", "include")
+
+print()
+print("交付物齐全度（硬性=README.md+run.bat；软性=演示/测试入口，形态按语言不同）：")
+hard_gaps = 0
+for d in sorted(x for x in root.iterdir() if x.is_dir() and x.name[0] in "Bb" and x.name[1].isdigit()):
+    missing_hard = [n for n in HARD if not (d / n).exists()]
+    has_demo = any((d / n).exists() for n in DEMO_HINTS)
+    has_test = any((d / n).exists() for n in TEST_HINTS) or bool(list(d.rglob("test_*.py")))         or bool(list(d.rglob("*_test.*")))
+    notes = []
+    if not has_demo:
+        notes.append("没找到演示入口")
+    if not has_test:
+        notes.append("没找到测试入口")
+    if missing_hard or notes:
+        hard_gaps += 1
+        tag = "缺硬性交付物" if missing_hard else "待人工确认"
+        print(f"  [{tag}] {d.name}"
+              + (f"：缺 {'、'.join(missing_hard)}" if missing_hard else "")
+              + (f"；{'；'.join(notes)}" if notes and not missing_hard else ""))
+PROJECTS_SEEN = sum(1 for x in root.iterdir()
+                    if x.is_dir() and x.name[:1] in "Bb" and x.name[1:2].isdigit())
+if PROJECTS_SEEN == 0:
+    print(f"[x] 在 {root} 下扫到 0 个项目目录——这是无效扫描，不报\"全绿\"")
+    raise SystemExit(2)
+print(f"（扫描范围：{root}，项目目录 {PROJECTS_SEEN} 个）")
+print("全部项目的硬性交付物齐全" if hard_gaps == 0
+      else f"共 {hard_gaps} 个项目需要处理（上面已标明是缺硬性交付物，还是软性入口待人工确认）")

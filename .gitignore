@@ -1,0 +1,25 @@
+# 编译产物
+*.exe
+*.o
+*.obj
+*.pdb
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 数据/日志
+*.log
+todos.txt
+demo_todos.txt
+.zcode/
+
+# IDE
+.idea/
+.vscode/
+
+# Java / Maven 构建产物（B18）
+target/
+*.class
