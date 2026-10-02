@@ -32,6 +32,9 @@ python src\logstat.py demo\sample_build.log     # 按消息模板聚合的警告
 | `demo/Makefile` + `demo/src/greet.cpp` | 演示工程：产物进 `build/`，`clean` 一条命令还原 |
 | `demo/sample_build.log` | 合成的 GCC 风格日志（给 logstat 用） |
 
+> **交付细节**：`.gitignore` 里有 `*.log`，而 `demo/sample_build.log` 是**测试夹具**不是运行产物，
+> 所以它是用 `git add -f` 强制入库的——否则新克隆缺这个文件，`run.bat` 第 3 步会直接失败。
+
 ## 知识点 ↔ 实现 ↔ 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
