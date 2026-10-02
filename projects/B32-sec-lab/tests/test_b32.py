@@ -16,14 +16,16 @@
 from __future__ import annotations
 
 import html
+import importlib.util
 import pathlib
 import shutil
-import sqlite3
 import sys
+import tempfile
 import unittest
-import urllib.parse
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
+PROJECTS_DIR = ROOT.parent                                  # = projects/
+WORKSPACE_ROOT = PROJECTS_DIR.parent                        # = 仓库根（课设/）
 sys.path.insert(0, str(ROOT))
 
 from sec32 import audit as A                          # noqa: E402
@@ -31,6 +33,54 @@ from sec32 import creds as C                          # noqa: E402
 from sec32 import sqli as Q                           # noqa: E402
 from sec32 import traversal as T                      # noqa: E402
 from sec32 import xss as X                            # noqa: E402
+
+
+def inside_repo(path) -> bool:
+    """这个路径落在仓库里面吗？"""
+    try:
+        pathlib.Path(path).resolve().relative_to(WORKSPACE_ROOT.resolve())
+    except ValueError:
+        return False
+    return True
+
+
+_PROBE_ROOTS: set[pathlib.Path] = set()
+
+
+def make_probe_root(name: str) -> pathlib.Path:
+    """反向证明用的临时副本：**只能建在仓库之外**，并且只有它自己能被删。
+
+    这条函数是 2026-10-02 两次误删事故的直接后果。当时写的是
+    `work = parents[2] / "_probe_b32_xss"`（= `projects/_probe_b32_xss`），
+    而清理写成 `shutil.rmtree(work.parent)` —— `work.parent` 正是 `projects/`，
+    于是整个 projects 目录被删了两遍（第二遍是因为我把带着这个 bug 的测试
+    恢复出来之后没审计就直接跑了）。
+    现在的规矩：**只删本函数亲手建、且登记在案的那一个目录**；
+    "在仓库外"与"是我建的"两件事都由代码断言，不靠人记住。
+    """
+    base = pathlib.Path(tempfile.mkdtemp(prefix=f"b32-probe-{name}-"))
+    if inside_repo(base):
+        raise RuntimeError(f"临时副本必须建在仓库之外，实际得到 {base}")
+    _PROBE_ROOTS.add(base.resolve())
+    return base
+
+
+def destroy_probe_root(base) -> None:
+    resolved = pathlib.Path(base).resolve()
+    if inside_repo(resolved):
+        raise RuntimeError(f"拒绝删除仓库内的路径 {resolved}")
+    if resolved not in _PROBE_ROOTS:
+        raise RuntimeError(f"拒绝删除不是 make_probe_root 建立的目录 {resolved}")
+    shutil.rmtree(resolved, ignore_errors=True)
+    _PROBE_ROOTS.discard(resolved)
+
+
+def load_mutated(module_name: str, file_path):
+    """从临时副本加载改坏的模块（标准写法：spec → module_from_spec → exec_module）。"""
+    spec = importlib.util.spec_from_file_location(module_name, str(file_path))
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 class TestSqlInjection(unittest.TestCase):
@@ -42,7 +92,8 @@ class TestSqlInjection(unittest.TestCase):
         vuln = Q.login_concat(self.conn, "admin", "sha256$TOP_SECRET")
         safe = Q.login_bound(self.conn, "admin", "sha256$TOP_SECRET")
         self.assertTrue(vuln["logged_in"] and safe["logged_in"])
-        self.assertEqual(vuln["role"], safe["role"] == "admin")
+        self.assertEqual(vuln["role"], "admin")
+        self.assertEqual(safe["role"], "admin")
 
     def test_comment_payload_bypasses_concat_but_not_binding(self):
         payload, pwd = Q.PAYLOAD_COMMENT, "随便填"
@@ -213,7 +264,7 @@ class TestXssEscaping(unittest.TestCase):
 
         改的是临时副本里的**被测代码**，不是测试断言（B20 的规矩）。
         """
-        work = pathlib.Path(__file__).resolve().parents[2] / "_probe_b32_xss"
+        work = make_probe_root("xss")
         try:
             shutil.copytree(ROOT / "sec32", work / "sec32")
             target = work / "sec32" / "xss.py"
@@ -221,15 +272,13 @@ class TestXssEscaping(unittest.TestCase):
             mutated = text.replace("    return html.escape(name, quote=True)",
                                    "    return html.escape(name, quote=False)")
             self.assertNotEqual(mutated, text, "锚点没命中，这条证明就是空的")
-            spec = __import__("importlib.util", fromlist=["util"])
-            loader = spec.spec_from_file_location("mutated_xss", str(target))
-            module = spec.module_from_loader(loader.loader)
-            loader.loader.exec_module(module)
+            target.write_text(mutated, encoding="utf-8")   # 不写回去，加载的就还是原始模块
+            module = load_mutated("mutated_xss", target)
             payload = X.PAYLOADS["属性逃逸"]
             self.assertTrue(X.evidence(module.render_safe(payload), payload),
                             "去掉 quote=True 后判定毫无反应")
         finally:
-            shutil.rmtree(work.parent, ignore_errors=True)
+            destroy_probe_root(work)
 
 
 class TestCredentials(unittest.TestCase):
@@ -377,36 +426,76 @@ class TestPathTraversal(unittest.TestCase):
         self.assertEqual(row["join"]["verdict"], "ESCAPED", row["join"])
         self.assertEqual(row["guarded"]["verdict"], "REJECTED", row["guarded"])
 
-    def test_guard_rule_can_be_removed_and_then_it_leaks(self):
-        """反向证明：把 resolve 后的归属判定删掉，必须有载荷立刻越界。"""
-        work = pathlib.Path(__file__).resolve().parents[2] / "_probe_b32_path"
+    def test_resolve_check_is_the_only_thing_stopping_a_symlink_escape(self):
+        """拆掉 resolve 归属判定，软链载荷必须立刻越界；不拆则拦住。
+
+        上一版这条探针挑错了载荷：`../outside.txt` 在段规则之外还会被
+        `_reject_win_normalization`（`..` 以点结尾）拦下，所以只拆 resolve 也测不出来——
+        那是我的探针写错，不是被测代码没问题。软链路径不含 `..`，
+        **只有** resolve 判定能拦它，正好用来单独量这一层。
+        """
+        if self.tree["symlink"] is None:
+            self.skipTest("本机建不出目录软链（权限或文件系统限制），这一层没法单独量")
+        work = make_probe_root("path")
         try:
             shutil.copytree(ROOT / "sec32", work / "sec32")
-            text = (work / "sec32" / "traversal.py").read_text(encoding="utf-8")
-            mutated = text.replace(
-                "    if not target.is_relative_to(root.resolve()):",
-                "    if False:")
-            self.assertNotEqual(mutated, text, "锚点没命中")
-            (work / "sec32" / "traversal.py").write_text(mutated, encoding="utf-8")
-            spec = __import__("importlib.util", fromlist=["util"])
-            loader = spec.spec_from_file_location("mutated_traversal",
-                                                 str(work / "sec32" / "traversal.py"))
-            module = spec.module_from_loader(loader.loader)
-            sys.path.insert(0, str(work))
-            try:
-                loader.loader.exec_module(module)
-                tree = module.make_tree()
-                try:
-                    verdicts = [module.classify(module.serve_guarded, tree["root"], p)
-                                ["verdict"] for p in
-                                ("../outside.txt", "sub/../../outside.txt")]
-                    self.assertEqual(verdicts, ["ESCAPED", "ESCAPED"], verdicts)
-                finally:
-                    shutil.rmtree(tree["base"], ignore_errors=True)
-            finally:
-                sys.path.remove(str(work))
+            target = work / "sec32" / "traversal.py"
+            original = target.read_text(encoding="utf-8")
+            no_resolve = original.replace(
+                "    if not target.is_relative_to(root.resolve()):", "    if False:")
+            self.assertNotEqual(no_resolve, original, "锚点没命中，这条证明就是空的")
+            payload = "linkdir/outside.txt"
+            for label, source, want in (("原样", original, "REJECTED"),
+                                        ("只拆 resolve 判定", no_resolve, "ESCAPED")):
+                with self.subTest(stage=label):
+                    target.write_text(source, encoding="utf-8")
+                    module = load_mutated(f"mut_trav_{abs(hash(label))}", target)
+                    tree = module.make_tree()
+                    try:
+                        if tree["symlink"] is None:
+                            self.skipTest("副本所在文件系统不支持软链")
+                        verdict = module.classify(module.serve_guarded, tree["root"],
+                                                  payload)
+                        self.assertEqual(verdict["verdict"], want, (label, verdict))
+                    finally:
+                        shutil.rmtree(tree["base"], ignore_errors=True)
         finally:
-            shutil.rmtree(work.parent, ignore_errors=True)
+            destroy_probe_root(work)
+
+
+class TestProbeSandboxIsSafe(unittest.TestCase):
+    """这一组是事故本身换来的：守卫代码自己也必须被测，否则它只是安慰剂。"""
+
+    def test_probe_root_is_never_inside_the_repo(self):
+        work = make_probe_root("guard")
+        try:
+            self.assertFalse(inside_repo(work), work)
+            self.assertTrue(str(work).startswith(str(tempfile.gettempdir())))
+        finally:
+            destroy_probe_root(work)
+
+    def test_destroy_refuses_an_in_repo_path(self):
+        """反向证明：指着仓库里说"删掉它"，守卫必须拒绝，而且目录必须还在。"""
+        decoy = PROJECTS_DIR / "_b32_guard_should_survive"
+        decoy.mkdir(exist_ok=True)
+        try:
+            with self.assertRaises(RuntimeError):
+                destroy_probe_root(decoy)
+            self.assertTrue(decoy.is_dir(), "守卫没能保住仓库内的目录")
+        finally:
+            decoy.rmdir()
+
+    def test_destroy_refuses_a_path_it_did_not_create(self):
+        outside = pathlib.Path(tempfile.gettempdir()) / "definitely-not-mine-b32"
+        outside.mkdir(exist_ok=True)
+        nested = make_probe_root("nested")     # 只有走 make_probe_root 的才允许被删
+        try:
+            with self.assertRaises(RuntimeError):
+                destroy_probe_root(outside)    # 临时目录里但不是我建的那一个
+            self.assertTrue(outside.is_dir())
+        finally:
+            outside.rmdir()
+            destroy_probe_root(nested)
 
 
 class TestAuditScanner(unittest.TestCase):
@@ -424,7 +513,7 @@ class TestAuditScanner(unittest.TestCase):
         """本项目的 SQL 走 `_rows/_outcome` 包装。把它们从 sink 集合里摘掉，
         扫出来的点数必须大幅下降——这就是"静态检查最常见的失效方式"的实物证据。"""
         full = len(A.scan_package().get("sqli.py", []))
-        saved_attr, saved_name = A.ATTR_SINKS, A.NAME_SINKS
+        saved_name = A.NAME_SINKS
         A.NAME_SINKS = ()
         try:
             reduced = len(A.scan_package().get("sqli.py", []))
