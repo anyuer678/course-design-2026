@@ -2,17 +2,20 @@
 
 唯一事实源：`g2/cards.json`（40 张卡：B1–B41，B36 未做——用户主动跳过）。
 - `--write`：渲染 `g2/README.md`（索引）+ `g2/B<编号>.md`（每张卡）；
-- `--check`：重算比对（渲染过期即红），并逐条核验事实来源——
-  每张卡的每个来源锚点必须**逐字**存在于目标文件里（README 措辞一漂就红），
-  锚点长度 ≥ 12（防"短串哪都能命中"的平凡锚点）。
+- `--check`：渲染新鲜度 + 逐条核验事实来源——总结句 / 知识点行 / 任务原文 /
+  坑单标题必须在对应 README 里**逐字**存在，materials 里的路径必须真实存在。
 
-卡片内容全部取自各项目 README 的「练习建议」「踩过的坑」与 dorm-repair 的练习
-（不新造题）；「完成记录」留白，完成归用户。
+可审计规范化器（唯一规则）：比较前把全部空白折叠为单空格——README 里的条目
+常常跨行折行，这条规则让"折行与否"不算差异，其余一字不改。
+
+卡片内容全部取自各项目 README 原文（一句话 / 知识点表 / 练习建议 / 踩坑），
+不新造题；「完成记录」留白，完成归用户。
 """
 from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -20,8 +23,12 @@ ROOT = Path(__file__).resolve().parents[1]
 G2 = ROOT / "g2"
 CARDS = G2 / "cards.json"
 EXPECTED_IDS = [f"B{i}" for i in range(1, 42) if i != 36]
-
 VERIFY_CARD = "python g2/render.py --check"
+
+
+def norm(s: str) -> str:
+    """可审计规范化器：全部空白折叠为单空格（唯一规则）。"""
+    return re.sub(r"\s+", " ", s).strip()
 
 
 def load_cards(root: Path | None = None) -> list:
@@ -31,43 +38,61 @@ def load_cards(root: Path | None = None) -> list:
 
 # ------------------------------------------------------------------ 渲染
 
+def _task_text(t: dict) -> str:
+    if "raw" in t:
+        return norm(t["raw"])
+    return str(t["text"])
+
+
 def render_card(card: dict) -> str:
     lines = [
         f"# {card['id']} · {card['title']}（G2 卡片）",
         "",
         f"- 课程：{card['course']}",
-        f"- 项目：`projects/{card['project']}`（一键校验：`run.bat`）",
-        f"- 取材：项目 README 的「练习建议」「知识点」「踩过的坑」；锚点由 `{VERIFY_CARD}` 逐字核对",
-        "",
-        "## 一、口述提纲（不看代码讲得出）",
+        f"- 项目：`projects/{card['project']}`（一键校验：`run.bat`；展示页：`web/showcase.html`）",
+        f"- 取材：本项目 README 的「一句话 / 知识点 / 练习建议 / 踩坑」原文——不新造题；"
+        f"逐字由 `{VERIFY_CARD}` 核对",
         "",
     ]
+    if card.get("summary"):
+        lines += ["## 〇、这张卡对应什么（README 原文）", "", f"> {card['summary']}", ""]
+    lines += ["## 一、口述提纲（不看代码讲得出）", ""]
     for i, item in enumerate(card["oral"], 1):
         lines.append(f"{i}. {item}")
+    if card.get("knowledge"):
+        lines += ["", "## 二、知识点速览（README 表格原文）", ""]
+        lines += list(card["knowledge"])
+    lines += ["", "## 三、独立修改任务（README 练习建议原文；做完跑 `run.bat` 全绿）", ""]
+    for i, t in enumerate(card["tasks"], 1):
+        lines.append(f"{i}. （{t['from']}）{_task_text(t)}")
     lines += [
         "",
-        f"## 二、独立修改任务（出处：{card['modify_from']}）",
-        "",
-        card["modify"],
-        "",
-        "做完的标准：改完后 `run.bat` 全绿，且你能在口述提纲里补上「这次改动的取舍」。",
-        "",
-        f"## 三、失败复现任务（出处：{card['fail_from']}）",
+        "## 四、失败复现任务（先写下「我预言哪条会红、为什么」，再动手）",
         "",
         card["fail"],
         "",
-        "先写下「我预言哪条会红、为什么」，再动手跑；对不上预言本身就是收获。",
+        f"> 出处：{card['fail_from']}。对不上预言本身就是收获。",
         "",
-        "## 四、完成记录（你填）",
+    ]
+    if card.get("pin_list"):
+        lines += ["### 延伸坑单（README 踩坑原文，任选一条复现）", ""]
+        for h in card["pin_list"]:
+            lines.append(f"- {h}")
+        lines += [""]
+    lines += ["## 五、从哪看起（README 目录里的真实路径）", ""]
+    for m in card["materials"]:
+        lines.append(f"- `projects/{card['project']}/{m}`")
+    lines += [
+        "",
+        "## 六、完成记录（你填）",
         "",
         "- [ ] 日期：______ ／ 一句话心得：______",
         "",
-        "## 来源（逐字锚点，机器核对）",
+        "---",
+        f"本卡引用（总结句 / 知识点行 / 任务 / 坑单）与材料路径全部逐字机核，"
+        f"缺一即红（`{VERIFY_CARD}`）。",
         "",
     ]
-    for s in card["sources"]:
-        lines.append(f"- `{s['file']}`：「{s['anchor']}」")
-    lines.append("")
     return "\n".join(lines)
 
 
@@ -75,17 +100,18 @@ def render_index(cards: list) -> str:
     lines = [
         "# G2 练习册（生成物：`python g2/render.py --write`）",
         "",
-        f"> {len(cards)} 张卡片（B1–B41；B36 未做）：**口述提纲 / 独立修改任务 / 失败复现任务**——内容全部取自",
-        "> 各项目 README 的「练习建议」与「踩过的坑」（或 dorm-repair 的练习），**不新造题**；",
-        f"> 每张卡的来源锚点由 `{VERIFY_CARD}` 逐字核对，README 一改就红。",
+        f"> {len(cards)} 张卡片（B1–B41；B36 未做）：**这张卡对应什么 / 口述提纲 / 知识点速览 /",
+        "> 独立修改任务（全部练习建议原文） / 失败复现 + 延伸坑单 / 从哪看起**——内容全部取自",
+        "> 各项目 README 原文，**不新造题**；每条引用由 `--check` 逐字核对（README 一改就红）。",
         "> **完成归你**：卡片只搭脚手架，不代做、不代勾。",
         "",
-        "## 用法（每张卡 30–60 分钟）",
+        "## 用法（每张卡 45–90 分钟）",
         "",
         "1. 先做「口述提纲」：关掉代码把这些讲给空气听一遍；卡壳的点就是该回读的。",
-        "2. 做「独立修改任务」：改完跑项目 `run.bat`，全绿再收手。",
-        "3. 做「失败复现任务」：先写下「我预言哪条会红」，再跑——对不上是更有价值的收获。",
-        f"4. 填「完成记录」。{len(cards)} 张全做完，你对这个仓库的掌握就不再是「我写过」，而是「我能改」。",
+        "2. 扫一眼「知识点速览」与「从哪看起」，把不懂的行回去读 README 对应段。",
+        "3. 做「独立修改任务」（README 练习建议的全量清单，可多轮做）：改完跑项目 `run.bat` 全绿。",
+        "4. 做「失败复现任务」+「延伸坑单」：先写预言再跑——对不上是更有价值的收获。",
+        f"5. 填「完成记录」。{len(cards)} 张全做完，你对这个仓库的掌握就不再是「我写过」，而是「我能改」。",
         "",
         "## 卡片",
         "",
@@ -100,7 +126,8 @@ def render_index(cards: list) -> str:
         "## 维护",
         "",
         f"- 机器可读源是 `g2/cards.json`；重渲染 `python g2/render.py --write`，校验 `{VERIFY_CARD}`。",
-        "- 改过任何项目的 README 练习建议/坑之后，`--check` 会因锚点漂移报红——按提示对齐锚点与文案。",
+        "- 改过任何项目的 README（一句话/知识点表/练习建议/踩坑）之后 `--check` 会因引用漂移报红——"
+        "按提示对齐 cards.json 里的引用。",
         "- 自测（含「改坏必须红」的负面对照）：`python g2/tests/test_g2.py`。",
         "",
     ]
@@ -110,39 +137,70 @@ def render_index(cards: list) -> str:
 # ------------------------------------------------------------------ 校验
 
 def validate_cards(root: Path, cards: list) -> list:
-    """结构 + 锚点核验。返回问题列表。"""
+    """结构 + 逐字引用 + 材料路径核验。返回问题列表。"""
     problems = []
     if not isinstance(cards, list):
         return ["cards.json 顶层必须是数组"]
     ids = [c.get("id") for c in cards]
     if ids != EXPECTED_IDS:
-        problems.append(f"卡片编号必须恰好是 B1–B22 各一张：实际 {ids}")
+        problems.append(f"卡片编号必须恰好是 B1–B41（B36 缺位）：实际 {ids}")
     seen = set()
     for c in cards:
         cid = c.get("id", "?")
         if cid in seen:
             problems.append(f"{cid}：编号重复")
         seen.add(cid)
-        for key in ("project", "title", "course", "modify", "modify_from", "fail", "fail_from"):
+        for key in ("project", "title", "course", "fail", "fail_from"):
             if not str(c.get(key) or "").strip():
                 problems.append(f"{cid}：缺少字段 {key}")
         if len(c.get("oral") or []) < 3:
             problems.append(f"{cid}：口述提纲至少 3 条")
-        sources = c.get("sources") or []
-        if len(sources) < 3:
-            problems.append(f"{cid}：来源锚点至少 3 个")
-        for s in sources:
-            f = root / str(s.get("file") or "")
-            anchor = str(s.get("anchor") or "")
-            if not f.is_file():
-                problems.append(f"{cid}：来源文件不存在 {s.get('file')}")
-                continue
-            if len(anchor) < 12:
-                problems.append(f"{cid}：锚点过短（<12，防平凡）{anchor!r}")
-                continue
-            if anchor not in f.read_text(encoding="utf-8"):
-                problems.append(f"{cid}：锚点不在 {s['file']} 里逐字存在：{anchor!r}")
+        readme = root / "projects" / str(c.get("project") or "") / "README.md"
+        if not readme.is_file():
+            problems.append(f"{cid}：README 不存在 {readme}")
+            continue
+        ntext = norm(readme.read_text(encoding="utf-8"))
+        tasks = c.get("tasks") or []
+        if not tasks:
+            problems.append(f"{cid}：独立修改任务至少 1 条")
+        for t in tasks:
+            if not str(t.get("from") or "").strip():
+                problems.append(f"{cid}：任务缺少出处标注")
+            if "raw" in t:
+                if norm(str(t["raw"])) not in ntext:
+                    problems.append(f"{cid}：任务原文不在 README 里逐字存在：{norm(t['raw'])[:40]!r}")
+            else:
+                anchor = str(t.get("anchor") or "")
+                if len(anchor) < 12:
+                    problems.append(f"{cid}：任务锚点过短（<12，防平凡）{anchor!r}")
+                elif anchor not in ntext:
+                    problems.append(f"{cid}：任务锚点不在 README 里逐字存在：{anchor!r}")
+        if c.get("summary") and norm(str(c["summary"])) not in ntext:
+            problems.append(f"{cid}：总结句不在 README 里逐字存在")
+        for row in c.get("knowledge") or []:
+            if norm(str(row)) not in ntext:
+                problems.append(f"{cid}：知识点行不在 README 里逐字存在：{norm(str(row))[:40]!r}")
+        for h in c.get("pin_list") or []:
+            if norm(str(h)) not in ntext:
+                problems.append(f"{cid}：坑单标题不在 README 里逐字存在：{norm(str(h))[:40]!r}")
+        mats = c.get("materials") or []
+        if len(mats) < 3:
+            problems.append(f"{cid}：材料路径至少 3 个")
+        for m in mats:
+            p = root / "projects" / str(c.get("project") or "") / str(m)
+            if not p.exists():
+                problems.append(f"{cid}：材料路径不存在 {c.get('project')}/{m}")
     return problems
+
+
+def count_refs(cards: list) -> tuple:
+    """返回 (逐字引用数, 材料路径数)，供总结打印。"""
+    refs = mats = 0
+    for c in cards:
+        refs += len(c.get("tasks") or []) + len(c.get("knowledge") or []) + len(c.get("pin_list") or [])
+        refs += 1 if c.get("summary") else 0
+        mats += len(c.get("materials") or [])
+    return refs, mats
 
 
 def freshness_problems(root: Path, cards: list) -> list:
@@ -200,9 +258,9 @@ def main(argv) -> int:
             print("  -", p)
         return 1
     cards = load_cards()
-    n_anchor = sum(len(c["sources"]) for c in cards)
-    print(f"G2 校验通过：{len(cards)} 张卡片（B1–B41）、{n_anchor} 个来源锚点逐字可验、"
-          "渲染物与现算一致。")
+    refs, mats = count_refs(cards)
+    print(f"G2 校验通过：{len(cards)} 张卡片（B1–B41）、{refs} 个逐字引用与 {mats} 个材料路径"
+          "全部核验通过、渲染物与现算一致。")
     return 0
 
 

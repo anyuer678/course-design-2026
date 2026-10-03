@@ -10,22 +10,50 @@
       "RAII 的取证方式：为什么\"文件句柄用删除成功来证明已关闭\"在 Windows 上成立？",
       "对拍引擎在测什么：同一随机操作序列喂给 mini 与 std，比的是每一步之后的状态——为什么这比手写用例狠？"
     ],
-    "modify": "把 `grow()` 的 ×2 改成 ×1.5，用 `reserve + push_back` 循环数出总拷贝次数，比较两种系数在 n=1000 时的实际搬移量，解释摊还分析里\"Σ2^k = O(n)\"那一步。",
-    "modify_from": "练习建议 2",
     "fail": "把 `string` 构造后写 `c_str()` 终止符的那一步去掉（坑 1 的现场），再跑自测——先红的是哪条断言？为什么\"size 对了\"不等于\"门面对了\"？",
     "fail_from": "踩坑 1（c_str 的 '\\0' 不是自动的）",
-    "sources": [
+    "summary": "**容器的\"对\"不是自己说了算**——同一串随机操作分别喂给 `mini::vector` 与",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 三个指针描述动态数组 | `vector` 的 `data_/size_/cap_` | 手写用例逐条核对；随机对拍 60 种子 × 60 步 |",
+      "| 容量倍增摊还 | `grow()` | 实测增长轨迹（4 → 8 → 16）；`capacity() >= size()` 每步断言 |",
+      "| rule of five | 两个容器的五个特殊成员 | 拷贝独立（改一不改二）、自赋值、移动后源可复用 |",
+      "| RAII：对象管资源 | `~vector` / `~string` / `~FileHandle` | `Tracker` 静态计数器逐段对账（20 → clear 0 → 出作用域 0）；**文件句柄用\"删除成功\"取证**（句柄没关 Windows 删不掉） |",
+      "| 迭代器 | `T*`（vector）/ 结点游标（list） | 链表头尾插入后\"中段迭代器\"仍读到同一值（这是链表存在的意义） |"
+    ],
+    "pin_list": [
+      "**`c_str()` 的 `'\\0'` 不是自动的**：构造函数拷贝完内容后忘了写终止符，",
+      "**`append(char)` 不能借道 `strlen`**：`'\\0'` 走 `append(const char*)` 会被当成空串丢掉，",
+      "**修 bug 时引入了段错误**：给构造函数补终止符时没防\"空串不分配缓冲\"，",
+      "**多字符常量 `'闭'` 是编译期陷阱**：UTF-8 汉字写进 `char` 字面量是 multichar 常量"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "include/mini/vector.hpp",
+      "include/mini/list.hpp",
+      "include/mini/string.hpp"
+    ],
+    "tasks": [
       {
-        "file": "projects/B1-cpp-ministl/README.md",
-        "anchor": "把 `grow()` 的 ×2 改成 ×1.5"
+        "raw": "给 `vector` 补 `insert(pos, count, value)` 与区间构造，说清\"什么时候该重分配\"。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B1-cpp-ministl/README.md",
-        "anchor": "`strcmp == 0` 当场抓住"
+        "raw": "把 `grow()` 的 ×2 改成 ×1.5，用 `reserve + push_back` 循环数出总拷贝次数， 比较两种系数在 n=1000 时的实际搬移量，解释摊还分析里\"Σ2^k = O(n)\"那一步。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B1-cpp-ministl/README.md",
-        "anchor": "253,086 次逐元素比较"
+        "raw": "给 `list` 加 `splice`（整段剪接，O(1)），并写测试证明\"源表迭代器在剪接后仍然有效\"。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "把 `FileHandle` 改成**原子写**（写临时文件 + rename），解释为什么\"直接改原文件\"在 写一半崩溃时会留下半个文件（B14 有同类要求的实现可参照）。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -40,22 +68,55 @@
       "BST 删除三情形（叶/单子/双子后继顶替）——以及\"升序 31 个高 31 vs 折半插入高 5\"说明什么？",
       "线性建堆为什么 O(n)：494 次比较 vs 逐个插入 1538 次要靠什么数据形状才逼得出来？"
     ],
-    "modify": "把循环队列改成\"留一个空位\"区分空/满（不用 size 记账），写出被改红的测试。",
-    "modify_from": "练习建议 2",
     "fail": "故意把某条计数的期望值写错一位（例如\"删头部 5 个、搬 4 步\"写成 3 步），跑测试——它抓不抓？这条练习的教训是\"失败先怀疑自己的期望值\"。",
     "fail_from": "踩坑 2（手算计数也会错）",
-    "sources": [
+    "summary": "**\"复杂度\"不是标签，是数出来的**——顺序表插头部\"搬\"了多少步、链表查找\"跳\"了多少次、",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 顺序表的\"搬元素\"代价 | `SeqList::insert/erase` + `moves()` | 小样例**手算**到每一步（3 个元素头插 = 3 步）；300 次头插实测 44850 步（n(n-1)/2） |",
+      "| 链表的\"跳指针\"代价 | `LinkedList::find/at` + `hops()` | 手算（找第 3 个 = 跳 2 步、比较 3 次）；同题对照：头插只改链 300 次 |",
+      "| 栈的应用 | `brackets_match` / `infix_to_postfix` / `eval_postfix` | 括号 8 例手算；`3*(4+5)-6` → 后缀 → 21；括号不配对/非法字符/除零**必须抛错** |",
+      "| 循环队列的空/满 | `ArrayQueue`（size 记账） | 容量 4 的 head/tail 全手推（满时 head==tail==0 的\"相遇\"）；随机操作 vs `std::queue` |",
+      "| BST 删除三情形 | `BST::erase` | 叶/单子/双子（后继顶替）逐情形手推中序；随机操作 vs `std::set` |"
+    ],
+    "pin_list": [
+      "**`in_order` 是\"追加\"语义**：我的测试复用一个 `SeqList` 收遍历结果，忘了清空——",
+      "**手算计数也会错**：删头部 5 个元素的一批\"搬动\"我手数成 3 步，实际 4 步——",
+      "**中缀转后缀按位读会拆散多位数**：`10+2` 第一版产出 `1 0 2 +`（字面量被拆成两个词），",
+      "**空桶查找不比较键**：`probes()` 对空桶不加计数是我实现的口径（看了 0 个键）——",
+      "**随机数据的堆对拍看不出建堆优势**：随机序列下逐个插入平均只上浮 ~1 层，"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "include/ds/seqlist.hpp",
+      "include/ds/linkedlist.hpp",
+      "include/ds/stack.hpp"
+    ],
+    "tasks": [
       {
-        "file": "projects/B2-datastruct-lab/README.md",
-        "anchor": "把循环队列改成\"留一个空位\"区分空/满"
+        "raw": "给 `SeqList` 加\"按值删除全部\"并说明它各要搬多少步；给链表同题，对比两个计数器的差距。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B2-datastruct-lab/README.md",
-        "anchor": "教训同仓库记过的：**失败先怀疑自己的期望值**"
+        "raw": "把循环队列改成\"留一个空位\"区分空/满（不用 size 记账），写出被改红的测试。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B2-datastruct-lab/README.md",
-        "anchor": "建堆 494 次比较 vs 逐个插入 1538 次"
+        "raw": "给 BST 加 `successor/predecessor`，用它们重写 `erase` 的双子分支并跑全量对拍。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "给线性探测加\"墓碑数量超过一半就重散列\"，比较重散列前后的总探测数；",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "把 `Heap` 接成 `top-k`（维护 k 大小的小顶堆扫一遍），说清它和全排序的复杂度差在哪。",
+        "from": "练习建议 5"
       }
     ]
   },
@@ -70,22 +131,51 @@
       "两字符运算符（-> / <=>）的切分次序为什么是规范的一部分？",
       "传递闭包两套独立实现（Warshall 与逐点 BFS）互拍——\"独立参照\"为什么非要两套？"
     ],
-    "modify": "给关系加\"传递闭包的三条路\"：Warshall、BFS、反复平方 `R := R ∪ R^2` 直到不动点，三者对拍；说明为什么反复平方是 O(n^3 log n) 而前两者是 O(n^3)。",
-    "modify_from": "练习建议 3",
     "fail": "把 `to_cnf` 的极大项取反方向写反（坑 2 的经典错误），跑 36 项——哪条\"逐字符\"测试先红？为什么这个错误会输出与原式不等价的公式？",
     "fail_from": "踩坑 2（极大项的取反方向写反）",
-    "sources": [
+    "summary": "**判定不靠化简，靠穷举**——真值表把 2^n 行全枚举出来，\"重言/矛盾/可满足\"、",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 优先级与结合性 | `_Parser` 的五层函数链 | `render` 的括号位置逐条手推（`~` > `&` > `|` > `->` > `<=>`；`->` 右结合） |",
+      "| 两字符运算符 | `tokenize` | `p->q`、`p<=>q` 必须切成 3 个记号；`p<q`、`p - > q` 报错并给字符位置 |",
+      "| 词法/语法错误定位 | `FormulaError.pos` | 9 组坏输入断言字符下标（`\"p &\"` 报在 3、`\"(p & q\"` 报在 6） |",
+      "| 真值表（语义定义） | `truth_table` | `p & q` 的 4 行**逐行手写**对照；行序 = 变量字典序的二进制计数 |",
+      "| 极小项/极大项 | `minterms` / `maxterms` | 两者恰好覆盖 `0..2^n-1` 且不重（多条公式断言） |"
+    ],
+    "pin_list": [
+      "**两字符运算符必须先试长的**：`->` 若按单字符切，会变成 `-` 与 `>` 两个坏记号——",
+      "**极大项的取反方向写反是经典错误**：成真的行取变量本身、成假的行取否定；",
+      "**变量序是规范**：极小项编号依赖**字典序**（`p1 < p10 < p2` 的字符串序），",
+      "**给 AST 加常量后差点把收集逻辑写丢**：我改写 `walk` 时把 `Var` 分支的 `found.add`",
+      "**`render` 的括号只按树形加，不做最简化简**：`~(p & q)` 会渲染成 `~((p & q))`。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "logic3/formula.py",
+      "logic3/truth.py",
+      "logic3/relation.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B3-logic-lab/README.md",
-        "anchor": "给关系加\"传递闭包的三条路\""
+        "raw": "给 `FormulaError` 的\"公式意外结束\"在 `\"(p & q\"` 情形下改成报告**左括号的位置**， 说出为什么\"报在末尾\"对交互式输入不够友好（提示：栈里存括号的位置）。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B3-logic-lab/README.md",
-        "anchor": "极大项的取反方向写反是经典错误"
+        "raw": "把 `to_dnf` 的输出做一次\"吸收律化简\"（`p | (p & q)` → `p`）， 用回代测试证明化简前后等价，再说清为什么本项目**故意不做**（教学重点在\"表两半\"）。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B3-logic-lab/README.md",
-        "anchor": "Warshall 与逐点 BFS 闭包互证"
+        "raw": "给关系加\"传递闭包的三条路\"：Warshall、BFS、反复平方 `R := R ∪ R^2` 直到不动点， 三者对拍；说明为什么反复平方是 O(n^3 log n) 而前两者是 O(n^3)。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "构造一个\"对称 + 传递但不自反\"的关系，验证 `equivalence_classes` 会拒绝， 并解释：要让商集良定义，为什么自反那条不能省。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -100,22 +190,49 @@
       "群判定器\"四张坏表全拒（带反例）\"——举反例和只报\"不是群\"差在哪？",
       "对拍对象的选择：为什么与内建 pow / 暴力枚举对，而不是自己证自己？"
     ],
-    "modify": "给 `mod_pow` 加\"窗口法\"（每次看 k 位），统计 k=1..4 的模乘次数，找到本实现的最优窗口。",
-    "modify_from": "练习建议 1",
     "fail": "把 egcd 两版实现里的 `(0,0)` 约定改成不一致（一版 `(0,0,0)`、一版 `(0,1,0)`），跑对拍——它是不是当场逮住？这条就是坑 3 的复现。",
     "fail_from": "踩坑 3（(0,0) 的约定要两边一致）",
-    "sources": [
+    "summary": "**定理要靠对拍背书**——扩展欧几里得与\"两套实现互拍 + 裴蜀恒等验算\"一起交付，",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 扩展欧几里得与裴蜀等式 | `egcd` / `egcd_iter` | 手算 (240,46)→(2,-9,47)；**两套独立实现 3721 组互拍**；`a·x+b·y=g` 2601 组验算；g == math.gcd 对拍 |",
+      "| 模逆 | `mod_inverse` | 手算 3^-1 mod 11 = 4、7^-1 mod 40 = 23；不互素**必须抛错**；对 m<60 全量逐个乘回去验 1 |",
+      "| 平方-乘快速幂 | `mod_pow` | 内建 `pow(a,e,m)` 当参照，**3000 组随机对拍**；乘法次数的账精确到\"平方=bit_length-1、乘法=二进制 1 的个数\" |",
+      "| 欧拉函数 | `phi`（分解）/ `phi_sieve`（筛法） | 手算 φ(1)/φ(9)/φ(97)/φ(100)；**1..400 逐数对拍**；经典恒等 Σ_{d|n}φ(d)=n 对 1..200 全验 |",
+      "| 中国剩余定理 | `crt` | \"物不知数\" 3,5,7 → 23；**300 组随机系统对暴力搜索**（在 [0,∏m) 里逐数试）；模数不互素抛错 |"
+    ],
+    "pin_list": [
+      "**GBK 控制台编不了上标字符**：演示里写 `2^3`/`n^3` 直接 `python demo.py` 时",
+      "**期望值也要先手推**：我给\"非交换 witness\"随手写了一张表，测试却红了——",
+      "**`(0,0)` 的约定要两边一致**：egcd 递归版给 `(0,0,0)`、迭代版初版给 `(0,1,0)`——"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "algebra/numbertheory.py",
+      "algebra/rsa.py",
+      "algebra/groups.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B4-algebra-rsa/README.md",
-        "anchor": "给 `mod_pow` 加\"窗口法\""
+        "raw": "给 `mod_pow` 加\"窗口法\"（每次看 k 位），统计 k=1..4 的模乘次数，找到本实现的最优窗口。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B4-algebra-rsa/README.md",
-        "anchor": "`(0,0)` 的约定要两边一致"
+        "raw": "实现 Miller–Rabin（确定性底集对 64 位够用），与 `is_prime` 在 10^6 内全量对拍并计时。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B4-algebra-rsa/README.md",
-        "anchor": "实现 Miller–Rabin（确定性底集对 64 位够用）"
+        "raw": "给 `check_group` 加\"找子群\"：枚举所有子集，验封闭性，列出 Z_12 加法群的子群格。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "写一个 `break_rsa`：对 32 位以内的 n 暴力分解，演示\"密钥太短\"的真实含义； 再用 OAEP 的思路说明填充如何破坏确定性（只写设计说明，别实现加密库）。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -130,22 +247,52 @@
       "双模型（单周期 vs 流水线）对拍能抓到什么单周期看不见的 bug（坑 5 是例子）？",
       "流水线时空图的 S/F 格与\"冲刷次数×2 = F 格数\"这条口径。"
     ],
-    "modify": "给流水线加\"分支在 ID 判定 + 预测不跳\"，数冲刷次数怎么变、为什么。",
-    "modify_from": "练习建议 1",
     "fail": "把 `is_load` 标志挪回 EX 才置（坑 4 的现场），跑双模型对拍——load-use 检测失灵时结果是\"读到旧值\"还是崩？为什么单周期模型看不出来？",
     "fail_from": "踩坑 4（is_load 标志设得太晚）",
-    "sources": [
+    "summary": "**CPU 的\"对\"有两层**——单周期把 ISA 语义做对，流水线还要把**冒险**处理对；",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 指令编码与 r0 恒零 | `isa.hpp` `encode` / `RegFile` | 写 r0 被丢弃、读 r0 恒 0（两条断言）；R/I/J 三型各自编码路径 |",
+      "| 汇编器两遍扫描 | `asm.hpp` `assemble` | 前向跳转标签能解析成绝对地址；未定义标签必须报错；同行标签+注释 |",
+      "| 单周期语义 | `cpu.hpp` | 22 项 ISA 断言：算术/逻辑/移位/访存往返/负立即数/有符号 slt/分支跳/不跳/j/halt |",
+      "| 访存越界 | `DataMem` | 越界 **抛错**（不是读到垃圾） |",
+      "| 周期数与控制流 | `cpu.hpp` | 直线程序周期数 == 指令数；trace 里能看到 pc 从 0 跳到 2 |"
+    ],
+    "pin_list": [
+      "**取到 `halt` 之后还要继续取指** → 越界报错。修法：见到 halt 就**冻结取指**，只等流水线排空。",
+      "**分支跳转时\"取了目标又把它冲掉\"，而 pc 已前进** → 目标指令被跳过、循环变死循环。",
+      "**`pc_frozen` 冲刷后不清** → 跳转前恰好取到过 halt，排空后永不再取指（假死）。",
+      "**`is_load` 标志设得太晚**（EX 阶段才置）→ load-use 检测完全失灵（结果读到旧值）。",
+      "**`sll/srl` 的源是 rt 不是 rs**（`sll rd, rt, shamt`）→ 用 rs 的转发值算出恒 0；",
+      "**`run()` 整个重建 Machine** → 调用方预置的内存/寄存器被清空；改成只重置控制状态。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "include/isa.hpp",
+      "include/asm.hpp",
+      "include/cpu.hpp"
+    ],
+    "tasks": [
       {
-        "file": "projects/B5-cpu-sim/README.md",
-        "anchor": "给流水线加\"分支在 ID 判定 + 预测不跳\""
+        "raw": "给流水线加\"分支在 ID 判定 + 预测不跳\"，数冲刷次数怎么变、为什么。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B5-cpu-sim/README.md",
-        "anchor": "`is_load` 标志设得太晚"
+        "raw": "实现 `beqz/bnez` 与 `jal/jr`，写一个\"求阶乘\"的程序并用双模型对拍。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B5-cpu-sim/README.md",
-        "anchor": "双模型对拍**抓出来的（单周期一直是对的）"
+        "raw": "把访存改成有延迟（例如两级），看 load-use 停顿要变成几拍、为什么。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "人为制造一个转发错误（只保留 EX/MEM 一级），跑自测看**哪条断言先红**。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -160,22 +307,52 @@
       "为什么\"跑通\"还不够、要看 objdump 结构对照（序言/收尾/叶函数无 push）？",
       "反面教材（故意不保存 rbx）为什么必须亮 bit0——它在防\"探针恰好通过\"。"
     ],
-    "modify": "写递归版 `asm_fib_rec`，用 gdb 或 `objdump -d` 数每一层的栈帧怎么叠；与迭代版对比。",
-    "modify_from": "练习建议 2",
     "fail": "把一个 C++ 侧参数从 `long long` 改回 `long`（坑 1 的现场），跑自测——是编译期报错、还是运行时段错误？这说明\"宽度\"该写在契约的哪里？",
     "fail_from": "踩坑 1（参数宽度）+ 踩坑 2（数组步长）",
-    "sources": [
+    "summary": "**汇编的正确性分两层**——运行时行为对（与 C++ 参照逐数对拍），**结构也可见证**",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 两指针反转 | `asm_reverse` | 手算 7 例（含空串/单字符）；**越界哨兵围栏**（只许动指定 5 字节）；60 组对拍 `std::reverse` + 翻两次还原 |",
+      "| len 语义与边界 | 同上 | len≤0 不动内存；指针为空的 0 长调用安全（测试直接传 `nullptr,0`） |",
+      "| 迭代斐波那契 | `asm_fib` | 手算 0..10；fib(93)=12200160415121876738（u64 边界）；**0..93 全量与 C++ 参照对拍**；负数=0 |",
+      "| 比例变址寻址 | `asm_sort` | 手算 4 例（空/单/逆序/重复）；**60 组对拍 `std::sort`**（值域故意窄、重复多） |",
+      "| 完整栈帧 | `asm_sum_positive` | 手算 4 例 + 60 组参照对拍；**反汇编 6 项结构断言**（push rbp / mov rbp,rsp / leave / ret / push rbx / pop rbx） |"
+    ],
+    "pin_list": [
+      "**Windows x64 陷阱一：参数宽度**。C++ 侧写 `long len`（32 位），传 `-3` 进 rdx 是",
+      "**陷阱二：数组步长**。`asm_sort` 按 8 字节步长寻址，测试却传 `long` 数组（4 字节元素）",
+      "**`leave` 把 `pop rbp` 折进去了**：反汇编检查第一版要求显式 `pop rbp`，于是 FAIL——",
+      "**`mov rbx, imm64` 反汇编成 `movabs`**：检查器正则漏认 mnemonic，被自己的输出当场纠正。",
+      "**objdump 不认含中文的绝对路径**（`Illegal byte sequence`）：工具里改为",
+      "**探针的指针宽度**：`reinterpret_cast<long>(buf)` 在 x64 上装不下指针（编译期报错），"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "asm/reverse.s",
+      "asm/fib.s",
+      "asm/sort.s"
+    ],
+    "tasks": [
       {
-        "file": "projects/B6-asm-lab/README.md",
-        "anchor": "写递归版 `asm_fib_rec`，用 gdb 或 `objdump -d` 数每一层的栈帧怎么叠；与迭代版对比。"
+        "raw": "手写 `asm_strlen`，把 `asm_reverse` 改成\"只收一个指针\"的版本（自找长度）， 说清\"以 0 结尾\"的代价（多扫一遍）。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B6-asm-lab/README.md",
-        "anchor": "Windows x64 陷阱一：参数宽度"
+        "raw": "写递归版 `asm_fib_rec`，用 gdb 或 `objdump -d` 数每一层的栈帧怎么叠；与迭代版对比。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B6-asm-lab/README.md",
-        "anchor": "汇编没有类型系统，\"宽度\"必须由接口契约写清"
+        "raw": "把 `abi_probe.s` 扩到 SSE 寄存器（xmm6–xmm15 也是 Windows x64 的 callee-saved）， 再加一个\"故意破坏 xmm6\"的反面教材。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "把 `sum_positive` 同题的 C++ 函数分别用 `-O0` 与 `-O2` 编译，`objdump` 对照调用约定 与栈帧差异（PLAN 的选做项之一，从这里起步）。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -190,22 +367,51 @@
       "相对路径以 Makefile 目录为锚（-C/-f 语义）——用进程 cwd 会错在哪？",
       "logstat 的两个问题：\"哪类消息最多\"与\"哪个文件最脏\"为什么不是同一个视图？"
     ],
-    "modify": "把分批并发改成\"依赖就绪即调度\"的流水线，用 `time.sleep` 当 recipe 比较总耗时。",
-    "modify_from": "练习建议 2",
     "fail": "把 makefile 里一条相对路径改成相对进程 cwd 解析（坑 1 的现场），跑测试——在临时目录里跑时它红在哪一条？产物是不是还会被写进仓库？",
     "fail_from": "踩坑 1（相对路径必须相对 Makefile 目录）",
-    "sources": [
+    "summary": "**make 的核心不是\"跑命令\"，而是依赖图上的偏序**——目标只在全部前置就绪后执行，",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| Makefile 解析（目标/前置/recipe/`.PHONY`） | `Makefile.load` | 逐字段断言；重复目标、recipe 出现在目标之前都要报错 |",
+      "| 依赖图与拓扑序 | `Makefile.order` | 人工推的偏序逐条断言（`a` 在 `b` 前、`b` 在 `c` 前、`all` 最后） |",
+      "| 环检测 | 同上 | `a·b` 报错信息里必须出现 `a -> b -> a` 这条环 |",
+      "| 增量构建 | `needs_build` / `mtime` | 目标比前置新 → 不重建；`utime` 把前置调新 → 必须重建 |",
+      "| 失败传播 | `Builder.build` | 上游 `exit 7` → 返回码 1、**下游目标不执行**（断言产物不存在） |"
+    ],
+    "pin_list": [
+      "**相对路径必须相对 Makefile 目录**，不是进程 cwd。第一版按 cwd 解析：在临时目录里跑测试时",
+      "**失败传播是\"流程\"，不是\"崩溃\"**：`build()` 要返回非 0 并跳过下游，而不是把异常抛给调用方；",
+      "**`classmethod` 里写了 `self.PHONY_PREFIX`**：构造函数里能跑通、类方法里当场 `NameError`。",
+      "**我在这份 `run.bat` 里又踩了一次仓库自己记过的坑**：`echo ... clean -> full -> ...` 里的 `->`",
+      "**原子替换要带断言**：我两次用脚本改测试里的 recipe，转义在 heredoc 里被吃掉，"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "src/mm.py",
+      "src/logstat.py",
+      "tests/test_mini_make.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B7-mini-make/README.md",
-        "anchor": "把分批并发改成\"依赖就绪即调度\"的流水线"
+        "raw": "给 mm.py 加变量展开（`CC = g++`、`$(CC)`），并写一条\"未定义变量报错\"的测试。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B7-mini-make/README.md",
-        "anchor": "相对路径必须相对 Makefile 目录"
+        "raw": "把分批并发改成\"依赖就绪即调度\"的流水线，用 `time.sleep` 当 recipe 比较总耗时。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B7-mini-make/README.md",
-        "anchor": "先 `assert 锚点 in 文本` 再替换"
+        "raw": "给 logstat 加\"按文件分组\"的视图，说明为什么\"哪类消息最多\"和\"哪个文件最脏\"是两个问题。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "让 `clean` 只在产物存在时才执行（`needs_build` 现在对伪目标恒真），说清这样做的代价。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -220,22 +426,52 @@
       "stdio 预读为什么会吞掉子进程的 stdin——逐字节 read 换来了什么？",
       "`$?` 的口径：三段管道整体 = 最后一段；`exit` 无参数 = 上一条的 `$?`。"
     ],
-    "modify": "加 `&` 与 `jobs`：后台子进程不 wait、另存 pid 表；说明\"后台任务\"为什么必须改回收逻辑（SIGCHLD / WNOHANG 轮询），以及僵尸检查要跟着改什么。",
-    "modify_from": "练习建议 1",
     "fail": "把 `read_line` 的空行返回值（0）当成 EOF（坑 1 的真 bug），跑测试——哪条测试先红？为什么\"第一行是空行\"会让整个 shell 退出？",
     "fail_from": "踩坑 1（\"空行 = EOF\"的真 bug）",
-    "sources": [
+    "summary": "**shell 是进程课的总复习**——一行命令背后是 fork、exec、pipe、dup2、waitpid 的",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| fork + execvp | `run_pipeline` 子进程分支 | `true/false/sh -c 'exit 42'` 的退出码实测；找不到命令 → stderr + 127 且 shell 继续 |",
+      "| 管道 = N 进程 + N-1 根 pipe | `pipe()`/`dup2`/端点关闭 | 两段/三段管道现场（`printf \\| sort \\| head`）；父进程**关掉多余端点**（不关会挂死） |",
+      "| 重定向是 dup2 的艺术 | 子进程 `open`+`dup2` | `>` 截断、`>>` 追加、`<` 读入、管道+落盘组合；坏路径报错但 shell 继续 |",
+      "| 内建命令（改自己） | 单命令时 shell 本体执行 `cd/exit/pwd` | `cd /tmp` 后 `pwd` 变、跨行保持；**管道里的 cd 按外部命令处理**（找不到 → 127）有专项用例 |",
+      "| 退出码口径 | `waitpid` + `WIFEXITED/WIFSIGNALED` | `$?`=最后一段（`true \\| false` → 1）；信号死亡 = 128+15=143；`exit N` 显式码 |"
+    ],
+    "pin_list": [
+      "**\"空行 = EOF\"的真 bug**：`read_line` 对空行返回 0，而主循环把 `<=0` 当 EOF——",
+      "**stdio 预读会吞掉子进程的 stdin**：最初想用 `fgets` 读命令行——缓冲会把 `cat`",
+      "**管道端点必须关干净**：父进程不关写端，下游的读端等不到 EOF——整条管道挂死。",
+      "**两条我写错的测试期望**（实现是对的）：管道 `$?` 口径是**最后一段**（`cd /tmp | cat`",
+      "**WSL 默认发行版是 docker-desktop**（没有 bash）：必须 `-d Ubuntu-24.04` 点火，",
+      "**命令替换吞退出码**：`out=$(python3 ...)` 里若测试失败，`set -e` 不会拦住"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "src/msh.c",
+      "tests/test_msh.py",
+      "demo.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B8-mini-shell/README.md",
-        "anchor": "加 `&` 与 `jobs`"
+        "raw": "加 `&` 与 `jobs`：后台子进程不 wait，另存 pid 表；说明\"后台任务\"为什么必须改回收逻辑 （SIGCHLD / WNOHANG 轮询），以及僵尸检查要跟着改什么。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B8-mini-shell/README.md",
-        "anchor": "\"空行 = EOF\"的真 bug"
+        "raw": "加 `&&` 与 `||`：把\"单行多命令\"从管道的两层语法里切出来，画出你改了哪一层。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B8-mini-shell/README.md",
-        "anchor": "**管道端点必须关干净**：父进程不关写端"
+        "raw": "给 `lex` 加反斜杠转义与 `$VAR` 展开（只做最小子集），说清\"展开发生在词法之后、 执行之前\"的位置。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "用 `strace -f -e trace=process,desc ./build/msh` 跑一段管道，对着 trace 数 fork/pipe/dup2/wait4 的次序，和 `run_pipeline` 的代码逐行对上。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -250,22 +486,49 @@
       "FAT 的\"分配\"是一次写盘：空闲判定与占用标记为什么必须原子做完？",
       "覆盖写的顺序决定失败时还剩什么（先建新链→成功后释放旧链→填数据）。"
     ],
-    "modify": "实现 SRTF（最短剩余时间优先，抢占版 SJF），对比平均等待。",
-    "modify_from": "练习建议 1",
     "fail": "把 `alloc_one()` 的占用标记去掉（坑 4 的现场），跑测试——为什么同一个块会被连续分配、`fat_[0]` 自指成环，最后从哪里越界崩？",
     "fail_from": "踩坑 4（分配器必须\"边分配边占位\"）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 说明 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| FCFS / SJF / 优先级 / RR | `scheduler.hpp` | 事件循环 + 甘特图 + 等待/周转指标 |",
+      "| 抢占 vs 非抢占 | 同上 | RR 是抢占版；时间片极大时退化回 FCFS（有断言） |",
+      "| Belady 异常 | `paging.hpp` | 经典参考串下 FIFO 4 帧缺页(10) > 3 帧(9) |",
+      "| LRU / Clock / OPT | 同上 | LRU 用栈、Clock 用引用位+指针、OPT 看未来 |",
+      "| 缺页率实验 | `demo_paging` | 随机串上 OPT ≤ LRU、OPT ≤ FIFO 的实证 |"
+    ],
+    "pin_list": [
+      "**LRU ≤ FIFO 不是定理**：两者互不支配（上面的例子 LRU=10 > FIFO=9）。",
+      "**RR 的入队顺序约定**：新到达进程先入队、再到期进程回队尾。",
+      "**等待时间 = 周转时间 - 突发时间**：手算时最容易漏掉减 burst。",
+      "**分配器必须\"边分配边占位\"**：`alloc_one()` 只扫描 `fat_[b] == FREE` 却忘了",
+      "**覆盖写的顺序决定失败时还剩什么**：原来是\"先释放旧链、再分配新链\"，磁盘满时",
+      "**空文件是一条不存在的链**：`write(name, \"\")` 让首块 = `EOF_MARK`，`append` 里"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B9-os-sim/README.md",
-        "anchor": "实现 SRTF（最短剩余时间优先，抢占版 SJF），对比平均等待。"
+        "raw": "实现 SRTF（最短剩余时间优先，抢占版 SJF），对比平均等待。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B9-os-sim/README.md",
-        "anchor": "分配器必须\"边分配边占位\""
+        "raw": "给页面置换加\"工作集模型\"窗口统计。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B9-os-sim/README.md",
-        "anchor": "覆盖写的顺序决定失败时还剩什么"
+        "raw": "把 FAT 的每块 4 字节改成可配置块大小，画出\"块大小 vs 内部碎片\"关系。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "实现多级反馈队列（MLFQ），用随机负载对比 RR。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -280,22 +543,53 @@
       "崩溃对账：已提交必在、未提交必不在——`os._exit` 硬退帮证了什么？",
       "\"WAL 最后一行撕裂\"为什么只有\"文件末尾且没有换行\"的那行可以丢？"
     ],
-    "modify": "把页式快照从\"整库重写\"升级到**行/索引增量分页**：B+ 树页落盘、根页号写进头槽位、CHECKPOINT 只写脏页——先量一次\"改了 1 行要写多少页\"，再决定值不值。",
-    "modify_from": "练习建议 1",
     "fail": "在 WAL 中间（不是末尾）手动破坏一条记录再启动（坑 5 的边界），跑恢复——它该拒绝打开还是静默跳过？为什么\"静默跳过等于丢数据\"？",
     "fail_from": "踩坑 5（WAL 最后一行撕裂）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 说明 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| B+ 树插入分裂 / 删除借用合并 | `btree.py` | 阶 order 可配；叶子右链支持顺序扫描 |",
+      "| 索引范围扫描 | `btree.py` `range_scan` | `lo`/`hi` 传 `None` 表示该侧无界 |",
+      "| 聚簇主键索引 | `engine.py` `Table.index` | 索引里存 pk -> rowid，行本体在 `rows` 字典 |",
+      "| 词法分析 | `sqlparser.py` `tokenize` | 一条正则扫数字/字符串/限定列名/运算符 |",
+      "| 递归下降与优先级 | `sqlparser.py` | OR < AND < NOT < 比较；`users.id` 整体是一个记号 |"
+    ],
+    "pin_list": [
+      "**`UPDATE ... SET 主键 = 新值` 会悄悄弄坏索引**：只改 `rows` 不删旧键，",
+      "**多行 INSERT 中途失败留下半条语句**：第一行已写进内存、日志却没写，",
+      "**CHECKPOINT 落下未提交数据**：快照写的是\"当前内存\"，而事务中的改动已经在",
+      "**事务里的 DDL 回滚不掉**：快照只存行数据的话，事务里 `CREATE TABLE` 建的表",
+      "**WAL 最后一行撕裂会让整个库打不开**：崩溃时半条 JSON 记录被追加进去，",
+      "**Windows 的 `\\r\\n` 让按字节截断砍错位置**：文本模式读出来的行数 ≠ 字节数，"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B10-minidb/README.md",
-        "anchor": "升级到**行/索引增量分页**：B+ 树页落盘"
+        "raw": "把页式快照从\"整库重写\"升级到**行/索引增量分页**：B+ 树页落盘、根页号写进头槽位、 CHECKPOINT 只写脏页——先量一次\"改了 1 行要写多少页\"，再决定值不值。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B10-minidb/README.md",
-        "anchor": "WAL 最后一行撕裂会让整个库打不开"
+        "raw": "把 UPDATE 的日志从\"整表镜像\"改成\"前后镜像 + LSN\"，恢复时按 LSN 幂等重放 （现在只保证不重放旧记录，还做不到单条幂等）。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B10-minidb/README.md",
-        "anchor": "给 WAL 加**组提交窗口**"
+        "raw": "给 WAL 加**组提交窗口**（攒 N 条或 T 毫秒一次 fsync），用 demo 第 7 段的 计量方法量\"吞吐 vs 崩溃窗口\"的取舍。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "实现 `COUNT(*)`/`SUM(col)` 与 `GROUP BY`，注意它们要在投影之前算。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "支持 `LEFT JOIN`：内表无匹配时补 NULL，并想清楚 `ON` 与 `WHERE` 的差别 （谓词下推会把 LEFT 退化成 INNER）。",
+        "from": "练习建议 5"
       }
     ]
   },
@@ -310,22 +604,53 @@
       "`Connection: close` 的承诺要在行为上兑现：发完承诺的响应 → SHUT_WR → 读干净 → EOF 回收。",
       "GBN 的累积确认 vs SR 的缓存：同一丢包轨迹下有效载荷比不同在哪？"
     ],
-    "modify": "把固定超时换成 SRTT/RTTVAR（Jacobson/Karels）估计，用同一 seed 比较重传次数与时隙。",
-    "modify_from": "练习建议 2",
     "fail": "在\"发完 503 立刻 close\"的路径上复现坑 7：为什么 Windows 上 503 会被 RST 冲掉？对照\"发完 → SHUT_WR → 读干净\"的修法，说清每一步各解决什么。",
     "fail_from": "踩坑 7（503 被 RST 冲掉）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 在哪实现 | 用哪个测试/实验验证 | 取舍 |",
+      "|---|---|---|---|",
+      "| 报文格式与协议字段 | `http1.parse_request`、`udp.encode/decode` | `TestRequestParsing`、`TestDatagramFormat` | 只实现子集，但字段非法必须拒，不\"宽容\" |",
+      "| 可靠传输：序号/确认/重传 | `gbn.Sender/Receiver` | `TestGbnOverSimChannel` 全场景逐字节一致 | GBN 整窗重传，不上 SR（选做练习） |",
+      "| 滑动窗口与序号回绕 | `gbn.seq_diff`、`window ≤ space/2` 检查 | `TestSeqArithmetic`、`test_sequence_numbers_wrap_around`（space=8 绕 3 圈） | 内部用不回绕计数，上线才取模，避免边界歧义 |",
+      "| 超时与 RTT | `Sender.timeout` 挂在 base 上 | `test_out_of_order_is_dropped_not_buffered` | 固定超时，不做 RTT 自适应（练习 2） |",
+      "| 校验和与差错控制 | `zlib.crc32` | `test_one_bit_flip_is_caught`（40 个位置逐一翻位） | 校验失败当\"没收到\"，不区分坏包/丢包 |",
+      "| 信道损伤的统计特性 | `udp.SimChannel`（丢包/损坏/重复/乱序/抖动） | `TestSimChannel`（同 seed 轨迹一致） | 虚拟时钟，与机器快慢无关，实验可复现 |"
+    ],
+    "pin_list": [
+      "**`%xx` 解码全废**：`bytes` 下标取出来是 `int`，却拿字符串集合去判十六进制，",
+      "**裸 LF 被当成\"数据还没到\"**：找不到 `CRLFCRLF` 就返回\"需要更多数据\"，",
+      "**头部值含非 ASCII 抛 `UnicodeDecodeError`**：不是 `HttpError`，一路冒到服务端",
+      "**小写方法被悄悄折成 `GET`**：RFC 9110 说方法名大小写敏感。`get` 和 `GET` 在",
+      "**`Connection: close` 只写进响应头，没真的关**：客户端读完响应继续等，直到超时。",
+      "**HEAD 的 `Content-Length` 被写成 0**：拼响应前就把体清空了，长度算的是空体。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B11-net-lab/README.md",
-        "anchor": "把固定超时换成 SRTT/RTTVAR（Jacobson/Karels）估计"
+        "raw": "把 `Expect: 100-continue` 真正实现（先回 100 再读体），说明\"忽略 chunked\"为什么 会导致请求走私，并补一条两侧理解不一致的测试。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B11-net-lab/README.md",
-        "anchor": "503 被 RST 冲掉"
+        "raw": "把固定超时换成 SRTT/RTTVAR（Jacobson/Karels）估计，用同一 seed 比较重传次数与时隙。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B11-net-lab/README.md",
-        "anchor": "让客户端在收到响应前断开"
+        "raw": "实现 SR（选择重传）：加 NACK/缓存 + 单个定时器，同一批丢包轨迹下比较有效载荷比。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "给服务器加线程池版本，测 `peak_open` 与响应延迟，说明为什么单线程版里 `sleep` 一个 handler 会拖垮所有客户端。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "用 `GET /stats` 设计一个失败实验：让客户端在收到响应前断开，解释服务端 `open_now` 为什么会先涨后落，并说明\"退出码为 0 不代表没留垃圾\"这条验收规则 在本项目哪一处救了你。",
+        "from": "练习建议 5"
       }
     ]
   },
@@ -340,22 +665,53 @@
       "实测复杂度的前提是\"输入能触发最坏情况\"：Bellman-Ford 斜率 1.20 怎么修到 1.96？",
       "计时口径：为什么实验一律用 `bench.sweep`（输入先备好、只测算法本体）？"
     ],
-    "modify": "给 Dijkstra 加 A*，启发式分别用曼哈顿距离和欧几里得距离，说明**容许性**（不高估剩余代价）为什么是\"结果仍最优\"的前提，以及欧几里得版为什么必须小心浮点比较。",
-    "modify_from": "练习建议 5",
     "fail": "把三个图实现的\"边方向\"约定再次弄不一致（坑 1 的现场：两个当无向、一个当有向），跑 200 组随机图对拍——多少组不一致？这说明对拍比的是什么？",
     "fail_from": "踩坑 1（三种图实现各用各的\"边方向\"约定）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 代码 | 正确性靠什么 | 怎么验 |",
+      "|---|---|---|---|",
+      "| 分治递推 + 合并计数 | `divide.merge_sort_count` | 逆序对三分解；合并时右块先出则贡献 `mid-i` 对 | 值域 {0,1,2} 长度 ≤5 全穷举；500 组随机对暴力；测试里再加一棵独立写的树状数组 |",
+      "| 归并排序的稳定性约定 | 同上 `a[i] <= a[j]` | 相等元素不构成逆序对 | `[7,7,7,7] → 0`；降序数组恰好 `n(n-1)/2` |",
+      "| DP 状态与转移 | `dp.knapsack_table` | 对 `(i, w)` 归纳：`f[i][w]=max(f[i-1][w], f[i-1][w-wt]+v)` | 400~500 组随机与子集枚举比价值、比方案可行性 |",
+      "| 空间压缩与循环方向 | `dp.knapsack_rolling` | 倒序保证 `f[w-wt]` 仍是\"上一件物品之前\"的值 | 与全表逐组相等；正序版单独测出\"同一件被装两次\" |",
+      "| 方案还原 | `dp.knapsack` 的回溯段 | `f[i][w] != f[i-1][w]` <=> 第 i 件被选（价值非负） | 断言还原集合重量 ≤ 容量、价值 == 最优值 |",
+      "| 贪心 + 交换论证 | `greedy.schedule` | 用结束最早的 g 替换最优解的第一个，不损害后续 | 端点不超过 5、区间数 ≤3 的**全部 575 组**集合穷举；600 组随机 |"
+    ],
+    "pin_list": [
+      "**三种图实现各用各的\"边方向\"约定**（真 bug）：Dijkstra 与 Floyd 把边表当无向（各自补一条反向边），",
+      "**提前收敛让 Bellman-Ford 的实测斜率只有 1.20**，与理论 V·E 差得远。",
+      "**计时把输入生成也算进去了**：`bench.growth(fn, sizes)` 里 fn 自己造数据，测的是\"生成 + 算法\"。",
+      "**演示里 N 皇后棋盘打成了转置**（`placement[col] == row` 写反）：算法没错，",
+      "**我自己的期望值算错了两次**，都是测试先错、代码没错：",
+      "**演示数据不演示**：第一版区间调度例子里三种排序键都选出 3 个，看上去\"三种都对\"。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B12-algo-arena/README.md",
-        "anchor": "给 Dijkstra 加 A*，启发式分别用曼哈顿距离和欧几里得距离"
+        "raw": "给背包加 W 上限保护与大 W 退化路径（值域缩放或 meet-in-the-middle n≤40）， 说明它什么时候开始给出**近似**答案。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B12-algo-arena/README.md",
-        "anchor": "200 组随机图对拍里 **118 组不一致**——对拍比的是约定"
+        "raw": "把带权区间调度做出来（DP + 二分找上一个不冲突区间），并与\"最大数量\"版本比较反例。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B12-algo-arena/README.md",
-        "anchor": "计时把输入生成也算进去了"
+        "raw": "给 N 皇后加对称性剪枝（首行只搜一半，再乘 2），或改成迭代加深； 用 `experiments.py` 同一档规模比倍率，说明为什么量级仍然没变。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "复用 B2 的 `huffman.hpp` 做一次真实文件压缩，统计 WPL 和实际字节数—— 这题要求的是\"别在 Python 里再写一遍堆\"。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "给 Dijkstra 加 A*，启发式分别用曼哈顿距离和欧几里得距离， 说明**容许性**（不高估剩余代价）为什么是\"结果仍最优\"的前提， 以及欧几里得版为什么必须小心浮点比较。",
+        "from": "练习建议 5"
       }
     ]
   },
@@ -370,22 +726,48 @@
       "常量池按 (类型, 值) 去重；`list.count(1)` 数出 3 个常量的巧合怎么解释？",
       "调用帧与深度上限 100：为什么树遍历侧要临时抬高宿主递归上限（护栏公式）？"
     ],
-    "modify": "**给语言加数组与越界检查**，然后写快排：先定\"数组怎么作为参数传递（引用还是拷贝）\"，再实现下标与越界错误——做完它，`tests/test_recursion.py` 里那句\"快排不在其中\"就可以删掉。",
-    "modify_from": "练习建议 1",
     "fail": "把词法运算符表里的 `,` 去掉（坑 9 的现场），解析 `hanoi.tiny`——错误信息说的是\"无法识别的字符\"还是别的？为什么冒烟解析能当场抓出它？",
     "fail_from": "踩坑 9（词法漏了逗号）",
-    "sources": [
+    "summary": "",
+    "knowledge": [],
+    "pin_list": [
+      "**类型名有两套写法，一处不统一就全线假错误**：语法给出的是 `int`，表达式类型内部用 `INT`。",
+      "**`list.count(1)` 数出 3 个常量**：常量池\"去重\"必须按 `(类型, 值)` 判等。",
+      "**VM 把内部错误外包给 Python**：越界常量索引、坏运算码、`STORE` 不检查槽位——",
+      "**裸 `\\r` 不算换行**：CRLF 能过，老 Mac 换行的文件行号会全体错位。",
+      "**`let` 直接当 `if/while` 的语句体会造成\"名字可见但槽位可能没值\"**：改成显式语法规则。",
+      "**代码生成读检查器的标注**，没标注就抛 `CodegenError`——这条不变式被\"写错的测试\"意外验证过。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B13-tinylang/README.md",
-        "anchor": "**给语言加数组与越界检查**，然后写快排"
+        "raw": "**给语言加数组与越界检查**，然后写快排：先定\"数组怎么作为参数传递（引用还是拷贝）\"， 再实现下标与越界错误——做完它，`tests/test_recursion.py` 里那句\"快排不在其中\"就可以删掉。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B13-tinylang/README.md",
-        "anchor": "（候选②）**词法漏了逗号**：`fun f(a : int, b : int)`"
+        "raw": "支持互递归：加前向声明或两遍登记（先收全部函数签名、再查体），并说明 \"先定义后使用\"的简单性付出了什么代价。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B13-tinylang/README.md",
-        "anchor": "教训：**期望值必须有出处**，不能靠印象。"
+        "raw": "加内置转换函数 `int(x)`（floor）与 `round(x)`：先决定并写下 `int(-2.5)` 应该等于几，为什么。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "实现常量折叠优化（`1 + 2 * 3` → `7`），并解释它为什么会让 `--trace` 的行对应变模糊、 怎么在保留可追踪性的前提下做。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "做语法错误恢复：定义同步集（`;`、`}`、语句起始关键字），跳过到同步集继续解析， 然后统计\"一条程序里 3 个语法错误\"能报出几条——并解释为什么会漏报。",
+        "from": "练习建议 5"
+      },
+      {
+        "raw": "给调用深度上限做\"可配置\"：`--max-call-depth`，并想清楚树遍历侧的宿主栈上界 该怎么跟着变（提示：`interpret()` 里的公式）。",
+        "from": "练习建议 6"
       }
     ]
   },
@@ -400,22 +782,44 @@
       "工厂：加一种形状只改一处；画布代码里为什么不该出现 `if (tool == RECT)`？",
       "不信任文件：白名单 + 落点复核 + 原子写 + 不用 ObjectInputStream 各防什么？"
     ],
-    "modify": "加\"拖右下角手柄缩放\"：把 `translatedBy` 扩成 `scaledBy(...)`，想清楚矩形和线段各怎么缩放，并给撤销/重做补上对应测试（快照模型那条测试可以直接拿来加一步\"缩放\"操作）。",
-    "modify_from": "练习建议 1",
     "fail": "把 `hashCode` 故意改坏（坑 3 的现场：用数组身份当键），跑 7054 项——哪几条测试先红？这一步确认的是\"测试真的在盯着这件事\"，而不是恰好通过。",
     "fail_from": "踩坑 3（equals 写对但 hashCode 用数组当键）+ 练习建议 5",
-    "sources": [
+    "summary": "",
+    "knowledge": [],
+    "pin_list": [
+      "**`run.bat` 里两回踩了 cmd 的静默坑**（都是退出码 0，都不会自己喊出来）：",
+      "**`SafeStore` 先 `trim()` 再校验**：`\\u0001x.pad` 被裁成 `x.pad` 并放行，",
+      "**`equals` 写对但 `hashCode` 用数组当键**：`Objects.hash(..., long[])` 用的是数组身份，",
+      "**`Graphics2D g.create()` 不 `dispose()`**：每次重绘泄一个图形上下文，短期看不出来。",
+      "**`MoveShapeCommand` 里\"移动 0 像素\"会被当成一条命令**：用户撤销一次却没见画面变化，",
+      "**影子模型必须和真实历史用同一个深度上限**：一开始快照栈不限深，"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B14-java-paint/README.md",
-        "anchor": "加\"拖右下角手柄缩放\"：把 `translatedBy` 扩成 `scaledBy(...)`"
+        "raw": "加\"拖右下角手柄缩放\"：把 `translatedBy` 扩成 `scaledBy(...)`，想清楚矩形和线段各怎么缩放， 并给撤销/重做补上对应测试（快照模型那条测试可以直接拿来加一步\"缩放\"操作）。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B14-java-paint/README.md",
-        "anchor": "`equals` 写对但 `hashCode` 用数组当键"
+        "raw": "做多选（框选 + 一次移动/删除）：一条命令要能撤销多个形状，想想 `Command` 接口要不要加复合命令。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B14-java-paint/README.md",
-        "anchor": "把 `hashCode` 故意改坏"
+        "raw": "加图层：`Drawing` 变成 `List<Layer>`，序列化格式升级到版本 2 并写一个\"读 v1 → 转 v2\"的迁移器， 说明为什么\"读到不认识的文件就拒\"比\"尽量猜\"安全。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "把\"新建/打开\"也做成可撤销的（快照式命令），并给历史加上\"深度可配置 + 状态栏显示还能撤几步\"。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "用 `jshell` 或改代码，验证 `equals`/`hashCode` 不一致会造成什么后果：把 `hashCode` 故意改坏， 看哪几条测试先红——这一步能确认你的测试真的在盯着这件事，而不是恰好通过。",
+        "from": "练习建议 5"
       }
     ]
   },
@@ -430,22 +834,38 @@
       "11 条假设为什么必须登记为待决问题，而不是悄悄当\"规定\"用？",
       "AC（验收标准）转成可执行测试意味着什么？哪些 AC 只能留给用户？"
     ],
-    "modify": "给状态机加\"退回公共池次数上限\"（AQ-10 的裁决），看哪几条测试与文档必须同时改。",
-    "modify_from": "练习建议 1",
     "fail": "按练习 5 自己做一次验伪：只改 `02-srs.md` 里 HIGH 的时限、不动模型，跑 `checks/check_docs.py`——报不报、报在哪一格？这一步确认核对机制在工作。",
     "fail_from": "练习建议 5（故意把文档和模型改歪一处）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 需求层次（业务/用户/系统）与 FR 编号 | `02-srs.md` 第 2 节 | 检查器要求每条 FR 至少被一个用例或故事引用，否则报\"孤儿需求\" |",
+      "| 功能性 vs 非功能性需求 | FR / NFR 两张表 | NFR 的\"验证方式\"也必须是三种之一，不能只写一句愿望 |",
+      "| 用例建模（角色、前后置、扩展流、异常流） | `03-use-cases.md` | 覆盖关系被机器读进追踪矩阵；异常流大多有对应测试 |",
+      "| 用户故事与验收标准（Given/When/Then） | `04-user-stories.md` | 每个 US 至少一条 AC（缺了红灯）；AC 的验证入口必须能解析 |",
+      "| 需求追踪矩阵 | `traceability.csv` | **由文档生成并与提交内容比对**，过期即红灯（PLAN 里原本列为\"选做扩展\"） |"
+    ],
+    "pin_list": [
+      "**`run.bat` 里的中文 `echo` 又被 cmd 切了**，而且这次**不是** `chcp` 之前的注释：前言全 ASCII，",
+      "**演示里那条\"追踪入口真的能跑\"的测试，一开始是假的**：我把 `tests/test_x.py::method`",
+      "**一个真正的模型缺陷是被穷举走查抓到的，不是被写测试时想到的**：",
+      "**检查器最初只会说\"这条转换两边不一样\"**，说不出哪一格不一样（我删掉模型里一条转换时，",
+      "**文档里我自己写了两个不存在的引用**：一处 AC 提到 `AQ-03` 但检查器只把 FR/BR/NFR 当合法引用；",
+      "**`{set}` 放进元组里当集合比较**：`unhashable type: 'set'`。要写 `frozenset`。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "给状态机加\"退回公共池次数上限\""
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "故意把文档和模型改歪一处"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "`checks/check_docs.py` 逐格比对"
+        "text": "给状态机加\"退回公共池次数上限\"（AQ-10 的裁决），看哪几条测试与文档必须同时改。",
+        "anchor": "给状态机加\"退回公共池次数上限\"",
+        "from": "练习建议 1"
       }
     ]
   },
@@ -460,22 +880,38 @@
       "20 步走查清单的结果列为什么必须留空由人填——机器能替代的只是期望值部分？",
       "可访问性（键盘 / 读屏）在原型里的最小承诺是什么？"
     ],
-    "modify": "给\"强制关闭\"加二次确认（或按 AQ-03 加悬挂时长提示），改完跑 `run.bat`：哪几条测试应该红、哪几条根本管不到这件事？说不出来就说明测试有洞。",
-    "modify_from": "练习建议 6",
     "fail": "按练习 2 的提示做一次\"越界改动\"：在 `app.js` 里直接加一条状态判断（而不走模型），先回去看第 9 条踩坑——说明这样改为什么会和\"前端不复制业务规则\"冲突。",
     "fail_from": "练习建议 2（维修员自助退回）+ 踩坑 9",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 需求层次（业务/用户/系统）与 FR 编号 | `02-srs.md` 第 2 节 | 检查器要求每条 FR 至少被一个用例或故事引用，否则报\"孤儿需求\" |",
+      "| 功能性 vs 非功能性需求 | FR / NFR 两张表 | NFR 的\"验证方式\"也必须是三种之一，不能只写一句愿望 |",
+      "| 用例建模（角色、前后置、扩展流、异常流） | `03-use-cases.md` | 覆盖关系被机器读进追踪矩阵；异常流大多有对应测试 |",
+      "| 用户故事与验收标准（Given/When/Then） | `04-user-stories.md` | 每个 US 至少一条 AC（缺了红灯）；AC 的验证入口必须能解析 |",
+      "| 需求追踪矩阵 | `traceability.csv` | **由文档生成并与提交内容比对**，过期即红灯（PLAN 里原本列为\"选做扩展\"） |"
+    ],
+    "pin_list": [
+      "**`run.bat` 里的中文 `echo` 又被 cmd 切了**，而且这次**不是** `chcp` 之前的注释：前言全 ASCII，",
+      "**演示里那条\"追踪入口真的能跑\"的测试，一开始是假的**：我把 `tests/test_x.py::method`",
+      "**一个真正的模型缺陷是被穷举走查抓到的，不是被写测试时想到的**：",
+      "**检查器最初只会说\"这条转换两边不一样\"**，说不出哪一格不一样（我删掉模型里一条转换时，",
+      "**文档里我自己写了两个不存在的引用**：一处 AC 提到 `AQ-03` 但检查器只把 FR/BR/NFR 当合法引用；",
+      "**`{set}` 放进元组里当集合比较**：`unhashable type: 'set'`。要写 `frozenset`。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "给\"强制关闭\"加二次确认"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "加一个\"维修员自助退回\"的动作"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "四态（正常/加载/空/错误）约定"
+        "text": "给\"强制关闭\"加二次确认（或按 AQ-03 加悬挂时长提示），改完跑 `run.bat`：哪几条测试应该红、哪几条根本管不到这件事？说不出来就说明测试有洞。",
+        "anchor": "给\"强制关闭\"加二次确认",
+        "from": "练习建议 6"
       }
     ]
   },
@@ -490,22 +926,38 @@
       "契约 workflow.json 三方一致（文档现算 = 契约 = 模型），谁是唯一判定源？",
       "三种架构风格对照的指标为什么必须\"实测\"（`arch/style_probe.py`）？"
     ],
-    "modify": "仿照既有三条 ADR 写第四条（如\"为什么依赖方向表要双向核对\"），五节齐全后跑 `checks/check_arch.py`——check_adrs 要求\"被引用、无孤儿\"，想清楚新 ADR 该被谁引用。",
-    "modify_from": "取材自 README『三条决策记录』五节结构（不新造题）",
     "fail": "按练习 5 的模式：往 `spec/` 里塞一个 `import netlab` 的文件，跑 `checks/check_arch.py`——核对器必须连报两条；删掉后立刻恢复干净。",
     "fail_from": "练习建议 5 模式（对照 README 记录的反向测试）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 需求层次（业务/用户/系统）与 FR 编号 | `02-srs.md` 第 2 节 | 检查器要求每条 FR 至少被一个用例或故事引用，否则报\"孤儿需求\" |",
+      "| 功能性 vs 非功能性需求 | FR / NFR 两张表 | NFR 的\"验证方式\"也必须是三种之一，不能只写一句愿望 |",
+      "| 用例建模（角色、前后置、扩展流、异常流） | `03-use-cases.md` | 覆盖关系被机器读进追踪矩阵；异常流大多有对应测试 |",
+      "| 用户故事与验收标准（Given/When/Then） | `04-user-stories.md` | 每个 US 至少一条 AC（缺了红灯）；AC 的验证入口必须能解析 |",
+      "| 需求追踪矩阵 | `traceability.csv` | **由文档生成并与提交内容比对**，过期即红灯（PLAN 里原本列为\"选做扩展\"） |"
+    ],
+    "pin_list": [
+      "**`run.bat` 里的中文 `echo` 又被 cmd 切了**，而且这次**不是** `chcp` 之前的注释：前言全 ASCII，",
+      "**演示里那条\"追踪入口真的能跑\"的测试，一开始是假的**：我把 `tests/test_x.py::method`",
+      "**一个真正的模型缺陷是被穷举走查抓到的，不是被写测试时想到的**：",
+      "**检查器最初只会说\"这条转换两边不一样\"**，说不出哪一格不一样（我删掉模型里一条转换时，",
+      "**文档里我自己写了两个不存在的引用**：一处 AC 提到 `AQ-03` 但检查器只把 FR/BR/NFR 当合法引用；",
+      "**`{set}` 放进元组里当集合比较**：`unhashable type: 'set'`。要写 `frozenset`。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "每条含背景·决定·备选·后果·验证方式"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "往 `spec/` 塞一个 `import netlab` 的文件"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "五节齐全、被引用、无孤儿"
+        "text": "仿照既有三条 ADR 写第四条（如\"为什么依赖方向表要双向核对\"），五节齐全后跑 `checks/check_arch.py`——check_adrs 要求\"被引用、无孤儿\"，想清楚新 ADR 该被谁引用。",
+        "anchor": "每条含背景·决定·备选·后果·验证方式",
+        "from": "取材自 README『三条决策记录』五节结构（不新造题）"
       }
     ]
   },
@@ -520,22 +972,38 @@
       "乐观锁与事务边界：并发冲突在哪种场景下会真的发生？",
       "1680 格跨语言判定的对拍：两边各自独立消费契约，为什么比\"共享代码\"强？"
     ],
-    "modify": "把字段级权限（维修员可否改优先级）建模进第 5 节的表，并想清检查器该怎么核对。",
-    "modify_from": "练习建议 3",
     "fail": "按练习 5 的模式改歪一处：往 `java/` 某处加一条违反分层的 import，跑 `checks/check_arch.py`——`check_java` 的双向比对必须在原因上红。",
     "fail_from": "练习建议 5 模式（对照 README 记录的 Java 双向核对）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 需求层次（业务/用户/系统）与 FR 编号 | `02-srs.md` 第 2 节 | 检查器要求每条 FR 至少被一个用例或故事引用，否则报\"孤儿需求\" |",
+      "| 功能性 vs 非功能性需求 | FR / NFR 两张表 | NFR 的\"验证方式\"也必须是三种之一，不能只写一句愿望 |",
+      "| 用例建模（角色、前后置、扩展流、异常流） | `03-use-cases.md` | 覆盖关系被机器读进追踪矩阵；异常流大多有对应测试 |",
+      "| 用户故事与验收标准（Given/When/Then） | `04-user-stories.md` | 每个 US 至少一条 AC（缺了红灯）；AC 的验证入口必须能解析 |",
+      "| 需求追踪矩阵 | `traceability.csv` | **由文档生成并与提交内容比对**，过期即红灯（PLAN 里原本列为\"选做扩展\"） |"
+    ],
+    "pin_list": [
+      "**`run.bat` 里的中文 `echo` 又被 cmd 切了**，而且这次**不是** `chcp` 之前的注释：前言全 ASCII，",
+      "**演示里那条\"追踪入口真的能跑\"的测试，一开始是假的**：我把 `tests/test_x.py::method`",
+      "**一个真正的模型缺陷是被穷举走查抓到的，不是被写测试时想到的**：",
+      "**检查器最初只会说\"这条转换两边不一样\"**，说不出哪一格不一样（我删掉模型里一条转换时，",
+      "**文档里我自己写了两个不存在的引用**：一处 AC 提到 `AQ-03` 但检查器只把 FR/BR/NFR 当合法引用；",
+      "**`{set}` 放进元组里当集合比较**：`unhashable type: 'set'`。要写 `frozenset`。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "把字段级权限（维修员可否改优先级）建模进第 5 节的表"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "扫真实 `import` 与表**双向**比对"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "H2 + 事务与乐观锁 + 1680 格跨语言对拍"
+        "text": "把字段级权限（维修员可否改优先级）建模进第 5 节的表，并想清检查器该怎么核对。",
+        "anchor": "把字段级权限（维修员可否改优先级）建模进第 5 节的表",
+        "from": "练习建议 3"
       }
     ]
   },
@@ -550,22 +1018,38 @@
       "WSDL 由契约生成：手写 WSDL 与生成 WSDL 的差别是什么？",
       "双接口对拍的牙齿怎么证过：塞一条自造规则会精确分叉吗？"
     ],
-    "modify": "对照「双接口覆盖范围」把没进 SOAP 的写操作列成一张表；再改「状态字面量白名单」里一个文件名，跑 `checks/check_arch.py`——核对器是不是立刻双向报红？",
-    "modify_from": "取材自 README『双接口覆盖范围 / 状态字面量白名单』（不新造题）",
     "fail": "按练习 5 的模式：在契约里改一个错误码描述再重新生成 WSDL，跑双接口对拍——REST 与 SOAP 两侧的判定必须在同一处、以同一种方式红。",
     "fail_from": "练习建议 5 模式（对照 README「WSDL 由契约生成」）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 需求层次（业务/用户/系统）与 FR 编号 | `02-srs.md` 第 2 节 | 检查器要求每条 FR 至少被一个用例或故事引用，否则报\"孤儿需求\" |",
+      "| 功能性 vs 非功能性需求 | FR / NFR 两张表 | NFR 的\"验证方式\"也必须是三种之一，不能只写一句愿望 |",
+      "| 用例建模（角色、前后置、扩展流、异常流） | `03-use-cases.md` | 覆盖关系被机器读进追踪矩阵；异常流大多有对应测试 |",
+      "| 用户故事与验收标准（Given/When/Then） | `04-user-stories.md` | 每个 US 至少一条 AC（缺了红灯）；AC 的验证入口必须能解析 |",
+      "| 需求追踪矩阵 | `traceability.csv` | **由文档生成并与提交内容比对**，过期即红灯（PLAN 里原本列为\"选做扩展\"） |"
+    ],
+    "pin_list": [
+      "**`run.bat` 里的中文 `echo` 又被 cmd 切了**，而且这次**不是** `chcp` 之前的注释：前言全 ASCII，",
+      "**演示里那条\"追踪入口真的能跑\"的测试，一开始是假的**：我把 `tests/test_x.py::method`",
+      "**一个真正的模型缺陷是被穷举走查抓到的，不是被写测试时想到的**：",
+      "**检查器最初只会说\"这条转换两边不一样\"**，说不出哪一格不一样（我删掉模型里一条转换时，",
+      "**文档里我自己写了两个不存在的引用**：一处 AC 提到 `AQ-03` 但检查器只把 FR/BR/NFR 当合法引用；",
+      "**`{set}` 放进元组里当集合比较**：`unhashable type: 'set'`。要写 `frozenset`。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "双接口覆盖范围、**状态字面量白名单**"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "**状态字面量白名单**"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "WSDL 由契约生成、本轮真缺陷 4 条"
+        "text": "对照「双接口覆盖范围」把没进 SOAP 的写操作列成一张表；再改「状态字面量白名单」里一个文件名，跑 `checks/check_arch.py`——核对器是不是立刻双向报红？",
+        "anchor": "双接口覆盖范围、**状态字面量白名单**",
+        "from": "取材自 README『双接口覆盖范围 / 状态字面量白名单』（不新造题）"
       }
     ]
   },
@@ -580,22 +1064,38 @@
       "\"退出码 0 但读不到数 = 红\"：这条流水线规则在防哪种假绿？",
       "四件验证产物各自\"能被什么弄红\"——说不出来意味着什么？"
     ],
-    "modify": "把 `docs/11-testing.md` 的「14 条反向探针清单」挑一条亲手跑一遍，看对应核对器是不是按文档说的方式红；对不上就说明文档或探针该改。",
-    "modify_from": "取材自 README『四件验证产物各自\"能被什么弄红\"』（不新造题）",
     "fail": "从「12 条变异 + 1 条阴性对照」里挑一条独立复跑：把制造出的红与预期原因逐字对一遍——如果它红在别处（比如副本缺文件），这条变异就不算数。",
     "fail_from": "练习建议 5 模式（对照 README『变异自检台』）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 需求层次（业务/用户/系统）与 FR 编号 | `02-srs.md` 第 2 节 | 检查器要求每条 FR 至少被一个用例或故事引用，否则报\"孤儿需求\" |",
+      "| 功能性 vs 非功能性需求 | FR / NFR 两张表 | NFR 的\"验证方式\"也必须是三种之一，不能只写一句愿望 |",
+      "| 用例建模（角色、前后置、扩展流、异常流） | `03-use-cases.md` | 覆盖关系被机器读进追踪矩阵；异常流大多有对应测试 |",
+      "| 用户故事与验收标准（Given/When/Then） | `04-user-stories.md` | 每个 US 至少一条 AC（缺了红灯）；AC 的验证入口必须能解析 |",
+      "| 需求追踪矩阵 | `traceability.csv` | **由文档生成并与提交内容比对**，过期即红灯（PLAN 里原本列为\"选做扩展\"） |"
+    ],
+    "pin_list": [
+      "**`run.bat` 里的中文 `echo` 又被 cmd 切了**，而且这次**不是** `chcp` 之前的注释：前言全 ASCII，",
+      "**演示里那条\"追踪入口真的能跑\"的测试，一开始是假的**：我把 `tests/test_x.py::method`",
+      "**一个真正的模型缺陷是被穷举走查抓到的，不是被写测试时想到的**：",
+      "**检查器最初只会说\"这条转换两边不一样\"**，说不出哪一格不一样（我删掉模型里一条转换时，",
+      "**文档里我自己写了两个不存在的引用**：一处 AC 提到 `AQ-03` 但检查器只把 FR/BR/NFR 当合法引用；",
+      "**`{set}` 放进元组里当集合比较**：`unhashable type: 'set'`。要写 `frozenset`。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "本轮 4 次自欺记录、14 条反向探针清单"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "12 条变异 + 1 条阴性对照，每条都要把对应核对器弄红"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "退出码 0 但读不到数＝红"
+        "text": "把 `docs/11-testing.md` 的「14 条反向探针清单」挑一条亲手跑一遍，看对应核对器是不是按文档说的方式红；对不上就说明文档或探针该改。",
+        "anchor": "本轮 4 次自欺记录、14 条反向探针清单",
+        "from": "取材自 README『四件验证产物各自\"能被什么弄红\"』（不新造题）"
       }
     ]
   },
@@ -610,22 +1110,38 @@
       "`mutation` 层被降级为什么会被导出器拒绝——它在防\"把牙齿拔了再签字\"吗？",
       "走查证据列（T: 文件::方法）核实的是什么：引用必须真的存在？"
     ],
-    "modify": "改 `docs/12-qa.md` 一张表（比如把某层从 blocking 挪到 advisory），重跑 `export_gate.py --write` + `quality_gate.py`——解释为什么 `mutation` 不许被降级。",
-    "modify_from": "取材自 README『两张规范表 + 不许被降级』（不新造题）",
     "fail": "跑 `tools/triage.py --selftest` 后，把一条规则的特征串改错一位再跑——它必须红；README 记过\"每条规则至少一条真实样本\"是分诊可信的前提。",
     "fail_from": "练习建议 5 模式（对照 README『每类分诊必须有真实样本』）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 需求层次（业务/用户/系统）与 FR 编号 | `02-srs.md` 第 2 节 | 检查器要求每条 FR 至少被一个用例或故事引用，否则报\"孤儿需求\" |",
+      "| 功能性 vs 非功能性需求 | FR / NFR 两张表 | NFR 的\"验证方式\"也必须是三种之一，不能只写一句愿望 |",
+      "| 用例建模（角色、前后置、扩展流、异常流） | `03-use-cases.md` | 覆盖关系被机器读进追踪矩阵；异常流大多有对应测试 |",
+      "| 用户故事与验收标准（Given/When/Then） | `04-user-stories.md` | 每个 US 至少一条 AC（缺了红灯）；AC 的验证入口必须能解析 |",
+      "| 需求追踪矩阵 | `traceability.csv` | **由文档生成并与提交内容比对**，过期即红灯（PLAN 里原本列为\"选做扩展\"） |"
+    ],
+    "pin_list": [
+      "**`run.bat` 里的中文 `echo` 又被 cmd 切了**，而且这次**不是** `chcp` 之前的注释：前言全 ASCII，",
+      "**演示里那条\"追踪入口真的能跑\"的测试，一开始是假的**：我把 `tests/test_x.py::method`",
+      "**一个真正的模型缺陷是被穷举走查抓到的，不是被写测试时想到的**：",
+      "**检查器最初只会说\"这条转换两边不一样\"**，说不出哪一格不一样（我删掉模型里一条转换时，",
+      "**文档里我自己写了两个不存在的引用**：一处 AC 提到 `AQ-03` 但检查器只把 FR/BR/NFR 当合法引用；",
+      "**`{set}` 放进元组里当集合比较**：`unhashable type: 'set'`。要写 `frozenset`。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "两张**规范表**（门禁口径：10 层谁拦谁放；分诊：7 类怎么归）"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "门禁执行器：口径过期就**拒判**；blocking 全绿才 PASS"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "`mutation` 不许被降级、每类分诊必须有真实样本"
+        "text": "改 `docs/12-qa.md` 一张表（比如把某层从 blocking 挪到 advisory），重跑 `export_gate.py --write` + `quality_gate.py`——解释为什么 `mutation` 不许被降级。",
+        "anchor": "两张**规范表**（门禁口径：10 层谁拦谁放；分诊：7 类怎么归）",
+        "from": "取材自 README『两张规范表 + 不许被降级』（不新造题）"
       }
     ]
   },
@@ -640,22 +1156,38 @@
       "复盘分类必须恰好覆盖全部编号（重号漏号都红）——分类是\"划分\"是什么意思？",
       "台账键\"每个都被引用一次\"防的是哪种装饰？"
     ],
-    "modify": "给 `docs/13` 加一句 `L:键=值` 引用一个还没人用的台账键，跑 `checks/check_pm.py`——先想清\"没人读的键就是装饰\"，再决定这个键该不该存在。",
-    "modify_from": "取材自 README『台账 27 个键每个都被引用一次』（不新造题）",
     "fail": "在 `docs/14` 删掉一条未裁决 AQ（或把已裁决的标成未决），跑 `checks/check_pm.py`——README 说少一条就红、标错也红；对一下它报的是不是你改的这条。",
     "fail_from": "练习建议 5 模式（对照 README『未裁决 AQ 必须在册』）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 知识点 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 需求层次（业务/用户/系统）与 FR 编号 | `02-srs.md` 第 2 节 | 检查器要求每条 FR 至少被一个用例或故事引用，否则报\"孤儿需求\" |",
+      "| 功能性 vs 非功能性需求 | FR / NFR 两张表 | NFR 的\"验证方式\"也必须是三种之一，不能只写一句愿望 |",
+      "| 用例建模（角色、前后置、扩展流、异常流） | `03-use-cases.md` | 覆盖关系被机器读进追踪矩阵；异常流大多有对应测试 |",
+      "| 用户故事与验收标准（Given/When/Then） | `04-user-stories.md` | 每个 US 至少一条 AC（缺了红灯）；AC 的验证入口必须能解析 |",
+      "| 需求追踪矩阵 | `traceability.csv` | **由文档生成并与提交内容比对**，过期即红灯（PLAN 里原本列为\"选做扩展\"） |"
+    ],
+    "pin_list": [
+      "**`run.bat` 里的中文 `echo` 又被 cmd 切了**，而且这次**不是** `chcp` 之前的注释：前言全 ASCII，",
+      "**演示里那条\"追踪入口真的能跑\"的测试，一开始是假的**：我把 `tests/test_x.py::method`",
+      "**一个真正的模型缺陷是被穷举走查抓到的，不是被写测试时想到的**：",
+      "**检查器最初只会说\"这条转换两边不一样\"**，说不出哪一格不一样（我删掉模型里一条转换时，",
+      "**文档里我自己写了两个不存在的引用**：一处 AC 提到 `AQ-03` 但检查器只把 FR/BR/NFR 当合法引用；",
+      "**`{set}` 放进元组里当集合比较**：`unhashable type: 'set'`。要写 `frozenset`。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "台账 27 个键每个都被引用一次"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "每条**未裁决** AQ 必须在册（少一条就红）"
-      },
-      {
-        "file": "projects/dorm-repair/README.md",
-        "anchor": "分类必须恰好覆盖全部编号，重号漏号都红"
+        "text": "给 `docs/13` 加一句 `L:键=值` 引用一个还没人用的台账键，跑 `checks/check_pm.py`——先想清\"没人读的键就是装饰\"，再决定这个键该不该存在。",
+        "anchor": "台账 27 个键每个都被引用一次",
+        "from": "取材自 README『台账 27 个键每个都被引用一次』（不新造题）"
       }
     ]
   },
@@ -670,22 +1202,53 @@
       "决策树的\"零增益即停\"为什么会学不会 XOR——贪心与全局信息的关系？",
       "感知机的 sign(0) 归属（Novikoff 约定）为什么是\"实现的一部分\"？"
     ],
-    "modify": "实现 k-fold 交叉验证，报告 KNN 的均值±标准差，体会\"单一切分的偶然性\"。",
-    "modify_from": "练习建议 1",
     "fail": "把决策树的\"零增益即停\"改回来（坑 1 的现场），跑自测——精度会掉到多少？为什么 XOR 是\"贪心 + 局部零增益 ≠ 全局无信息\"的标准反例？",
     "fail_from": "踩坑 1（决策树\"零增益即停\"学不会 XOR）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| MSE 损失与梯度 | `linear.py` `mse_gradient` | 数值梯度中心差分对拍（< 1e-6） |",
+      "| 正规方程 X^T X θ = X^T y | `linear.py` `fit_closed_form` | 手算三点精确拟合 + 与 GD 对拍 + **与 sklearn OLS 系数对拍（容差 1e-6，实测 3.2e-12）** |",
+      "| 高斯消元（部分主元） | `linear.py` `solve_linear_system` | 手算 2x2 方程组 |",
+      "| R^2 的含义 | `linear.py` `r2_score` | 完美=1 / 均值=0 / 反向为负；**与 sklearn.metrics.r2_score 公式对拍** |",
+      "| 感知机学习规则 | `perceptron.py` | 完整手算轨迹逐数断言（4 轮/5 更新） |"
+    ],
+    "pin_list": [
+      "**决策树\"零增益即停\"学不会 XOR**：XOR 在根节点任何单次分裂的信息增益恒为 0",
+      "**sign(0) 的归属是实现的一部分**：更新条件用严格间隔 `y·(w·x+b) > 0`",
+      "**make_moons/make_blobs 的标签是 0/1**，感知机要求 ±1——忘了转换直接 ValueError，",
+      "**特征尺度拖垮梯度下降**：Iris 原始量纲下 GD 8000 轮与闭式解差 1e-3 量级；",
+      "**KNN k=3 会被多数类淹没**：查询点最近邻是 B，但 3 邻居里 2:1 是 A——",
+      "**阈值必须实测钉值**：moons BP 第一版断言 ≥0.95，实测 0.935（hidden=8/400 轮欠拟合）；"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B23-ml-from-scratch/README.md",
-        "anchor": "实现 k-fold 交叉验证，报告 KNN 的均值±标准差"
+        "raw": "实现 k-fold 交叉验证，报告 KNN 的均值±标准差，体会\"单一切分的偶然性\"。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B23-ml-from-scratch/README.md",
-        "anchor": "决策树\"零增益即停\"学不会 XOR"
+        "raw": "给 BP 加 L2 正则与早停（patience），观察过拟合曲线（用带噪声的月牙）；顺带把 早停的 patience 也写进对拍参数（想想为什么 sklearn 侧\"关掉早停\"是必须的）。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B23-ml-from-scratch/README.md",
-        "anchor": "数值梯度中心差分对拍（< 1e-6）"
+        "raw": "实现逻辑回归（sigmoid + 交叉熵），并与感知机在同一线性可分数据上对比决策边界； 然后加进对拍台与 `sklearn.linear_model.LogisticRegression` 同参对照，先写容差再实现。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "把决策树的准则换成\"增益率\"（C4.5），解释它为何偏向少取值的特征。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "证明：两层线性网络（无激活）等价于一层线性——用代码验证 W2W1 的参数化并数一数有效参数量。",
+        "from": "练习建议 5"
       }
     ]
   },
@@ -700,22 +1263,51 @@
       "Otsu 与自适应二值化各自的适用面与失败面（平坦区域为什么会冒噪点）？",
       "\"拒识\"为什么是正功能：五类原因的意义与边缘密度阈值怎么量出来？"
     ],
-    "modify": "给 `detect_document` 加\"候选四边形打分\"（面积 + 角度接近 90° + 边长比例），构造一张\"背景里还有一个大四边形\"的合成图，验证你的打分选对文档。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 1：把 demo 的 PNG 落盘改回 `cv2.imwrite` + 中文绝对路径——为什么它会\"静默失败\"（返回 False、文件不出现）、run.bat 还会\"成功\"？修法为什么必须\"写后验证字节数\"？",
     "fail_from": "踩坑 1（cv2.imwrite 对中文绝对路径静默失败）",
-    "sources": [
+    "summary": "**计算机视觉的期望值最容易凭感觉——所以本项目的参照全是\"造出来的\"**：",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 检测流水线各步的分工 | `find_quad_candidates` | 20 个种子全部检出，角点最大误差 ≤ 3px（实测最差 2.00） |",
+      "| 四边形判定 = 面积 + 顶点数 + 凸性 | 同上 | \"文档太小\"样例被拒（面积不达标）；正常样例候选数=1、面积比 ≈0.24 |",
+      "| 角点排序（TL/TR/BR/BL） | `order_points` | 手摆打乱的四点排对；检出结果的**结构关系**（上边两点 y 更小等）逐条断言 |",
+      "| 透视变换 8 参数求解 | `rectify.four_point_warp` | 还原图逐像素 vs 原始顶视图：MAD ≤ 15（实测最差 11.2） |",
+      "| 二值化两派 | `binarize.py` | 与真值掩码一致率 ≥ 0.95（实测最差 0.961）、IoU ≥ 0.75；Otsu 阈值落在纸/字之间 |"
+    ],
+    "pin_list": [
+      "**`cv2.imwrite` 对含中文的绝对路径静默失败**（返回 False、文件不出现；相对路径却没事）。",
+      "**纯噪声会被误检成\"文档\"**（假阳性）：噪声的 Canny 边经闭运算糊成一整块，",
+      "**低对比样例第一次没造对**：只压缩\"纸与字\"的对比没用——纸对桌面的外轮廓照样被",
+      "**容差不能拍脑袋**：5 个种子的探针给出 0.991 的一致率，40 个种子才露出 0.961 的最差值。",
+      "**测试自己写错了异常类型**：缺文件是 `FileNotFoundError`（OSError 家族），我写成了"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "cvscan/synth.py",
+      "cvscan/detect.py",
+      "cvscan/rectify.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B24-cv-scanner/README.md",
-        "anchor": "给 `detect_document` 加\"候选四边形打分\""
+        "raw": "给 `detect_document` 加\"候选四边形打分\"（面积 + 角度接近 90° + 边长比例）， 构造一张\"背景里还有一个大四边形\"的合成图，验证你的打分选对文档。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B24-cv-scanner/README.md",
-        "anchor": "对含中文的绝对路径静默失败"
+        "raw": "实现一个去阴影预处理（如大核中值/形态学估计光照面并相除），在 `shadow=True` 样例上 比较\"去阴影前后\"的角点误差与二值一致率。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B24-cv-scanner/README.md",
-        "anchor": "纯噪声 ~37%，差两个数量级"
+        "raw": "把 `binarize_adaptive` 的 block_size/C 做成小参数网格，在低对比种子集上画 \"一致率 vs 参数\"的表格，说清为什么自适应在平坦区域会冒噪点。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "用 `cv2.HoughLinesP` 换掉\"轮廓逼近\"这一路，比较两条路线在抖动更大 （`jitter_px=40`）的种子集上的成功率与角点误差。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -730,22 +1322,47 @@
       "拉普拉斯平滑为什么必须 α>0（log(0) 的死法）？",
       "合成语料的\"三方同源\"（词池/词典/生成器）为什么用单文件保证？"
     ],
-    "modify": "实现 HMM 分词（B/M/E/S 四标注 + Viterbi），用本词典造标注语料，对比 FMM/BMM 在歧义句上的表现。",
-    "modify_from": "练习建议 1",
     "fail": "把\"FMM = 词数最少\"当成定理写进一条测试（坑 1 的现场）——先手推一个反例再跑；为什么能断言的只有\"合法切分\"而不是\"最少词\"？",
     "fail_from": "踩坑 1（贪心最大匹配没有\"词数最少\"保证）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 正向最大匹配（贪心最长） | `segment.py` `fmm` | 首词=最长词典前缀（独立计算） |",
+      "| 逆向最大匹配 | `segment.py` `bmm` | 与 FMM 互为歧义探针 |",
+      "| **歧义与切分歧义句** | `segment.py` `segment` | \"研究生命起源\"：FMM 研究生/命/起源 vs BMM 研究/生命/起源 |",
+      "| 未登录词回退单字 | 同上 | 非词典输入不崩溃、拼接不变 |",
+      "| 拼接不变式 | 测试 | 切分拼回 == 原文 |"
+    ],
+    "pin_list": [
+      "**贪心最大匹配没有\"词数最少\"保证**：FMM 在\"研究生命起源\"上把",
+      "**语料相邻词拼出词典长词会破坏回切**：词池/词典/生成器三方必须",
+      "**α=0 会让未见词产生 log(0)**：平滑参数必须 > 0，构造函数里拒绝。",
+      "**未见词的处理方式是实现决策**：本实现直接忽略（它对两类的似然"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B25-nlp-lab/README.md",
-        "anchor": "实现 HMM 分词（B/M/E/S 四标注 + Viterbi）"
+        "raw": "实现 HMM 分词（B/M/E/S 四标注 + Viterbi），用本词典造标注语料， 对比 FMM/BMM 在歧义句上的表现。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B25-nlp-lab/README.md",
-        "anchor": "贪心最大匹配没有\"词数最少\"保证"
+        "raw": "实现 UNK 特殊词处理，观察测试集新词比例对准确率的影响。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B25-nlp-lab/README.md",
-        "anchor": "并用\"语料回切不变式\"测试担保"
+        "raw": "实现互信息/卡方特征选择，把 160 词词典压缩到 50 词，看准确率变化。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "证明（或证伪）：FMM 的切分词数 ≤ BMM 的切分词数——用穷举找一个 反例或给出直觉解释。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -760,22 +1377,47 @@
       "清洗账本的守恒式怎么写：total = clean + 四类剔除之和（填补为什么不算剔除）？",
       "空簇分支\"很难自然触发\"时，测试该断言什么（用户可见不变式 vs 计数器）？"
     ],
-    "modify": "实现 FP-growth（无候选生成），并与 Apriori 在同一数据上比候选数/扫描次数。",
-    "modify_from": "练习建议 1",
     "fail": "把缺陷注入的顺序改回\"先注入、后追加重复行\"（坑 1 的现场），跑清洗链——账本为什么对不上？\"重复行最后追加 + 缺陷打在互不重叠的基础行上\"各防什么？",
     "fail_from": "踩坑 1（缺陷注入的顺序与重叠）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 支持度 / 频繁项集 | `apriori.py` `apriori` | 与 2^n-1 项集**全穷举**逐项对拍（25 轮随机） |",
+      "| 反单调性剪枝 | `_has_infrequent_subset` | 被剪候选 + 生成候选 ≤ 全组合数；结果一致证明剪对了 |",
+      "| 连接步（共享前 k-2 项） | `_candidate_join` | 穷举对拍覆盖 |",
+      "| 置信度 / **提升度** | `association_rules` | 手算 conf=2/3、lift=8/9（负相关教学实例） |",
+      "| 向下闭包 | 测试 | 频繁项集的所有子集必在频繁集合里 |"
+    ],
+    "pin_list": [
+      "**缺陷注入的顺序与重叠**：先追加重复行、后注入缺陷，缺陷可能抽中",
+      "**\"total\" 的口径**：报表 total 是\"进入清洗的行数\"（含重复行 72），",
+      "**空簇很难自然触发**：初始中心取互异的数据点时，第一轮天然不空",
+      "**关联规则里 lift<1 才是完整的课**：手算用例故意选了 conf=2/3、"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B26-datamining/README.md",
-        "anchor": "实现 FP-growth（无候选生成）"
+        "raw": "实现 FP-growth（无候选生成），并与 Apriori 在同一数据上比 候选数/扫描次数。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B26-datamining/README.md",
-        "anchor": "互不重叠的基础行上，重复行**最后**追加"
+        "raw": "把 K-means 初始化换成 k-means++，在多峰数据上对比 100 个 seed 的 惯性分布（箱线图）。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B26-datamining/README.md",
-        "anchor": "探针跑了三种配置 900 个 seed 都没触发"
+        "raw": "给 Apriori 加事务 ID 列表（TID 集合）传递，避免每轮全表扫描。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "清洗链增加\"金额按单价重算校验\"步骤，统计账面金额与重算不一致的行。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -790,22 +1432,46 @@
       "\"事实源 + 断言\"结构为什么能把\"转写遗漏\"变成机器可见的红？",
       "白名单写死 vs 从定义现算（missing = 闭包 - 已完成）的差别？"
     ],
-    "modify": "给边加\"学期\"属性，把拓扑序改成分学期的排课方案（每学期学分上限）。",
-    "modify_from": "练习建议 1",
     "fail": "从 `data/prereqs.csv` 里删掉一条先修边（坑 1 的现场：B31 → B32），跑测试——哪条断言抓住它？这正是\"数据缺边由断言抓\"的设计演示。",
     "fail_from": "踩坑 1（数据缺边，测试抓的）",
-    "sources": [
+    "summary": "",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 三元组 (头, 关系, 尾) | data/prereqs.csv | 每条边带 kind（先修/概念支撑/迭代阶段）与来源 |",
+      "| 有向图邻接表 | `graph.py` `_succ/_pred` | 双向索引，直接先修/直接后继 O(1) |",
+      "| **传递闭包** | `graph.py` `ancestors/descendants` | 与测试内独立 DFS 交叉验证（15 个任务） |",
+      "| 拓扑排序（Kahn） | `graph.py` `topological_order` | 全图 41 节点、每条边 u→v 满足 pos[u]<pos[v] |",
+      "| 环检测 | 同上 | 有环抛异常（`validate`） |"
+    ],
+    "pin_list": [
+      "**数据缺边，测试抓的**：PLAN §3 明文有\"B31 → B32 的 Web 安全实验\"，",
+      "**测试方法里误用 `cls`**：setUpClass 的类属性在实例方法里要用",
+      "**演示断言的白名单手写漏项**：\"做 B18 缺什么\"的白名单漏了 B11"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B27-course-kg/README.md",
-        "anchor": "给边加\"学期\"属性，把拓扑序改成分学期的排课方案"
+        "raw": "给边加\"学期\"属性，把拓扑序改成分学期的排课方案（每学期学分上限）。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B27-course-kg/README.md",
-        "anchor": "PLAN §3 明文有\"B31 → B32 的 Web 安全实验\""
+        "raw": "实现\"如果 B9 没开，替代路径是什么\"——等价先修集的图查询。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B27-course-kg/README.md",
-        "anchor": "与测试内独立 DFS 交叉验证（15 个任务）"
+        "raw": "把 viz 换成力导向布局，比较两种布局在 41 节点规模下的可读性。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "用本图谱回答：做完批次 3 之后，\"解锁数\"最多的下一门课是哪门？ 与你的直觉一致吗？",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -820,22 +1486,56 @@
       "星型模型与筛选白名单：参数顺序/列名注入面在哪里收口？",
       "血缘图\"能不能追到清洗步骤\"检查的是什么（复用了 B27 的什么）？"
     ],
-    "modify": "把 `metrics.gmv` 的口径从\"按完成月\"改成\"按下单月\"，看**哪几条**测试红、`monthly_gmv` 的未完整月标记需不需要跟着改。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 3：把 `mismatches()` 里\"缺字段同样是红\"改回 `row.get(\"equal\", True)`——最重要指标的被对拍状态为什么会被静默洗白？",
     "fail_from": "踩坑 3（`row.get(\"equal\", True)` 让 gmv 从来没被对拍）",
-    "sources": [
+    "summary": "**把\"口径\"当成一等交付物**。每个指标都用两条独立实现算一遍（SQL 与被交付",
+    "knowledge": [
+      "| 课程概念 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 指标口径（时间字段/计入范围/除零） | `metrics.METRICS` 每条的 `口径` 文本 | 断言每个指标都带口径文字（缺了就红）；空窗口与首月环比单独测 |",
+      "| 两条实现必须逐数相等 | `compute()` 的 `sql` 与 `py` 两路 | 5 组筛选全对拍；**反向证明**：改坏参照谓词后 `mismatches()` 点名指标；缺 `equal` 字段同样算红 |",
+      "| ETL 与数据质量 | `source.etl()` → B26 `clean()` | 账本 5 个计数与注入数量逐数对上（注入 12/8/6/10/5） |",
+      "| 星型模型与维度 | `warehouse.DDL` | `dim_product.unit_price` 必须逐条等于 B26 的 `PRODUCTS`；`source.py` 里不许出现任何单价字面量（单一出处） |",
+      "| 筛选的两种粒度 | 金额类作用于**明细行**、订单类作用于**订单是否含该品类** | 同一筛选下实测两组数字并断言口径文字各自写明（`765,880→295,704` 与 `489→137`） |"
+    ],
+    "pin_list": [
+      "**cmd 的多行 `if ... ( ... )` 块**让这份 `run.bat` 每次执行**第一行**先打印",
+      "**`ThreadingHTTPServer` 每请求一条线程**：默认 `check_same_thread=True` 的连接",
+      "**`mismatches()` 写成 `row.get(\"equal\", True)`**，而 `gmv` 恰好没有 `equal` 字段 →",
+      "**`2026-13` 这种形状合法的假月份**一路通过校验，最后返回空表 + 200；`?evil=1`",
+      "**`_is_month` 把连字符下标写成 5（应为 4）**，把 `2026-05` 判成非法值。",
+      "**客户池只有 40 人 × 864 单 → 复购率恒等于 100%**，指标成了装饰。"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "bi/source.py",
+      "bi/warehouse.py",
+      "bi/metrics.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B28-bi-dashboard/README.md",
-        "anchor": "把 `metrics.gmv` 的口径从\"按完成月\"改成\"按下单月\""
+        "raw": "把 `metrics.gmv` 的口径从\"按完成月\"改成\"按下单月\"，看**哪几条**测试红、 `monthly_gmv` 的未完整月标记需不需要跟着改。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B28-bi-dashboard/README.md",
-        "anchor": "最重要的指标**从来没被对拍检查过**"
+        "raw": "把品类筛选在订单粒度上也改成明细粒度（只算含该品类的那些**行**）， 说明复购率的数字与语义各变成什么，代价是什么。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B28-bi-dashboard/README.md",
-        "anchor": "The process cannot access the file"
+        "raw": "给 `dim_customer` 加一维\"渠道\"，让 `FILTER_KEYS`、口径文字、血缘图三处**同步**改动； 哪一处忘了改，`scan_refs` 或对拍会先红？",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "用 `/api/drill` 手工复算 KPI（`?month_from=2026-06&month_to=2026-08`）， 验证明细行数、金额合计与 `/api/summary` 对得上。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "把分位数定义改成\"线性插值\"，看 `equal` 是否还能成立——这就是\"口径写进代码\"的意义。",
+        "from": "练习建议 5"
       }
     ]
   },
@@ -850,22 +1550,52 @@
       "\"下载体积 vs 安装体积\"为何必须两个口径（503MB 的现实）？",
       "`PYSPARK_PYTHON` 本机坑：占位桩 python3 会让 worker 起不来——A/B 对照说明了什么？"
     ],
-    "modify": "把 `skew_device_ratio` 调到 0.8、数据提到 200 万行，重测 plain/salted 耗时，找出\"salting 开始划算\"的拐点，并解释它和 shuffle 分区数的关系。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 3 的变体：把时间戳正则改回 `[0-2]\\d`（放行 25 点），跑两侧对拍——为什么\"测试期望对了、正则错了\"仍然会被两侧一致性抓住？",
     "fail_from": "踩坑 3（`[0-2]\\d` 会放行 25 点）",
-    "sources": [
+    "summary": "**大数据的\"对\"仍然要对拍**——同一份日志，Spark（DataFrame API）与",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 数据质量与注入账本 | `genlog` + `clean` | 四类缺陷按已知数量注入；清洗隔离计数**逐类相等**（小样本与 40 万行各一遍） |",
+      "| 清洗规则\"同一把尺子\" | `clean.classify_line` vs `jobs.parsed` | 同一套正则常量 + 同一优先级（CASE WHEN 对应 if-elif）；**逐行对拍 1986 行** |",
+      "| Spark 与纯 Python 对拍 | `jobs` vs `reference` | device×level（24 行）、每小时错误、top 错误码（k=1/3/5）全部逐行相等 |",
+      "| DataFrame 与 Spark SQL 同引擎 | `jobs.sql_*` | 同一视图上 SQL 三查询 == DataFrame 三查询 == 纯 Python 参照 |",
+      "| 空值语义与优先级 | `jobs.parsed` | 手工六行样例（含\"多缺陷行只归第一类\"）逐类计数断言 |"
+    ],
+    "pin_list": [
+      "**`PYSPARK_PYTHON` 必须显式指向完整解释器**：默认拉起 `python3`，而本机 `python3` 是",
+      "**\"~300MB\"是下载体积不是安装体积**：实测安装占用 **503MB**（jars 477MB）。",
+      "**`[0-2]\\d` 会放行 25 点**：第一版时间戳正则让 `25:02:03` 过关（测试期望对了、正则错了）。",
+      "**`winutils.exe` 找不到只是 WARN**：本地模式（`file://` + in-memory catalog）不需要它；",
+      "**对拍前先钉契约**：`msg=` 前缀剥不剥、`code=` 只留三位——两边写成同一句话，",
+      "**进度条是日志逐字比对的敌人**：`spark.ui.showConsoleProgress=false` 关掉；"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "sparklab/session.py",
+      "sparklab/genlog.py",
+      "sparklab/clean.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B29-bigdata-spark/README.md",
-        "anchor": "把 `skew_device_ratio` 调到 0.8、数据提到 200 万行"
+        "raw": "把 `skew_device_ratio` 调到 0.8、数据提到 200 万行，重测 plain/salted 耗时， 找出\"salting 开始划算\"的拐点，并解释它和 shuffle 分区数的关系。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B29-bigdata-spark/README.md",
-        "anchor": "Microsoft Store 的占位桩"
+        "raw": "打开 AQE（`spark.sql.adaptive.enabled=true` + `skewedJoin.enabled`）， 对比显式 salting 与 AQE 自动处理的耗时与结果——说清\"引擎已经会做什么、我们为什么还要懂\"。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B29-bigdata-spark/README.md",
-        "anchor": "实测安装占用 **503MB**"
+        "raw": "给清洗加第 5 类缺陷（如 device 名不存在），先把注入与两侧实现同步改、 再看哪些测试红了——体会\"契约先行\"。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "用 `.explain(True)` 看三条 SQL 的物理计划，指出 Exchange（shuffle）分别出现在哪一步， 与 `skew.py` 的分布读数对上。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -880,22 +1610,56 @@
       "单步成员变更的\"一次一个\"与配置交叠检查各防什么？",
       "\"断言过强\"与\"实现有 bug\"怎么区分（check_log_matching 的现场）？"
     ],
-    "modify": "把 `check_log_matching` 改回\"公共前缀逐条相同\"再跑测试，看它是**在哪一条**上红、红得是否说清了\"合法中间态\"——这题考的是你能不能分辨\"断言过强\"与\"实现有 bug\"。",
-    "modify_from": "练习建议 1",
     "fail": "按坑 2 的做法：把 demo 第 4 段的任期读数挪回\"愈合之后\"取——为什么\"同任期选出两个 leader\"的假象会消失？读数该在什么时刻取？",
     "fail_from": "踩坑 2（演示读数取错了时刻）",
-    "sources": [
+    "summary": "把 Raft 的两条安全性约束放进一个**能逐事件检查不变式**的模拟器里跑，",
+    "knowledge": [
+      "| 知识点 | 落在哪里 | 怎么被验证（不是\"跑过了\"，是\"能失败\"） |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| TCP 没有消息边界 | `rpc.py` `FrameDecoder` | 两帧粘在一次到达解出 2 条、半帧停在边界（补完才出第 2 条）；坏帧（空行/非 JSON）被跳过且**不回包** |",
+      "| RPC 的响应关联 | `RpcClient.call` | 真套接字回声三类请求（含中文与嵌套 dict）；客户端按 `id` 匹配，允许乱序 |",
+      "| 哈希分片的代价 | `NaiveShard` vs `ConsistentHash` | 2000 个键实测：朴素取模 4→5 搬 **81.0%**（理论 ≈80%），一致性哈希搬 **23.9%**（理想 1/(n+1)=20%）；且\"不属被摘节点却搬家的键 = 0 个\" |",
+      "| 虚拟副本与均衡 | `ConsistentHash(vnodes=…)` | `vnodes=10` 时三节点负载 `{a:579, b:724, c:697}`（实测，不是断言\"应该均匀\"） |",
+      "| 确定性可复现 | `Simulation(seed)` | 同一 seed 的事件序列与结果逐次一致：`demo.py` 跑两遍输出**逐字相同**（run.bat 日志除计时行外逐字同） |"
+    ],
+    "pin_list": [
+      "**不变式被写强了，不是实现有 bug**：`check_log_matching` 第一版要求\"任意两节点日志的**公共前缀**逐条相同\"，",
+      "**演示读数取错了时刻**：第 4 段最初打印\"旧 leader term=2、新 leader term=2\"，看起来像\"同任期选出两个 leader\"，",
+      "**代码注释里留着一条更早的现场**（上一会话记在 `sim.py`）：追加日志按 0 基下标写 `log[-1]`，",
+      "**交付前体检发现测试文件自身有三处问题**：未用的 `import socket`、未用的变量、",
+      "**我这轮自己的两次小失手**：Git Bash 吃掉反斜杠；按记忆写 `unittest.main()` 锚点替换静默失效。",
+      "（候选③）**follower 日志比 leader 长时回执越界**：`on_append_resp` 直接采信"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "raft30/rpc.py",
+      "raft30/hashing.py",
+      "raft30/sim.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B30-mini-raft/README.md",
-        "anchor": "把 `check_log_matching` 改回\"公共前缀逐条相同\"再跑测试"
+        "raw": "把 `check_log_matching` 改回\"公共前缀逐条相同\"再跑测试，看它是**在哪一条**上红、 红得是否说清了\"合法中间态\"——这题考的是你能不能分辨\"断言过强\"与\"实现有 bug\"。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B30-mini-raft/README.md",
-        "anchor": "不变式被写强了，不是实现有 bug"
+        "raw": "给 `check_config_overlap` 加一条\"隔步配置也要能举证安全性\"的检查——想清楚： 能做什么样的**可检查**断言，还是必须给形式化证明？（提示：看节点收到 config 条目时 日志前缀的约束，那是链式论证的可测切面。）",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B30-mini-raft/README.md",
-        "anchor": "注入同任期分叉必须仍被抓"
+        "raw": "给 `_advance_commit` 去掉\"只推进本任期\"这一条，跑 §5.4.2 那条测试：ghost 会不会被应用？ 说出这是论文哪个反例。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "把 `SNAPSHOT_THRESHOLD` 调到 2 和 20 各跑一遍 demo 第 5 段，看压缩/快照安装次数与 未提交尾巴长度怎么变，解释\"压缩频率\"的三个权衡（恢复时间、磁盘、传播量）。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "实现 Pre-Vote：给候选人加\"先试探不加法\"的一轮，用\"被移除节点搅动选举\"的场景 （`change_membership` 后不停 partition）对比前后任期膨胀速度。",
+        "from": "练习建议 5"
       }
     ]
   },
@@ -910,22 +1674,48 @@
       "`urlsplit` 在拆分那一刻就抛异常：为什么\"try 包晚了\"会把 400 变成 500？",
       "`re.match` 前缀匹配的安全陷阱（`a-.com`），`fullmatch` 如何收口？"
     ],
-    "modify": "加过期时间：`expires_at` 列 + 命中时判断，过期返回 **410 Gone**（先去 PLAN/B11 的 `STATUS` 表补码，顺便体会\"表里少一条\"会带来什么样的静默故障）。",
-    "modify_from": "练习建议 1",
     "fail": "按练习 5 的三条\"故意改坏\"逐条跑：(a) 把 `_reject_invisible` 挪到 `urlsplit` 之后；(b) 把 `visit()` 改成\"先读再加再写\"；(c) 去掉静态目录包含检查——每条都应被现有测试抓到；抓不到就是补测试的地方。",
     "fail_from": "练习建议 5（故意改坏看哪条测试先红）+ 踩坑 4",
-    "sources": [
+    "summary": "",
+    "knowledge": [],
+    "pin_list": [
+      "**`STATUS` 表少 3xx**：302 在事件循环线程里抛 `ValueError`，客户端只表现为\"没响应\"。",
+      "**SQLite 连接跨线程**：连接在主线程建、请求在事件循环线程处理，默认 `check_same_thread=True`",
+      "**别名和自动码共用名字空间**：先建别名 `1`，自增 id 走到 1 就撞了；",
+      "**`urlsplit` 在拆分那一刻就抛 `ValueError`**（`http://[::1/x` 方括号没闭合），",
+      "**`re.match` 是前缀匹配**：主机名校验用它，`a-.com` 里 `-` 结尾的尾巴被\"部分匹配\"放过了。",
+      "**`rest = raw[raw.index(netloc)+len(netloc):]` 会切错**：`http://h/p` 的 netloc 是 `\"h\"`，"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests"
+    ],
+    "tasks": [
       {
-        "file": "projects/B31-shorturl/README.md",
-        "anchor": "加过期时间：`expires_at` 列 + 命中时判断"
+        "raw": "加过期时间：`expires_at` 列 + 命中时判断，过期返回 **410 Gone**（先去 PLAN/B11 的 `STATUS` 表补码， 顺便体会\"表里少一条\"会带来什么样的静默故障）。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B31-shorturl/README.md",
-        "anchor": "`urlsplit` 在拆分那一刻就抛 `ValueError`"
+        "raw": "做删除与改指向（`DELETE /api/links/<码>`）：需要先有身份 → 顺势实现 cookie 会话， 并给\"未授权\"选一个正确的状态码（想想 401 与 403 的区别）。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B31-shorturl/README.md",
-        "anchor": "校验一律用 `fullmatch`"
+        "raw": "把命中统计做成时间序列：新增 `visits` 表，`GET /api/links/<码>/timeline`， 再让 B33 的可视化项目来读它（跨项目复用，别再造一套数据）。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "加限流：同一 IP 每分钟最多 N 次创建，返回 429 + `Retry-After`，并写一条测试证明它不会误伤 keep-alive。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "**故意改坏看哪条测试先红**：(a) 把 `_reject_invisible` 挪到 `urlsplit` 之后； (b) 把 `visit()` 改成\"先读再加再写\"；(c) 去掉静态目录包含检查。 每条都应该被现有测试抓到——抓不到就说明测试有洞，那正是补测试的地方。",
+        "from": "练习建议 5"
+      },
+      {
+        "raw": "口述一次\"从浏览器点下到数据库里那个数字 +1\"的完整链路： 谁解析请求、谁决定状态码、谁保证计数不丢、谁负责把中文变成 `%E4%B8%AD`。",
+        "from": "练习建议 6"
       }
     ]
   },
@@ -940,22 +1730,53 @@
       "上下文相关转义：四种上下文（文本/属性/JS/href）各防什么载荷？",
       "静态扫描器 + 人工登记表的\"双向比对\"：把包装函数从 sink 摘掉会怎样？"
     ],
-    "modify": "把 `login_bound` 改回拼接，跑测试：哪几条先红？错误信息能不能指出\"数据拿到了语法身份\"？",
-    "modify_from": "练习建议 1",
     "fail": "复跑\"沙箱守卫\"的三条反向测试（坑：本项目事故的根因）：守卫必须拒绝仓库内路径、拒绝它没建过的目录——口述事故链（`work.parent` 为什么正好是 `projects/`）与现在的两道防线。",
     "fail_from": "项目事故记录（沙箱守卫 + 三条反向测试）",
-    "sources": [
+    "summary": "**同一个错误模型，四个不同的解析器**。SQL 引擎、HTML 词法器、口令的比较逻辑、",
+    "knowledge": [
+      "| 课程概念 | 落在哪里 | 怎么被验证 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 注入 = 数据获得语法身份 | 四组并排的 vuln/fixed | 每组都有\"漏洞版拿到不该拿的、修复版拿不到\"的成对断言 |",
+      "| 参数绑定 vs 拼接 | `login_*` / `search_*` | 注释截断（`admin' --`）在拼接版登入 admin、绑定版被拒；UNION 泄漏 2 行 vs 0 行 |",
+      "| 载荷成立需要**语法条件** | `PAYLOAD_UNION` 的列数、`--` 收尾 | 列数不对 → `OperationalError`；课本那条 `' OR '1'='1` 因 AND 优先级**在本谓词里不成立**（也写成断言） |",
+      "| 标识符不能绑定 | `order_bound` / `order_whitelist` | 绑参列名是**静默无效**（与无排序同序、≠ 真排序）；白名单对合法输入结果不变，对载荷 `COLUMN_NOT_ALLOWED` |",
+      "| 二阶注入：危险的 sink 不是 source | `note_report_*` | 安全写入 + 拼接读取 → 泄漏散列；同一数据绑定读取 → 只剩正文 |"
+    ],
+    "pin_list": [],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "sec32/sqli.py",
+      "sec32/xss.py",
+      "sec32/creds.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B32-sec-lab/README.md",
-        "anchor": "把 `login_bound` 改回拼接，跑测试"
+        "raw": "把 `login_bound` 改回拼接，跑测试：哪几条先红？错误信息能不能指出\"数据拿到了语法身份\"？",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B32-sec-lab/README.md",
-        "anchor": "临时副本**只能建在仓库之外**"
+        "raw": "给 `order_whitelist` 加一个合法列（比如 `phone DESC` 的第二种写法），说明为什么加列不用改 SQL。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B32-sec-lab/README.md",
-        "anchor": "含三处\"改坏临时副本\"的反向证明与沙箱守卫"
+        "raw": "在 `xss.py` 里新增一个\"`<script>` 里直接用 `html.escape`\"的修复版，构造一条能打破它的载荷并写测试。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "把 `creds.DEFAULT_ITERS` 从 120k 调到 1k，说出哪几条断言会红、为什么它们该红。",
+        "from": "练习建议 4"
+      },
+      {
+        "raw": "给 `traversal` 加一条\"尾随空格\"载荷（`ok.txt `），解释为什么修复版会拒它、而这条拒绝的代价是什么。",
+        "from": "练习建议 5"
+      },
+      {
+        "raw": "把 `audit.JUDGED` 里 `order_whitelist` 的定性改成\"危险\"，看 `problems()` 是否点名——这就是\"登记表不是装饰\"。",
+        "from": "练习建议 6"
       }
     ]
   },
@@ -970,22 +1791,50 @@
       "\"每帧长度都等于 n\"的假假设说明了什么：断言要写精确相等还是整齐假设？",
       "导出器与页面各自掌握什么上下文（逐步解释文本该由谁生成）？"
     ],
-    "modify": "给导出器加 BST 场景（借 B2 的 `ds::bst.hpp` 也加同款 trace 口），在页面加第三张卡片——先把\"节点/边快照\"的记录格式定死，再写渲染；体会\"数据格式先行\"。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 1 的后半段：在 run.bat 的 `echo` 里再写一个箭头让 cmd 造出垃圾文件 `node`，看 `shutil.which('node')` 解析到的是什么——\"垃圾文件劫持 PATH 同名可执行文件\"的现场。",
     "fail_from": "踩坑 1（垃圾文件遮蔽真 node）",
-    "sources": [
+    "summary": "**动画不是\"再算一遍\"，是\"回放已记录的操作\"**——B2 的结构库带一个只读 trace",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 数据与视图分离 | trace JSON（数据） vs page.py（视图） | 页面内嵌数据**逐字节等于** JSON 文件（extract + json.loads + 相等断言） |",
+      "| \"演的是真算法\" | `replay.replay_sort` | 20 事件**逐步重建**：每个 swap 后逐位等于快照、pop 取出的必须是当时堆顶、build 后堆序成立；负面自证：改坏一条快照必须报错 |",
+      "| BFS/DFS 语义对拍 | `replay.reference_bfs/dfs` | Python 独立实现产出**同口径**逐步记录（visit + 队列/栈快照），与 C++ 导出逐访问相等；b 字段与独立算的距离相等 |",
+      "| 状态机驱动的交互 | page.py 的 `makeAnimator` | 播放/暂停/单步/上一步都只是下标移动；结构断言（控件 id 齐备） |",
+      "| 自包含与确定性 | `build_page` | 同一 inputs 两遍构建**字节相同**；无网络请求、无随机数 |"
+    ],
+    "pin_list": [
+      "**`echo` 里的 `->` 又双叒踩了**（仓库已记过两次：B7、B10）：run.bat 的",
+      "**回放协议必须\"读源码得来\"**：`Heap::pop` 里\"根<->尾交换 + 丢尾\"这步是**未记录**的，",
+      "**\"每帧长度都等于 n\"是假假设**：取出过程中有一帧\"在途\"（元素已离开堆、还没进前缀），",
+      "**跨项目 include 用正斜杠**：`-I..\\B2-datastruct-lab\\include` 里的反斜杠会被 bash 当转义吃掉，"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "tools/export_trace.cpp",
+      "vizlab/replay.py",
+      "vizlab/page.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B33-viz-algo/README.md",
-        "anchor": "给导出器加 BST 场景"
+        "raw": "给导出器加 BST 场景（借 B2 的 `ds::bst.hpp` 也加同款 trace 口），在页面加第三张卡片—— 先把\"节点/边快照\"的记录格式定死，再写渲染；体会\"数据格式先行\"。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B33-viz-algo/README.md",
-        "anchor": "回放协议必须\"读源码得来\""
+        "raw": "把 `makeAnimator` 的下标搬进 URL hash（`#step=7`），刷新页面能回到同一帧， 说明\"状态可寻址\"对分享与复现的价值。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B33-viz-algo/README.md",
-        "anchor": "垃圾文件不只是垃圾，还能**劫持 PATH 上的同名可执行文件**"
+        "raw": "加\"逐步解释\"文本框：每一步把 `op` 翻成一句人话（建堆/交换 k/v/取出最小值）， 再想想\"解释文本应该由导出器生成还是页面生成\"（提示：谁掌握上下文）。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "用 `performance.now()` 给播放循环加丢帧统计（数据量大时动画会追不上）， 说清\"动画的时基\"和\"算法的步数\"是两回事。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -1000,22 +1849,51 @@
       "轻微不可采纳（octile×1.001）为什么比明显撒谎更难被对拍抓住？",
       "\"确定性 ≠ 唯一性\"：邻居顺序改了，什么必须不变、什么可以变？"
     ],
-    "modify": "把 `octile` 乘 1.001（轻微不可采纳），跑 `test_astar_equals_dijkstra_8nb` 与反例测试，说清哪些会红、为什么\"轻微撒谎\"比\"明显撒谎\"更难被对拍抓住（提示：次优解出现的条件）。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 1：把 `walled_scene` 改回\"只封目标一侧\"，先让\"应当不可达\"的测试断言它真的失败——构造失败场景时必须让测试断言\"它真的失败\"，否则演示讲的是另一回事。",
     "fail_from": "踩坑 1（\"围死\"场景第一版没围死）",
-    "sources": [
+    "summary": "**A*、Dijkstra、BFS 不是三个算法，是一个循环加一个参数**——`best_first()` 只换",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| A* 与 Dijkstra 同源 | `best_first(..., heuristic)` | 30 张种子图 × 双邻域：A* 代价 == Dijkstra（`assertAlmostEqual`）且扩展数 ≤（逐 seed 断言）；h≡0 直接就是 Dijkstra——同一函数，不是两份实现 |",
+      "| BFS 的适用前提 | `bfs()` 对 `allow_diagonal` 抛 ValueError | 20 张 4 邻域图与 Dijkstra 代价全等；8 邻域调用**必须报错**（测试钉住） |",
+      "| 启发式可采纳性 | `max_admissibility_slack`（从目标回溯的 Dijkstra 算真实距离） | 曼哈顿×4邻域 / octile×8邻域 / 欧氏×8邻域 slack ≤ 0（实测 +0.000）；曼哈顿×8邻域 slack ≈ +4.69（高估即撒谎，测试要求 >0.5） |",
+      "| 不可采纳 → 次优 | 种子搜索找真反例 | seed=3：Dijkstra 14.242641 vs A* 14.828427，差值 0.585786 = 2-√2（测试钉住精确值） |",
+      "| 无解与退化 | 围死场景 / start==goal / 非法端点 | 围死**确定性**无解（两次展开序列相同、原因非空）；start==goal 代价 0；障碍起点/越界终点抛 ValueError |"
+    ],
+    "pin_list": [
+      "**\"围死\"场景第一版没围死**：`walled_scene` 最初只封了目标一侧，目标仍能绕进去——",
+      "**demo 从没在\"干净目录\"里跑过**：`demo.py` 写 `build/plan.html` 却从不建 `build/`，",
+      "**精确相等与几乎相等要分开用**：8 邻域代价是 √2 的和，求和次序不同会在最后一位分道",
+      "**阈值是量出来的**：页面尺寸断言第一版的下界写到了实测（7644 字节）之上，直接红——",
+      "**临时目录的仓库守卫**（10-02 事故的钉子延续）：`make_tmp` 若发现临时目录落在仓库内"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "planner/grid.py",
+      "planner/heuristics.py",
+      "planner/search.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B34-path-planner/README.md",
-        "anchor": "把 `octile` 乘 1.001（轻微不可采纳）"
+        "raw": "把 `octile` 乘 1.001（轻微不可采纳），跑 `test_astar_equals_dijkstra_8nb` 与反例测试， 说清哪些会红、为什么\"轻微撒谎\"比\"明显撒谎\"更难被对拍抓住（提示：次优解出现的条件）。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B34-path-planner/README.md",
-        "anchor": "\"围死\"场景第一版没围死"
+        "raw": "给 `best_first` 加\"一致/单调性\"断言（h(n) ≤ step + h(n')），找一个**可采纳但不单调** 的启发式，观察扩展数是否反弹、结点是否被重复展开。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B34-path-planner/README.md",
-        "anchor": "求和次序不同会在最后一位分道"
+        "raw": "把 `grid.neighbors` 的邻居顺序倒过来重跑 30 图对拍：代价应全等、扩展数会变。 解释\"确定性 ≠ 唯一性\"——顺序是约定，代价才是结论。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "给动画页加\"启发式热力图\"图层（每格按 h 值着色），比较曼哈顿×4邻域与 octile×8邻域 把搜索拉向哪里；再想想热力图应该由 `export_trace` 导出还是页面现算（谁掌握上下文）。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -1030,22 +1908,52 @@
       "断线重连的三段（探活/重连/重订阅）与\"QoS0 不补历史\"的语义。",
       "完整性对账四口（实收/分布/异常/缺口），seq 缺口数为什么==dropout 数？"
     ],
-    "modify": "实现 QoS1 的 PUBACK：发送端缓存未确认消息并在重连后重发——先写\"进程内掉线重发\"的测试，再说清为什么 QoS1 也只是\"至少一次\"（重复投递要靠接收端去重，代码里的幂等主键正是为此）。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 1：把 `Recorder` 的 `subscribe` 调用删掉（只留 `on_message`），跑端到端测试——\"实收 0 != 445\"会在哪一层先红？这演示的是\"消息链路里少挂一环=静默断链\"。",
     "fail_from": "踩坑 1（入库端忘了订阅）",
-    "sources": [
+    "summary": "**物联网消息层的全链路，从字节到曲线，一行第三方库都不用**——",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 固定头与变长 Remaining Length | `encode/decode_remaining_length` | **手算边界表**：127→`7f`、128→`80 01`、16383→`ff 7f`、16384→`80 80 01`；超 4 字节拒收 |",
+      "| 报文字节级正确 | `encode_connect/publish/subscribe` | **逐字节十六进制对照**（CONNECT 16 字节、PUBLISH 9 字节、SUBSCRIBE 9 字节全部手算），demo 第 1 段并排打印 |",
+      "| QoS0 的\"至多一次\" | broker 不做 ack/离线队列 | 断线期间的发布**不补收**（专项用例）；\"宕机中 safe_publish=False → 重启后只收到之后那条\" |",
+      "| 通配符路由 | `topic_matches` | 12 条手算表（`a/+/c` 匹配、`a/+` 不匹配三层、`a/#` 匹配 `a`、`#` 不匹配 `$SYS/x`…） |",
+      "| 订阅表与多订阅者 | `broker._subs` | 两个订阅者都收到（route 返回 2）；不相关主题 0 投递 |"
+    ],
+    "pin_list": [
+      "**入库端忘了订阅**：`Recorder` 第一版只挂 `on_message` 没调 `subscribe`——端到端测试",
+      "**`ensure_connected` 必须用 PING 探活**：TCP 半关闭下，对端已死时 `sendall` 仍会\"成功\"，",
+      "**重连测试的\"顺序\"本身就是语义**：先发布后重连 => 消息在无人订阅时就丢了——",
+      "**漏关 socket 会污染日志比对**：ResourceWarning 里带随机 fd 与端口号，日志没法逐字比；",
+      "**字典打印顺序随网络到达序漂移**：`by_device` 的插入序 = 消息到达序（不稳定）——",
+      "**seq 是轮次号，不是发送数**：dropout 那几轮 seq 照样 +1，正好在库里留下缺口——"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "mqttlite/packets.py",
+      "mqttlite/broker.py",
+      "mqttlite/client.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B35-iot-mqtt/README.md",
-        "anchor": "实现 QoS1 的 PUBACK"
+        "raw": "实现 QoS1 的 PUBACK：发送端缓存未确认消息并在重连后重发——先写\"进程内掉线重发\"的测试， 再说清为什么 QoS1 也只是\"至少一次\"（重复投递要靠接收端去重，代码里的幂等主键正是为此）。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B35-iot-mqtt/README.md",
-        "anchor": "`Recorder` 第一版只挂 `on_message` 没调 `subscribe`"
+        "raw": "给 broker 加 retained message：订阅时补发每个过滤器的最后一条保留消息， 并让 `test_retain_flag_passthrough_no_store` 反过来变成\"保留消息必须补发\"。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B35-iot-mqtt/README.md",
-        "anchor": "注释里写明\"QoS0 不补历史\""
+        "raw": "给 `ResilientClient` 加指数退避与抖动，用假时钟（注入 sleep 函数）测退避序列的可复现性。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "把 broker 换成 `asyncio` 再实现一遍，与 selectors 版跨实现跑同一批测试—— 体会\"同一协议、两种并发模型\"的等价性。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -1060,22 +1968,51 @@
       "误报解剖：20/20 全被 spike/freeze 骗说明阈值基线的什么缺陷？",
       "\"提前量 horizon\"为什么是业务给的、不是模型选的？"
     ],
-    "modify": "把 `horizon` 从 24 改成 6 与 48 各跑一遍：提前量分布与召回怎么变？说清\"要提前多久\"是业务给的，不是模型选的。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 3：去掉 logistic 的 L2（坑 2 的现场是权差发散），跑 GD vs Newton 互拍——为什么\"先有唯一最优，双实现互拍才有意义\"？",
     "fail_from": "踩坑 3（无惩罚 logistic 的 MLE 在可分开方向上发散）",
-    "sources": [
+    "summary": "**预测性维护不是\"训一个模型\"**，是把\"要提前多久报警、误报和漏报各罚多少、",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 预测性维护的口径 | `window_label`（horizon=24、排除暂态窗） | 逐边界断言：f-t=24 正、25 负、t≥f 起排除、f+W+decay 后回归负样本 |",
+      "| 特征不泄漏未来 | `window_features` 只用窗口内读数 | 把某窗口之后的所有读数改掉，该窗口特征**逐位不变**（且更晚的窗口确实变了） |",
+      "| 概率分数与阈值 | 手写逻辑回归（sigmoid + 交叉熵） | 解析梯度 vs 数值梯度（实测 2.8e-11）；GD vs Newton 最大权差 1.9e-3（L2 下的唯一最优） |",
+      "| 复用不抄第二份 | `ml.tree.DecisionTree` / `ml.data` | `isinstance` 断言 + 跨项目路径存在性断言；模型改动测试特征后权重分毫不动 |",
+      "| 误报/漏报权衡 | `sweep` / `roc_points` / `auc` | 阈值降 => 召回与报警数单调不降（断言）；打乱标签 AUC 跌回随机（10 种子实测 [0.33, 0.56]） |"
+    ],
+    "pin_list": [
+      "**\"能整包复用\"是错觉，复用的边界是实测出来的**：B35 `SensorSimulator` 480 步",
+      "**仿真里\"加在哪一层\"会被量出来**：第一版把尖峰 `temp += delta` 加在**游走状态**上，",
+      "**无惩罚 logistic 的 MLE 在可分开方向上发散**：第一版没加 L2，GD 与 Newton 的权重",
+      "**logdiff 要连补位空格一起规范化**：耗时列 `{ms:>10.1f}` 在 766 与 1040 两种量级下",
+      "**GBK 控制台扫净（B4 同款教训复发）**：一堆数学记号（蕴含/等价/偏导/转置/上标等）让 `python demo.py`"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "fault/telemetry.py",
+      "fault/features.py",
+      "fault/models.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B37-industry-ai/README.md",
-        "anchor": "把 `horizon` 从 24 改成 6 与 48 各跑一遍"
+        "raw": "把 `horizon` 从 24 改成 6 与 48 各跑一遍：提前量分布与召回怎么变？说清\"要提前多久\" 是业务给的，不是模型选的。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B37-industry-ai/README.md",
-        "anchor": "温度均值 141.3°C、18.3% 夹取"
+        "raw": "给随机切分臂换 3 个种子、给按设备切分换测试设备对（如 (4,5)），观察 AUC 波动—— 体会\"单一切分的偶然性\"（B23 练习第 1 条同款）。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B37-industry-ai/README.md",
-        "anchor": "单点离群必须只进输出、不进状态"
+        "raw": "把 `spike_delta` 调到 10（尖峰不再越过 100°C），固定阈值基线的误报解剖会怎么变？ 解释\"阈值选在哪\"和\"数据里有什么\"是同一个问题的两面。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "给树加一个特征\"距上次标定的步数\"（或把 `temp_mean` 换成\"相对本设备基线的偏差\"）， 重跑按设备切分——想想为什么**去基线化**的特征才可能跨设备泛化。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -1090,22 +2027,52 @@
       "主从复制：偏移=规范化帧字节数意味着什么；从库被动过期的取舍？",
       "\"对拍三条腿\"（第二解析器交叉读 + 语义表 + fuzz）各覆盖什么？"
     ],
-    "modify": "给主动过期加\"时间触发\"通道（与命令计数并行：`select` 每次循环检查上次周期距今超过 T 秒就触发），用假时钟写测试——顺便说清\"为什么真实 Redis 需要它\"（空闲时也清内存）。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 1：让客户端用 **int** 参数发 `EXPIRE k 10`（被编成 `:10` 整数帧），跑脚本——为什么\"探针用字符串全过、脚本用 int 全挂\"会把排查带偏？教训\"先打印自己发出去的字节\"接下来怎么用？",
     "fail_from": "踩坑 1（int 参数编成 RESP 整数帧）",
-    "sources": [
+    "summary": "**先读案例再动手**——`docs/case-study.md` 先写清楚 Redis 的设计要点",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 单线程串行化=原子性 | `server.py` selectors 循环 | 两客户端交替 `INCR` 得 1、2（无锁也不会丢更新）；同循环里坏包只伤自己 |",
+      "| 流式解析（粘包/拆包） | `FrameDecoder` 累积缓冲 | 同一字节流按 1..9 随机块长喂入 ×20，帧序列与整体喂入逐条相等 |",
+      "| 内联与数组混合 | `_cut_command` 双通道 | 同一条流里 `PING\\r\\n`、`*2\\r\\n$3\\r\\nGET...`、带引号内联并存；`*0`/空行跳过 |",
+      "| 二进制安全 | 显式长度定界 | 值含 `\\r\\n\\0` 全程往返无损（请求与回复方向都测） |",
+      "| 协议错误分类 | `ProtocolError` 文本 | 六类错误文本逐字断言，且与第二解析器**消息一致** |"
+    ],
+    "pin_list": [
+      "**\"时好时坏\"的冒烟：客户端把 int 参数编成了 RESP 整数帧**。`c.cmd(\"EXPIRE\",\"k\",10)`",
+      "**协议错误断开前必须把错误帧发完**（真实 Redis 的 CLOSE_AFTER_REPLY 模式）：",
+      "**Windows 的 RST ≠ 优雅 EOF**：服务器关连接时客户端可能收到 `ConnectionResetError`，",
+      "**构造失败不能泄漏监听套接字**：坏快照拒启时 `__init__` 里已 bind 的 socket 要关",
+      "**单线程服务器里\"任何未捕获异常=全体瘫痪\"**：调试初期 `CommandError.message`",
+      "**复制扩展把主库两条潜伏缺陷照出来了（对账器的功劳）**："
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "redislite/resp.py",
+      "redislite/store.py",
+      "redislite/server.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B38-mini-redis/README.md",
-        "anchor": "给主动过期加\"时间触发\"通道"
+        "raw": "给主动过期加\"时间触发\"通道（与命令计数并行：`select` 每次循环检查上次周期距今超过 T 秒就触发），用假时钟写测试——顺便说清\"为什么真实 Redis 需要它\"（空闲时也清内存）。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B38-mini-redis/README.md",
-        "anchor": "客户端把 int 参数编成了 RESP 整数帧"
+        "raw": "给复制加**复制积压缓冲**：主库保留最近 N 字节的流，重连时若从库偏移落在缓冲内就 只补发增量（部分重同步的雏形）；先改 case-study §8.2 的偏差表再动代码。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B38-mini-redis/README.md",
-        "anchor": "（`close_after_flush`），错误帧稳定送达"
+        "raw": "给快照加一个\"版本升级\"场景：改 `MAGIC` 尾部版本号，让加载器对旧版本给出**可操作**的 错误信息（而不是一句\"魔数不符\"）；再想想向前兼容该怎么做。",
+        "from": "练习建议 3"
+      },
+      {
+        "raw": "用 selectors 实现 per-connection 空闲超时（30 秒无请求断开），说明它与 Redis `timeout` 配置的差别（后者还涉及主从/发布订阅的连接豁免）。",
+        "from": "练习建议 4"
       }
     ]
   },
@@ -1120,22 +2087,45 @@
       "诚实标注规则（示例必须写\"非真实来源\"）防的是什么？",
       "最小复现 CRDT：交换/结合/幂等的性质测试为什么比\"跑一个例子\"强？"
     ],
-    "modify": "给检查器加一条新规则：\"证据至少两条、且至少一条来自 B39 之外的目录\"，并**先补一条负面对照测试**再让它通过——体会\"规则与对照成对出现\"。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 2 的现场：把示例里一处 `@提交号` 的**反引号**去掉（裸写），跑检查器——为什么第一版负面对照没红？\"规则的可信度取决于触发条件是否写得没有歧义\"这条教训具体指什么？",
     "fail_from": "踩坑 2（口径必须写进模板）",
-    "sources": [
+    "summary": "技术雷达的坑不在\"记不记\"，在**记的内容没人能核验**——本项目把记录变成",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 记录结构可执行 | `REQUIRED_SECTIONS` 顺序检查 | 示例记录 PASS；删「局限与适用边界」→ 必须 RED（对照测试钉住） |",
+      "| 证据 = 可核验指针 | `check_record.py` 指针解析 | 路径不存在/假提交号各有一条\"改坏必须红\"的对照；示例里 4 路径 + 1 提交逐条真验 |",
+      "| 诚实标注 | 来源含「示例」必须写「非真实来源」 | 去掉标记 → RED（对照测试） |",
+      "| CRDT 收敛的数学 | `crdt_lww.py` merge=取 ts 较大 | 交换律/结合律/幂等（各 50 组随机）+ 100 组随机置换全部收敛到同一 (值, 时间戳) |",
+      "| 全序破平 | `Timestamp(counter, replica)` | `test_tie_break_by_replica`：并列计数器时按副本号取大，两侧顺序无关 |"
+    ],
+    "pin_list": [
+      "**\"改坏必须红\"是检查器存在的证明**：三条负面对照（各对应一条规则）进测试——",
+      "**口径必须写进模板（第一次负面对照没红的现场证明）**：假提交测试第一版 Expected RED、",
+      "**GBK 扫净第三次复发**：双线箭头推导符号（U+21D2）又出现在新写的文件里（B37/B38 已各修过一次）——"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "docs/record-template.md",
+      "docs/records/example-crdt.md",
+      "tools/check_record.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B39-tech-radar/README.md",
-        "anchor": "证据至少两条、且至少一条来自 B39 之外的目录"
+        "raw": "给检查器加一条新规则：\"证据至少两条、且至少一条来自 B39 之外的目录\"， 并**先补一条负面对照测试**再让它通过——体会\"规则与对照成对出现\"。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B39-tech-radar/README.md",
-        "anchor": "三条负面对照（各对应一条规则）进测试"
+        "raw": "把 `LWWRegister` 扩成 MV-Register（保留并发值、读时由应用层合并）： 性质测试照搬，但\"幂等\"的判定要改成集合语义——说清哪条性质变难了。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B39-tech-radar/README.md",
-        "anchor": "规则的可信度取决于\"触发条件\"是否写得没有歧义"
+        "raw": "用本模板记录一条真实主题（课程内容 / 文档 / 项目实践）：来源照实填、证据指针指到你亲手跑过的仓库文件/提交， 跑 `tools/check_record.py` 直到 PASS——这就是技术雷达的第一条真实条目。",
+        "from": "练习建议 3"
       }
     ]
   },
@@ -1150,22 +2140,45 @@
       "匹配口径显式化：英文词边界 vs 中文子串，`go` 不被 `gold` 命中是怎么保证的？",
       "缺口是诚实输出：两个故意空证据的技能面钉在测试里防什么？"
     ],
-    "modify": "用 B39 的模板把一次技术主题复盘写成记录（问题/原理/证据/局限），证据指针指到本索引里的条目——两条工具链就接上了。",
-    "modify_from": "练习建议 1",
     "fail": "在临时副本里改坏一条真实证据（假提交号），跑 `check_evidence.py`——为什么三条负面对照必须红、而且红在预期原因上？顺带解释\"锚点要防平凡\"（`36` 为什么不行）。",
     "fail_from": "踩坑 2（锚点要\"防平凡\"）+ 踩坑 3（缺口故意留空）",
-    "sources": [
+    "summary": "自称\"熟悉 XX\"没法核验，但**\"哪一行 README、哪个提交、哪句实测数字\"可以**——",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 声明必须可核验 | `check_evidence` 三层检查 | 31 条真实证据全过；假路径/假锚点/假提交三条负面对照各必须红 |",
+      "| 没有装饰条目 | 交叉引用检查 | 每条证据**必须被至少一个技能引用**（测试钉住；B22 台账同款规矩） |",
+      "| 匹配口径显式化 | `hit()`：英文词边界 / 中文子串 | `go` 不被 `gold` 命中、`spring boot` 短语命中、中文子串命中断言 |",
+      "| 缺口是诚实输出 | 空 evidence = 缺口 + practice | `test_gap_row_contains_practice`；真实缺口集合 {containers, message-queue} 钉住 |",
+      "| 示例必须可辨认 | 文件名 `EXAMPLE*` → 横幅 | `collect_jds` 的 example 标志 + 矩阵含「示例（非真实岗位）」断言 |"
+    ],
+    "pin_list": [
+      "**JSON 里别写半角引号**：`skills.json` 第一次写进 `\"复制\"` 这类半角引号直接 JSON 解析失败",
+      "**锚点要\"防平凡\"**：`36` 这种短数字哪都能命中，等于没检查——锚点全部升级为",
+      "**一个假象要提前掐掉**：\"所有技能都有证据\"会让缺口功能变摆设——所以"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "data/evidence.json",
+      "data/skills.json",
+      "tools/check_evidence.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B40-career-map/README.md",
-        "anchor": "用 B39 的模板把一次技术主题复盘写成记录"
+        "raw": "用 B39 的模板把一次技术主题复盘写成记录（问题/原理/证据/局限）， 证据指针指到本索引里的条目——两条工具链就接上了。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B40-career-map/README.md",
-        "anchor": "两个技能面**故意保持空证据**"
+        "raw": "给 `skills.json` 加一个你目标岗位特有的技能面（比如嵌入式 RTOS）， **先想好每条 evidence 指针怎么被核验**再填——填不出来就是缺口，正好排期。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B40-career-map/README.md",
-        "anchor": "锚点要\"防平凡\"**：`36` 这种短数字哪都能命中"
+        "raw": "把 `map_jd.py` 的英文匹配从\"词边界\"升级为\"词边界 + 常见变体\" （如 `k8s`/`kubernetes` 互相归一），先补测试口径再改实现。",
+        "from": "练习建议 3"
       }
     ]
   },
@@ -1180,22 +2193,46 @@
       "基准数字为什么不进核验器（flaky 的教训），放 demo 的【实测】+ logdiff 换来什么？",
       "\"负面对照的输入必须是合法但错的值\"——`1 == True` 的空操作现场？"
     ],
-    "modify": "给某个候选加一个 `import-check` 探针（例如确认 B29 用到的 pyspark 仍在位），再写它的负面对照——体会\"环境事实也是会过期的数字\"。",
-    "modify_from": "练习建议 1",
     "fail": "复现坑 4：把一条负面对照的期望值改成 `1`（`1 == True` 的空操作），跑演示——为什么它\"什么都没改\"？正确做法为什么必须写 `False` 并补\"整段负面对照必须全红\"的测试？",
     "fail_from": "踩坑 4（\"故意改坏\"本身可能是个空操作）",
-    "sources": [
+    "summary": "**候选题清单不等于开题**——本项目把 ROADMAP 预列的 5 个候选题做成",
+    "knowledge": [
+      "| 课程知识点 | 代码 | 验证方式 |",
+      "|---|---|---|",
+      "|---|---|---|",
+      "| 可行性要有数字 | `seeds.json` 的 files/probes | 收官态：0 个未选候选；5 条已选定记录的锚点全部现算复核（PASS 行打印计数） |",
+      "| 数字会过期 | 行数**逐字比对** | 改错一行 → RED（注入式夹具钉住）；动代码不改 JSON 也会红 |",
+      "| 缺口要有证明 | `code-count` 探针 | 历史缺口（B10-fsync、B13-CALL、B30-snapshot/membership、B38-replica、B23-sklearn）**全部随选定轮次填平，一条不剩**；候选清零后规则由注入式夹具继续钉住（负面对照不因数据清空而失效） |",
+      "| 环境是决策点 | `import-check` 探针 | numpy/sklearn 在位判定曾用于决策（sklearn 装前为缺口、获批安装后转在位——安装双口径登记在 B23 README） |",
+      "| 基准要标口径 | `bench_io.py` | 60 次中位数、8KB 记录、同目录——demo 打印 plain/fsync 两行【实测】 |"
+    ],
+    "pin_list": [
+      "**\"计数=0\"必须有语境的 0**：裸写\"fsync 出现 0 次\"能骗过任何检查——所以探针规则先要求",
+      "**行数是最便宜的防漂移锚**：比\"我说大概七百行\"强得多——重算一次就知道代码有没有被动过；",
+      "**基准数字不能进核验器**：fsync 时间每次不同，塞进\"必须相等\"的检查会变成 flaky——",
+      "**\"故意改坏\"本身可能是个空操作**：负面对照把探针期望改成 `1`，而判定是 `ok != expected`——"
+    ],
+    "materials": [
+      "README.md",
+      "run.bat",
+      "web/showcase.html",
+      "tests",
+      "data/seeds.json",
+      "tools/check_seeds.py",
+      "tools/report_seeds.py"
+    ],
+    "tasks": [
       {
-        "file": "projects/B41-thesis-seeds/README.md",
-        "anchor": "给某个候选加一个 `import-check` 探针"
+        "raw": "给某个候选加一个 `import-check` 探针（例如确认 B29 用到的 pyspark 仍在位）， 再写它的负面对照——体会\"环境事实也是会过期的数字\"。",
+        "from": "练习建议 1"
       },
       {
-        "file": "projects/B41-thesis-seeds/README.md",
-        "anchor": "\"故意改坏\"本身可能是个空操作"
+        "raw": "把 `bench_io.py` 的载荷从 8KB 调到 64KB/1MB 各跑一遍，画 fsync 边际成本随记录大小 的变化，说清\"批量提交\"为什么是对的。",
+        "from": "练习建议 2"
       },
       {
-        "file": "projects/B41-thesis-seeds/README.md",
-        "anchor": "裸写\"fsync 出现 0 次\"能骗过任何检查"
+        "raw": "若你选定了一个候选：先跑 `run.bat` 存下基线日志，开题后每轮用它核对 \"行数与探针\"的变化幅度——这正是 B39 记录模板里\"证据\"一节的手感。",
+        "from": "练习建议 3"
       }
     ]
   }

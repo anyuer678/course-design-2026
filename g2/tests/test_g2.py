@@ -1,6 +1,6 @@
-"""g2/tests/test_g2.py —— G2 练习册的自测：一条正例 + 一组"改坏必须红"。
+"""g2/tests/test_g2.py —— G2 练习册的自测：正例 + 一组"改坏必须红"。
 
-负面对照都在临时沙箱里做（复制 cards.json 与它引用到的 README 副本），
+负面对照都在临时沙箱里做（复制 cards.json 与它引用到的 README、材料路径），
 不碰仓库真文件。
 """
 from __future__ import annotations
@@ -27,15 +27,26 @@ class TestG2(unittest.TestCase):
         cards = copy.deepcopy(cards) if cards is not None else R.load_cards(ROOT)
         (tmp / "g2" / "cards.json").write_text(
             json.dumps(cards, ensure_ascii=False), encoding="utf-8")
-        files = {s["file"] for c in cards for s in c["sources"]}
-        for rel in files:
-            src = ROOT / rel
-            if not src.is_file():
-                continue          # 缺失来源文件那类负面对照：故意不拷，交给核对器报红
-            dst = tmp / rel
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copyfile(src, dst)
+        for c in cards:
+            proj = c.get("project") or ""
+            rel_readme = f"projects/{proj}/README.md"
+            src = ROOT / rel_readme
+            if src.is_file():
+                dst = tmp / rel_readme
+                dst.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copyfile(src, dst)
+            for m in c.get("materials") or []:
+                s = ROOT / "projects" / proj / str(m)
+                d = tmp / "projects" / proj / str(m)
+                if s.is_dir():
+                    d.mkdir(parents=True, exist_ok=True)
+                elif s.is_file():
+                    d.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(s, d)
         return tmp
+
+    def a_dorm_card(self, cards):
+        return next(c for c in cards if "anchor" in (c.get("tasks") or [{}])[0])
 
     # ------------------------------------------------------------ 正例
 
@@ -47,30 +58,45 @@ class TestG2(unittest.TestCase):
         self.assertEqual([c["id"] for c in cards], R.EXPECTED_IDS)
         for c in cards:
             self.assertGreaterEqual(len(c["oral"]), 3, c["id"])
-            self.assertGreaterEqual(len(c["sources"]), 3, c["id"])
+            self.assertGreaterEqual(len(c["tasks"]), 1, c["id"])
+            self.assertGreaterEqual(len(c["materials"]), 3, c["id"])
 
     # ------------------------------------------------------------ 负面对照
 
-    def test_anchor_drift_turns_red(self):
+    def test_task_raw_drift_turns_red(self):
         cards = R.load_cards(ROOT)
-        cards[0]["sources"][0]["anchor"] = "绝不可能出现的锚点字符串zzq9"
+        cards[0]["tasks"][0]["raw"] += "zzq9"
         tmp = self.scaffold(cards)
         problems = R.validate_cards(tmp, cards)
-        self.assertTrue(any("锚点不在" in p for p in problems), problems)
+        self.assertTrue(any("任务原文不在" in p for p in problems), problems)
+
+    def test_task_anchor_drift_turns_red(self):
+        cards = R.load_cards(ROOT)
+        self.a_dorm_card(cards)["tasks"][0]["anchor"] = "绝不可能出现的任务锚点zzq9"
+        tmp = self.scaffold(cards)
+        problems = R.validate_cards(tmp, cards)
+        self.assertTrue(any("任务锚点不在" in p for p in problems), problems)
 
     def test_short_anchor_turns_red(self):
         cards = R.load_cards(ROOT)
-        cards[0]["sources"][0]["anchor"] = "太短"
+        self.a_dorm_card(cards)["tasks"][0]["anchor"] = "太短"
         tmp = self.scaffold(cards)
         problems = R.validate_cards(tmp, cards)
         self.assertTrue(any("锚点过短" in p for p in problems), problems)
 
-    def test_missing_source_file_turns_red(self):
+    def test_knowledge_row_drift_turns_red(self):
         cards = R.load_cards(ROOT)
-        cards[0]["sources"][0]["file"] = "projects/NOPE/README.md"
+        cards[0]["knowledge"][0] = "| 不存在的知识点行zzq9 | x | y |"
         tmp = self.scaffold(cards)
         problems = R.validate_cards(tmp, cards)
-        self.assertTrue(any("来源文件不存在" in p for p in problems), problems)
+        self.assertTrue(any("知识点行不在" in p for p in problems), problems)
+
+    def test_missing_material_turns_red(self):
+        cards = R.load_cards(ROOT)
+        cards[0]["materials"][0] = "nope/missing.txt"
+        tmp = self.scaffold(cards)
+        problems = R.validate_cards(tmp, cards)
+        self.assertTrue(any("材料路径不存在" in p for p in problems), problems)
 
     def test_duplicate_or_missing_id_turns_red(self):
         cards = R.load_cards(ROOT)
