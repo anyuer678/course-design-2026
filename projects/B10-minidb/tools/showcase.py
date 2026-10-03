@@ -207,7 +207,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B10-minidb">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B32-sec-lab/web/showcase.html">B32</a>　·　下一件 <a href="../../../projects/B30-mini-raft/web/showcase.html">B30</a></span>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B32-sec-lab/web/showcase.html">B32</a>　·　下一件 <a href="../../../projects/B30-mini-raft/web/showcase.html">B30</a></span>　·　<a href="#lab">实时实验台</a>（本页双击即看，零网络依赖）</p>
 <h1>B10 · 教学数据库：B+ 树索引 + WAL 恢复 + 事务 + sqlite 对拍</h1>
 <p class="note">数据库系统 · 无第三方依赖：词法/语法解析 → 计划器 → 执行器 →
 B+ 树 → WAL → 崩溃恢复。压轴是与 sqlite3 的随机 SQL 对拍。</p>
@@ -235,6 +235,16 @@ B+ 树 → WAL → 崩溃恢复。压轴是与 sqlite3 的随机 SQL 对拍。</
   观感与顺手程度归你实跑验收。</p>
 </section>
 
+<h2 id="lab-title">实时实验台</h2>
+<section id="lab" class="panel">
+<div id="lab-slot">
+<p class="note"><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
 <footer>
   <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
 </footer>
@@ -242,7 +252,7 @@ B+ 树 → WAL → 崩溃恢复。压轴是与 sqlite3 的随机 SQL 对拍。</
 <script>const DATA = {data};</script>
 <script>{APP_JS}</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";

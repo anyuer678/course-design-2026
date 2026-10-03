@@ -52,7 +52,7 @@
 .sw-footer{max-width:1300px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
 </style></head>
 <body data-showcase="B33-viz-algo">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B29-bigdata-spark/web/showcase.html">B29</a>　·　下一件 <a href="../../../projects/B34-path-planner/web/showcase.html">B34</a></span><h2>B33-viz-algo · 算法可视化：B2 导出操作记录，回放成可交互动画（不重算算法）</h2><p>本页是批次⑨「存量对齐」：原自包含动画页（vizlab/page.py 的产物）原位提升为提交物，动画/数据/控制条分毫未改。动画观感（动没动、清不清楚）仍归你实跑验收。</p></div>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B29-bigdata-spark/web/showcase.html">B29</a>　·　下一件 <a href="../../../projects/B34-path-planner/web/showcase.html">B34</a></span>　·　<a href="#lab">实时实验台</a><h2>B33-viz-algo · 算法可视化：B2 导出操作记录，回放成可交互动画（不重算算法）</h2><p>本页是批次⑨「存量对齐」：原自包含动画页（vizlab/page.py 的产物）原位提升为提交物，动画/数据/控制条分毫未改。动画观感（动没动、清不清楚）仍归你实跑验收。</p></div>
 <section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>18 项（11 核心 + 7 展示页自测）</span></div><div class="sw-card"><b>操作记录（C++ 导出）</b><span>堆排序 20 事件（1 建堆 + 10 swap + 8 取顶 + 1 收尾）；三份 JSON 字节数 {'sort': 1274, 'bfs': 393, 'dfs': 396}</span></div><div class="sw-card"><b>回放保真</b><span>逐步回放失败 0 步；终态 == 升序排序 True；BFS 7 / True；DFS 7 / True（独立 Python 参照逐步对拍）</span></div><div class="sw-card"><b>页面</b><span>HTML 13601 字节（内嵌数据 2080 字节）；控制条：播放/暂停/单步/上一步/速度</span></div><div class="sw-card"><b>JS 语法体检</b><span>node --check 退出码 0（无 node 则如实跳过）</span></div><div class="sw-card"><b>演的是真算法</b><span>动画只移动'记录下标'，不重算算法；负面自证：改坏一条快照记录回放器必须报错（测试钉住）</span></div></section>
 <section id="demo">
 <h1>B33 算法可视化 —— 操作记录回放</h1>
@@ -307,9 +307,18 @@ function makeAnimator(total, delayFn, render) {
 
 ==============================================================================
 完成：演示跑通。本演示无耗时输出，两遍运行应逐字相同。</pre></details></section>
+<section id="lab" class="sw-panel"><h3>实时实验台</h3>
+<div id="lab-slot">
+<p><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。动画页由本项目既有生成器产出（演的是 build/traces 里的操作记录）。</p></div>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\/\/127.0.0.1:7788/showcase/lab.js";

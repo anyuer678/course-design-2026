@@ -22,6 +22,7 @@ GOOD_PAGE = """<!DOCTYPE html>
 <section id="facts">数字</section>
 <section id="demo">展示</section>
 <section id="repro">怎么跑</section>
+<section id="lab">实时实验台<div id="lab-slot">启动说明</div></section>
 <footer>生成物：python tools/showcase.py --write</footer>
 <script>
 const x = 1;
@@ -59,10 +60,15 @@ class TestPageLint(unittest.TestCase):
         self.assertTrue(any("data-showcase" in p for p in problems), problems)
 
     def test_missing_anchor_turns_red(self):
-        for anchor in ("facts", "demo", "repro"):
+        for anchor in ("facts", "demo", "repro", "lab"):
             text = GOOD_PAGE.replace(f'<section id="{anchor}">', "<section>")
             problems, _ = sc.lint_page_text(text, "B13-tinylang")
             self.assertTrue(any(anchor in p for p in problems), (anchor, problems))
+
+    def test_missing_lab_slot_turns_red(self):
+        text = GOOD_PAGE.replace('id="lab-slot"', 'id="lab-missing"')
+        problems, _ = sc.lint_page_text(text, "B13-tinylang")
+        self.assertTrue(any("lab-slot" in p for p in problems), problems)
 
     def test_missing_provenance_turns_red(self):
         text = GOOD_PAGE.replace("python tools/showcase.py --write", "手改的")

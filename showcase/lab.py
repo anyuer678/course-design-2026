@@ -5,7 +5,7 @@
 
 用法：
     python showcase/lab.py                # 起在 127.0.0.1:7788
-    # 浏览器打开 http://127.0.0.1:7788/showcase/index.html （页面右下角出现控制台）
+    # 浏览器打开 http://127.0.0.1:7788/showcase/index.html （各页「实时实验台」分节变成控制台）
     python showcase/lab.py --selftest     # 自检：真起 B31 服务 → 真发请求 → 真停，PASS/FAIL
 
 安全边界（先说死）：
@@ -401,7 +401,7 @@ def serve(port: int) -> int:
         print(f"    或换端口：python showcase/lab.py --port {port + 1}")
         return 1
     print(f"实验台已启动：http://127.0.0.1:{port}/showcase/index.html")
-    print("（页面右下角会出现实时控制台；Ctrl+C 结束，子进程会一并清理）")
+    print("（已打开/刷新的展示页里，「实时实验台」分节会就地变成控制台；Ctrl+C 结束，子进程会一并清理）")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:

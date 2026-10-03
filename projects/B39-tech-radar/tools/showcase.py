@@ -143,7 +143,7 @@ def render(payload: dict) -> str:
 <title>B39-tech-radar · 技术雷达（课设作品集）</title>
 <style>{SHELL_CSS}</style></head>
 <body data-showcase="B39-tech-radar">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B31-shorturl/web/showcase.html">B31</a>　·　下一件 <a href="../../../projects/B40-career-map/web/showcase.html">B40</a></span>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B31-shorturl/web/showcase.html">B31</a>　·　下一件 <a href="../../../projects/B40-career-map/web/showcase.html">B40</a></span>　·　<a href="#lab">实时实验台</a>
 <h2>B39-tech-radar · 技术雷达：记录模板 + 可机验证据 + 一次最小复现</h2>
 <p>把"讲座笔记"变成<b>可核验</b>的资产：证据节里的每条指针（仓库路径 / @提交号）都会被
 <kbd>tools/check_record.py</kbd> 真的去仓库和 git 里找一遍——找不到就红。本页数字全部现算自
@@ -161,11 +161,21 @@ def render(payload: dict) -> str:
 红了就改——指针不存在意味着这条"证据"其实没人验证过。</li>
 <li><kbd>python tools\\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
 </ul></section>
+<section id="lab" class="sw-panel"><h3>实时实验台</h3>
+<div id="lab-slot">
+<p><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
+
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
 <script>{TAB_JS}</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";

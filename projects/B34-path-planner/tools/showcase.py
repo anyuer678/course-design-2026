@@ -102,16 +102,17 @@ def _promote(artifact: str, pid: str, title: str, banner: str, cards_html: str,
         raise SystemExit("<body> 标签不在预期形态（提升逻辑要跟着改）")
     head = (f'<body data-showcase="{pid}">\n'
             f'<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">'
-            f'← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B33-viz-algo/web/showcase.html">B33</a>　·　下一件 <a href="../../../projects/B14-java-paint/web/showcase.html">B14</a></span><h2>{html.escape(banner)}</h2>'
+            f'← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B33-viz-algo/web/showcase.html">B33</a>　·　下一件 <a href="../../../projects/B14-java-paint/web/showcase.html">B14</a></span>　·　<a href="#lab">实时实验台</a><h2>{html.escape(banner)}</h2>'
             f'<p>本页是批次⑨「存量对齐」：原自包含搜索动画页（planner/viz.py 的产物）原位提升为提交物，'
             f'动画/数据分毫未改。动画观感（动没动、清不清楚）仍归你实跑验收。</p></div>\n'
             f'<section id="facts" class="sw-cards">{cards_html}</section>\n'
             f'<section id="demo">')
     out = out[:m.start()] + head + out[m.end():]
     out = out.replace("</body>", f"</section>\n{repro_html}\n"
+                                 f'<section id="lab" class="sw-panel"><h3>实时实验台</h3>\n<div id="lab-slot">\n<p><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>\n<ul>\n<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\\lab.py</kbd>），然后刷新本页；</li>\n<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>\n</ul>\n</div>\n</section>\n'
                                  f'<div class="sw-footer"><p>生成物：python tools/showcase.py --write'
                                  f'（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。'
-                                 f'动画页由本项目既有生成器产出（BFS 展开的逐步记录）。</p></div>\n<script>\n/* 实时实验台引导（未启动则静默）：python showcase/lab.py */\n"use strict";\nvar s=document.createElement("script");\ns.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";\ndocument.body.appendChild(s);\n</script>\n</body>', 1)
+                                 f'动画页由本项目既有生成器产出（BFS 展开的逐步记录）。</p></div>\n<script>\n/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */\n"use strict";\nvar s=document.createElement("script");\ns.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";\ndocument.body.appendChild(s);\n</script>\n</body>', 1)
     return out
 
 

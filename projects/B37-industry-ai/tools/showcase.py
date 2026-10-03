@@ -208,7 +208,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B37-industry-ai">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B35-iot-mqtt/web/showcase.html">B35</a>　·　下一件 <a href="../../../projects/B27-course-kg/web/showcase.html">B27</a></span>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B35-iot-mqtt/web/showcase.html">B35</a>　·　下一件 <a href="../../../projects/B27-course-kg/web/showcase.html">B27</a></span>　·　<a href="#lab">实时实验台</a>（本页双击即看，零网络依赖）</p>
 <h1>B37-industry-ai · 预测性维护：遥测 → 特征 → 概率 → 阈值 → 告警</h1>
 <p class="note">行业软件 + AI · <b>预测性维护不是"训一个模型"</b>：要提前多久报警、误报/漏报各罚多少、
 阈值按什么口径选，全部写成可对账的清单。数据是<strong>模拟</strong>（复用 B35 的异常分类学与账本、
@@ -258,13 +258,23 @@ B23 的决策树），<strong>指标只说明口径自洽，不外推生产</str
   唯一实时测量=第 3 段耗时列，已按规则替换成 &lt;当场&gt;）。一切数字不外推为生产结论。</p>
 </section>
 
+<h2 id="lab-title">实时实验台</h2>
+<section id="lab" class="panel">
+<div id="lab-slot">
+<p class="note"><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
 <footer>
   <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
 </footer>
 </main>
 <script>{TOGGLE_JS}</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";

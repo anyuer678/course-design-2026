@@ -161,7 +161,7 @@ def render(payload: dict) -> str:
 <title>dorm-repair · 宿舍报修系统（B15–B22 全生命周期，课设作品集）</title>
 <style>{SHELL_CSS}</style></head>
 <body data-showcase="dorm-repair">
-<div class="sw-top"><a class="sw-link" href="../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B41-thesis-seeds/web/showcase.html">B41</a></span>
+<div class="sw-top"><a class="sw-link" href="../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B41-thesis-seeds/web/showcase.html">B41</a></span>　·　<a href="#lab">实时实验台</a>
 <h2>dorm-repair · 宿舍报修系统：同一套代码的八轮迭代（B15 → B22）</h2>
 <p>需求工程 → 交互设计 → 体系结构 → Java 平台层 → SOA 第二接口 → 测试工程 → 质量门禁 → 项目管理：
 每一轮的「数字」都能被下一轮的检查器复核——文档与模型说不同话、契约过期、判定漂移、
@@ -179,12 +179,22 @@ def render(payload: dict) -> str:
 </ul>
 <p>浏览器原型的观感、手感、键盘与读屏表现只能你实跑——<kbd>docs\\07-walkthrough.md</kbd> 的 20 步
 每行结果都留空等你填，检查器会拒绝任何代填。</p></section>
+<section id="lab" class="sw-panel"><h3>实时实验台</h3>
+<div id="lab-slot">
+<p><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
+
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。
 本页只做展示，不进流水线——层数被门禁表锁死，先例见 tools/walkthrough_pack.py docstring。</p></div>
 <script>{TAB_JS}</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";

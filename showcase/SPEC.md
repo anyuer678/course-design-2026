@@ -11,7 +11,8 @@
    **零网络依赖**——`src=`/`href=`/`url()` 不得指向外部（协议或 `//` 开头）；
    全文出现 `http(s)://` 的唯一例外是 W3C 命名空间串（`www.w3.org`，它是标识符不是请求）。
 2. **必备锚点**：`<body data-showcase="<项目 id>">`（与 `manifest.json` 对得上）、
-   `id="facts"`（实测数字区）、`id="demo"`（展示/交互区）、`id="repro"`（怎么自己跑）。
+   `id="facts"`（实测数字区）、`id="demo"`（展示/交互区）、`id="repro"`（怎么自己跑）、
+   `id="lab"`（实时实验台分节，内含控制台挂载点 `id="lab-slot"`——缺它 lab.js 就升不成控制台）。
 3. **生成物标记**：页脚必须含重生成命令字符串 `tools/showcase.py --write`。
 4. **脚本规范**：不用 `innerHTML / outerHTML / document.write / insertAdjacentHTML`
    （数据可信与否不是例外理由）；每个内联 `<script>` 过 `node --check`
@@ -29,6 +30,9 @@
 - 项目内测试：新鲜度、数据抽查（与现算源一致）、自包含 lint、负面对照。
 - 仓库级：`showcase/check.py` 统一再验（结构 + 自包含 + node --check + 逐项目 `--check`
   子进程 + 总入口新鲜度与链接）；负面对照在 `showcase/tests/`。
+  `showcase/lab.js` 也过 `node --check`（页内控制台的脚本，语法错就是整台控制台哑掉）；
+  跑各项目 `--check` 的子进程**强制 `PYTHONUTF8=1`**——生成器自身 stdout 默认跟控制台走
+  （本机 GBK），父进程按 utf-8 解，不强制会出现乱码 note、GBK 控制台上直接崩（2026-10-03 实测修）。
 - 总入口：`showcase/index.html` 由 `python showcase/check.py --write-index` 从
   `manifest.json` 生成（已交付的给链接、待补的给状态签）；链接目标不存在即红。
 
@@ -96,8 +100,10 @@ python -m unittest discover -s showcase/tests
 - **启动**：双击仓库根 `lab.bat`（Windows 双击即用：起 7788 并自动打开总入口；`lab.bat no-open`
   只起服务，`lab.bat selftest` 复跑自检；正文纯 ASCII + CRLF，沿用全仓 .bat 规矩），或
   `python showcase/lab.py`（纯标准库，只绑 127.0.0.1:7788）。之后从
-  `http://127.0.0.1:7788/showcase/index.html` 打开任意页面，或双击本地页（实验台在跑即可），
-  右下角出现控制台面板；实验台没跑时页面**完全静默**（角落只留一条可关闭的小提示）。
+  `http://127.0.0.1:7788/showcase/index.html` 打开任意页面，或双击本地页（实验台在跑即可）——
+  每页正文尾部的**「实时实验台」正式分节**（`id="lab"`，与 facts/demo/repro 并列，顶部导航有跳链；
+  2026-10-03 由角落浮窗升级而来）会**就地**变成控制台：启停服务、发原始请求、看实时日志；
+  实验台没跑时该分节显示静态启动说明，页面其余部分完全不受影响。
 - **端口被占**：先连接探测再绑定——第二个实例会给出人话报错并退出 1（分辨"已有实验台在跑"还是
   "别的程序占着"，建议换端口），不依赖 bind 失败：Windows 的 `SO_REUSEADDR` 允许双绑同一端口，
   只看 bind 会静默起两个实验台（2026-10-03 实测踩到后改的）。
@@ -108,8 +114,8 @@ python -m unittest discover -s showcase/tests
 - **安全边界（写死）**：只绑回环；只执行 `lab.py` 注册表里的**固定命令**（客户端只能选 id，
   带不了命令/参数/路径）；`sock` 只转发到实验台自己启动过的端口；进程在实验台退出时统一清理。
 - **页面侧**：每页生成物里内嵌一段引导脚本（无花括号、f-string 安全；`file://` 时从 127.0.0.1:7788
-  加载 `/showcase/lab.js`，失败即静默）；控制台界面全部 DOM API 构建（无 innerHTML），`node --check` 随
-  校验器执行。
+  加载 `/showcase/lab.js`，加载失败则分节保持静态说明）；控制台界面全部 DOM API 构建（无 innerHTML），
+  `lab.js` 与每页内联脚本都过 `node --check`（校验器执行）。
 - **自证**：`python showcase/lab.py --selftest`（真起 B31 → 真发请求断言 201 → 真停）；
   2026-10-03 全服务冒烟 6/6：B31 `201 Created`（341B）、B38 `+PONG`、B35 `CONNACK 20 02 00 00`、
   B28 `200 OK`（5719B）、dorm `200 OK`（6998B）、B11 `HTTP/1.1 404`（真服务的正确回答）。

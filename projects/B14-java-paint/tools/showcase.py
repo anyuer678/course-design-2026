@@ -153,7 +153,7 @@ def render(payload: dict) -> str:
 <title>B14-java-paint · Java 图形编辑器（课设作品集）</title>
 <style>{SHELL_CSS}</style></head>
 <body data-showcase="B14-java-paint">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B34-path-planner/web/showcase.html">B34</a>　·　下一件 <a href="../../../projects/B31-shorturl/web/showcase.html">B31</a></span>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B34-path-planner/web/showcase.html">B34</a>　·　下一件 <a href="../../../projects/B31-shorturl/web/showcase.html">B31</a></span>　·　<a href="#lab">实时实验台</a>
 <h2>B14-java-paint · 图形编辑器：命令/撤销重做 + 可信存盘 + 离屏渲染</h2>
 <p>纯 Java（零第三方库）：图形类体系与命令模式、原子写盘与读取防线、离屏渲染像素对账、
 Swing 事件语义、随机操作 vs 快照模型。本页数字全部现算——生成器按 run.bat 同命令行自包含
@@ -180,11 +180,21 @@ Swing 事件语义、随机操作 vs 快照模型。本页数字全部现算—�
 <li><kbd>python tools\\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
 </ul>
 <p>Swing 窗口的手感、键盘与拖拽的真实表现请自己开窗口试——自动化只到离屏语义这一层。</p></section>
+<section id="lab" class="sw-panel"><h3>实时实验台</h3>
+<div id="lab-slot">
+<p><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
+
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
 <script>{TAB_JS}</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";

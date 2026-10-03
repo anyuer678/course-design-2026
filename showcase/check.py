@@ -21,6 +21,7 @@ from __future__ import annotations
 import argparse
 import html
 import json
+import os
 import re
 import shutil
 import subprocess
@@ -34,7 +35,7 @@ INDEX = Path(__file__).resolve().parent / "index.html"
 
 #: 全文允许出现的唯一外部地址形态：W3C 命名空间串（它是标识符，不是网络请求）。
 URL_EXCEPTIONS = ("http://www.w3.org/", "https://www.w3.org/")
-ANCHORS = ("facts", "demo", "repro")
+ANCHORS = ("facts", "demo", "repro", "lab")
 PROVENANCE = "tools/showcase.py --write"
 
 
@@ -122,6 +123,8 @@ def lint_page_text(text: str, pid: str) -> tuple:
     for anchor in ANCHORS:
         if f'id="{anchor}"' not in text:
             problems.append(f"缺少必备锚点 id=\"{anchor}\"")
+    if 'id="lab-slot"' not in text:
+        problems.append('缺少实验台挂载点 id="lab-slot"（lab.js 没有它就升不成控制台）')
     if PROVENANCE not in text:
         problems.append(f"页脚缺少生成物标记「{PROVENANCE}」")
     problems.extend(_external_refs(text))
@@ -318,13 +321,18 @@ def index_problems(manifest: dict, index_text: str, root: Path) -> list:
 # ------------------------------------------------------------------ 全量校验
 
 def project_check(root: Path, entry: dict) -> tuple:
-    """子进程跑项目自己的生成器 --check。返回 (problems, notes)。"""
+    """子进程跑项目自己的生成器 --check。返回 (problems, notes)。
+
+    子进程强制 PYTHONUTF8=1：生成器自己的 stdout 默认跟控制台走（这台机器上是 GBK），
+    而这里按 utf-8 解码——不强制就会把提示行解成乱码，GBK 控制台上还可能直接崩。
+    """
     project_dir = root / "projects" / entry["id"]
     generator = project_dir / entry["generator"]
+    env = dict(os.environ, PYTHONUTF8="1")
     try:
         proc = subprocess.run([sys.executable, str(generator), "--check"],
                               cwd=str(project_dir), capture_output=True, text=True,
-                              encoding="utf-8", errors="replace", timeout=300)
+                              encoding="utf-8", errors="replace", timeout=300, env=env)
     except subprocess.TimeoutExpired:
         return [f"{entry['id']} 的生成器 --check 超时（300 秒）"], []
     tail = [line for line in (proc.stdout or "").strip().splitlines() if line][-3:]
@@ -339,6 +347,13 @@ def check(root: Path | None = None) -> tuple:
     manifest = load()
     problems = manifest_problems(manifest, root)
     notes = []
+    lab_js = root / "showcase" / "lab.js"
+    if lab_js.is_file():
+        lab_problems, lab_notes = _node_check([lab_js.read_text(encoding="utf-8")])
+        problems.extend(f"showcase/lab.js：{p}" for p in lab_problems)
+        notes.extend(lab_notes)
+    else:
+        problems.append("showcase/lab.js 不存在：页内实验台分节没有控制台脚本")
     for entry in manifest["projects"]:
         if entry["status"] != "done":
             continue

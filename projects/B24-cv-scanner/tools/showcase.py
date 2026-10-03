@@ -217,7 +217,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B24-cv-scanner">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B26-datamining/web/showcase.html">B26</a>　·　下一件 <a href="../../../projects/B35-iot-mqtt/web/showcase.html">B35</a></span>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B26-datamining/web/showcase.html">B26</a>　·　下一件 <a href="../../../projects/B35-iot-mqtt/web/showcase.html">B35</a></span>　·　<a href="#lab">实时实验台</a>（本页双击即看，零网络依赖）</p>
 <h1>B24-cv-scanner · 文档扫描仪：边缘检测 → 透视变换 → 二值化</h1>
 <p class="note">计算机视觉 · <b>期望值全是"造出来的"</b>：程序渲染一份文档、记下四角/文字掩码真值，
 再按已知透视"拍成照片"——检测误差、还原质量、二值准确率全对着真值算，像素级有出处。
@@ -264,13 +264,23 @@ def render(payload: dict) -> str:
   页面不含计时数字）。依赖 cv2 + numpy（装机实测在位，零新依赖）。</p>
 </section>
 
+<h2 id="lab-title">实时实验台</h2>
+<section id="lab" class="panel">
+<div id="lab-slot">
+<p class="note"><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
 <footer>
   <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
 </footer>
 </main>
 <script>{TOGGLE_JS}</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";

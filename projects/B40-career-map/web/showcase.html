@@ -26,7 +26,7 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 .pj-pane{display:none}.pj-pane.active{display:block}
 </style></head>
 <body data-showcase="B40-career-map">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B39-tech-radar/web/showcase.html">B39</a>　·　下一件 <a href="../../../projects/B41-thesis-seeds/web/showcase.html">B41</a></span>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B39-tech-radar/web/showcase.html">B39</a>　·　下一件 <a href="../../../projects/B41-thesis-seeds/web/showcase.html">B41</a></span>　·　<a href="#lab">实时实验台</a>
 <h2>B40-career-map · 求职证据的可核验化 + JD 差距矩阵</h2>
 <p>每个技能面挂<b>可机验</b>证据：指针路径 + @提交号 + 锚点字符串，<kbd>tools/check_evidence.py</kbd>
 逐条去仓库和 git 里找；改坏一条必须红。JD 映射把岗位关键词对到证据，缺口转成练习清单。
@@ -139,6 +139,16 @@ JD 未提及（不计入矩阵）：C/C++ 内存与资源管理、编译原理�
 <li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
 </ul>
 <p>边界：本工具只做映射与核验，不替你选岗位/方向（PLAN §5），也不替代真实实习。</p></section>
+<section id="lab" class="sw-panel"><h3>实时实验台</h3>
+<div id="lab-slot">
+<p><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
+
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
 <script>(function(){
@@ -153,7 +163,7 @@ JD 未提及（不计入矩阵）：C/C++ 内存与资源管理、编译原理�
   if (tabs.length) show(tabs[0].dataset.tab);
 })();</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\/\/127.0.0.1:7788/showcase/lab.js";

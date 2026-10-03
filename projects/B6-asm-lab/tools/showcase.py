@@ -14,6 +14,7 @@
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import subprocess
 import sys
@@ -47,8 +48,11 @@ def _ensure_built():
 
 
 def _run(args) -> str:
+    # 子进程（disasm_check.py）强制 PYTHONUTF8=1：它的 stdout 默认跟调用侧环境走，
+    # 这里按 utf-8 解码——不强制的话，同一份代码在不同控制台上会现算出不同结果。
+    env = dict(os.environ, PYTHONUTF8="1")
     proc = subprocess.run(args, cwd=str(ROOT), capture_output=True, text=True,
-                          encoding="utf-8", errors="replace")
+                          encoding="utf-8", errors="replace", env=env)
     if proc.returncode != 0:
         raise SystemExit(f"{' '.join(map(str, args))} 退出码 {proc.returncode}：\n"
                          f"{(proc.stderr or '')[-500:]}")
@@ -181,7 +185,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B6-asm-lab">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B5-cpu-sim/web/showcase.html">B5</a>　·　下一件 <a href="../../../projects/B9-os-sim/web/showcase.html">B9</a></span>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B5-cpu-sim/web/showcase.html">B5</a>　·　下一件 <a href="../../../projects/B9-os-sim/web/showcase.html">B9</a></span>　·　<a href="#lab">实时实验台</a>（本页双击即看，零网络依赖）</p>
 <h1>B6-asm-lab · 手写 x86-64 汇编四函数</h1>
 <p class="note">汇编语言 · 字符串反转 / 纯寄存器斐波那契 / 插入排序 / 完整栈帧函数：
 每个函数都对 C++ 参照逐元素对拍；调用约定由**哨兵探针**取证（callee-saved 一个 bit 都不许动），
@@ -229,13 +233,23 @@ def render(payload: dict) -> str:
   README 坑记里的"32 位 long 陷阱"值得一读。观感归你实跑验收。</p>
 </section>
 
+<h2 id="lab-title">实时实验台</h2>
+<section id="lab" class="panel">
+<div id="lab-slot">
+<p class="note"><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
 <footer>
   <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
 </footer>
 </main>
 <script>{TOGGLE_JS}</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";

@@ -182,7 +182,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B29-bigdata-spark">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B28-bi-dashboard/web/showcase.html">B28</a>　·　下一件 <a href="../../../projects/B33-viz-algo/web/showcase.html">B33</a></span>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B28-bi-dashboard/web/showcase.html">B28</a>　·　下一件 <a href="../../../projects/B33-viz-algo/web/showcase.html">B33</a></span>　·　<a href="#lab">实时实验台</a>（本页双击即看，零网络依赖）</p>
 <h1>B29-bigdata-spark · 工业日志的清洗 / 聚合 / Spark SQL / 倾斜实验</h1>
 <p class="note">用户画像与大数据分析 · 本机装好的 pyspark 4.2.0（local[2]）真跑 40 万行合成日志：
 清洗链与账本对账、DataFrame 与纯 Python 参照逐行对拍、Spark SQL 第二种说法、salting 两阶段倾斜实验。
@@ -230,13 +230,23 @@ Spark 的 JVM 日志在 stderr，天然不进页面；三处现场值已按规�
   规范化，规则写在生成器文档串里）。</p>
 </section>
 
+<h2 id="lab-title">实时实验台</h2>
+<section id="lab" class="panel">
+<div id="lab-slot">
+<p class="note"><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
 <footer>
   <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
 </footer>
 </main>
 <script>{TOGGLE_JS}</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";

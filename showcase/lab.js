@@ -1,13 +1,16 @@
-/* showcase/lab.js —— 展示页右下角"实时实验台"控制台（由 lab.py 提供）。
+/* showcase/lab.js —— 展示页内「实时实验台」分节的控制台（由 lab.py 提供）。
  *
  * 设计要点：
- * - 页面自己仍可双击静态看；本文件只在"实验台在跑"时有存在感：拉不到就只留一个小提示；
+ * - 实验台是每页的一个正式分节（#lab-slot）：页面双击静态看时，它显示启动说明；
+ *   实验台在跑时，本文件把该分节**就地**升级为控制台（启停真实服务、发原始请求、看实时日志）；
  * - 只用 DOM API 构建界面（不用 innerHTML），零依赖、无框架；
  * - 与 lab.py 的 API 一一对应：/lab/api/info、/start、/stop、/run、/log、/sock；
  * - 请求框里的 \r \n \t \\ \xNN 转义与 lab.py 的 unescape_bytes() 同一条规则。
  */
 (function () {
   "use strict";
+  var slot = document.getElementById("lab-slot");
+  if (!slot) return;                       // 页面上没有实验台分节：完全安静
   var pid = (document.body && document.body.dataset) ? document.body.dataset.showcase : "";
   if (!pid) return;
   var HUB = (location.protocol === "http:") ? "" : "http:\/\/127.0.0.1:7788";
@@ -33,92 +36,46 @@
     var s = document.createElement("style");
     s.id = "lab-style";
     s.textContent = [
-      "#lab-dock{position:fixed;right:14px;bottom:14px;width:400px;max-width:92vw;background:#0f1115;color:#e6e9ef;",
-      "border:1px solid #3a3f4b;border-radius:10px;font:13px/1.6 ui-monospace,Consolas,monospace;z-index:9999;",
-      "box-shadow:0 6px 24px rgba(0,0,0,.35)}",
-      "#lab-dock .lab-head{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;",
-      "background:#171a21;border-bottom:1px solid #3a3f4b;cursor:pointer;user-select:none}",
-      "#lab-dock .lab-head b{font-size:13px;color:#9ec1ff}",
-      "#lab-dock .lab-body{padding:8px 10px;max-height:62vh;overflow:auto}",
-      "#lab-dock .lab-row{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}",
-      "#lab-dock button{font:inherit;font-size:12px;padding:3px 10px;border:1px solid #4a5164;border-radius:6px;",
-      "background:#1c2230;color:#dbe4ff;cursor:pointer}",
-      "#lab-dock button:hover{border-color:#9ec1ff}",
-      "#lab-dock button:disabled{opacity:.45;cursor:default}",
-      "#lab-dock .lab-status{color:#8fb3e0;margin:2px 0}",
-      "#lab-dock .lab-hint{color:#98a2b3;font-size:12px;margin:4px 0}",
-      "#lab-dock textarea{width:100%;min-height:64px;background:#0a0c10;color:#d8e2f2;border:1px solid #3a3f4b;",
-      "border-radius:6px;font:12px/1.5 ui-monospace,Consolas,monospace;padding:6px;resize:vertical}",
-      "#lab-dock pre{background:#0a0c10;border:1px solid #2c3140;border-radius:6px;padding:6px;margin:4px 0;",
-      "max-height:200px;overflow:auto;white-space:pre-wrap;word-break:break-word;color:#cfe0c8}",
-      "#lab-dock .lab-badge{position:fixed;right:14px;bottom:14px;background:#1c2230;color:#9ec1ff;",
-      "border:1px solid #4a5164;border-radius:8px;font:12px ui-monospace,Consolas,monospace;padding:5px 10px;",
-      "cursor:pointer;z-index:9999}",
+      "#lab-slot .lab-status{color:#5f6773;font-size:13px;margin:2px 0 6px}",
+      "#lab-slot .lab-hint{color:#5f6773;font-size:13px;margin:8px 0 3px}",
+      "#lab-slot .lab-row{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}",
+      "#lab-slot button{font:inherit;font-size:13px;padding:4px 12px;border:1px solid #d5d9e0;",
+      "border-radius:999px;background:#fff;color:#1c2330;cursor:pointer}",
+      "#lab-slot button:hover{border-color:#1d4ed8}",
+      "#lab-slot button:disabled{opacity:.45;cursor:default}",
+      "#lab-slot textarea{width:100%;box-sizing:border-box;min-height:64px;border:1px solid #d5d9e0;",
+      "border-radius:8px;padding:6px;font:12px/1.5 ui-monospace,Consolas,monospace;resize:vertical}",
+      "#lab-slot pre{background:#0f1115;color:#e6e9ef;border-radius:8px;padding:10px 12px;margin:4px 0;",
+      "max-height:240px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;",
+      "white-space:pre-wrap;word-break:break-word}",
     ].join("");
     document.head.appendChild(s);
   }
 
-  function absent() {
-    // 实验台没在跑：角落里留一个可展开、可关闭的小提示；不打扰静态浏览
-    ensureStyle();
-    if (sessionStorage.getItem("lab-dismissed") === "1") return;
-    var badge = el("div", "lab-badge", "实验台未启动");
-    badge.title = "点这里看怎么开";
-    badge.addEventListener("click", function () {
-      var box = el("div", "");
-      box.id = "lab-dock";
-      box.appendChild(el("div", "lab-head", "实时实验台（未启动）"));
-      var body = el("div", "lab-body");
-      body.appendChild(el("div", "lab-hint",
-        "本页是静态生成物，要让页面能真正控制后端（启停真实服务、发真实请求、看实时日志）："));
-      body.appendChild(el("pre", "", "cd 仓库根\npython showcase\\lab.py\n# 然后浏览器打开 http://127.0.0.1:7788/showcase/index.html 或刷新本页"));
-      var row = el("div", "lab-row");
-      var x = el("button", "", "知道了，本次不再提示");
-      x.addEventListener("click", function () {
-        sessionStorage.setItem("lab-dismissed", "1");
-        box.remove();
-      });
-      row.appendChild(x);
-      body.appendChild(row);
-      box.appendChild(body);
-      badge.remove();
-      document.body.appendChild(box);
-    });
-    document.body.appendChild(badge);
-  }
-
-  function dock(info) {
-    if (!info || !info.ok) return absent();
+  function consoleUI(info) {
     ensureStyle();
     var state = info.state || {};
-    var pollTimer = null;
     var logFrom = 0;
     var wasRunning = !!state.running;
+    slot.textContent = "";
 
-    var box = el("div", "");
-    box.id = "lab-dock";
-    var head = el("div", "lab-head");
-    head.appendChild(el("b", "", "实时实验台 · " + pid));
-    var toggle = el("span", "", "收起");
-    head.appendChild(toggle);
-    box.appendChild(head);
-    var body = el("div", "lab-body");
-    box.appendChild(body);
-    head.addEventListener("click", function () {
-      var hidden = body.style.display === "none";
-      body.style.display = hidden ? "" : "none";
-      toggle.textContent = hidden ? "收起" : "展开";
-    });
+    var status = el("div", "lab-status", "正在连接实验台…");
+    slot.appendChild(status);
+    if (info.hint) slot.appendChild(el("div", "lab-hint", info.hint));
 
-    var status = el("div", "lab-status", "…");
-    body.appendChild(status);
-    if (info.hint) body.appendChild(el("div", "lab-hint", info.hint));
+    var log = null;
+    function appendLog(text) {
+      if (!log) return;
+      var atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+      log.textContent = (log.textContent === "（暂无输出）" ? "" : log.textContent) + text + "\n";
+      if (atBottom) log.scrollTop = log.scrollHeight;
+    }
 
-    // ---- 动作按钮
+    // ---- 动作按钮（启停服务 / 跑 demo / 跑测试）
     var acts = info.actions || [];
     if (!acts.length) {
-      body.appendChild(el("div", "lab-hint",
-        "本项目未接实验台动作（演示/测试入口见本页页尾与 README）。"));
+      slot.appendChild(el("div", "lab-hint",
+        "本项目未接实验台动作（演示与测试入口见上方「怎么自己跑」）。"));
     }
     var row = el("div", "lab-row");
     acts.forEach(function (a) {
@@ -137,18 +94,19 @@
       });
       row.appendChild(b);
     });
-    body.appendChild(row);
+    slot.appendChild(row);
 
     // ---- 请求发送区（只对注册了常驻服务的项目显示）
-    var input = null;
+    var resp = null;
     if (info.sample) {
-      body.appendChild(el("div", "lab-hint", "把下面这段原样发给真实服务（\\r \\n \\t \\xNN 会转义成字节）："));
-      input = document.createElement("textarea");
+      slot.appendChild(el("div", "lab-hint",
+        "把下面这段原样发给真实服务（\\r \\n \\t \\xNN 转义成字节）："));
+      var input = document.createElement("textarea");
       input.value = info.sample;
-      body.appendChild(input);
+      slot.appendChild(input);
       var sendRow = el("div", "lab-row");
       var send = el("button", "", "发送真实请求");
-      var resp = el("pre", "", "（响应将显示在这里）");
+      resp = el("pre", "", "（响应将显示在这里）");
       send.addEventListener("click", function () {
         send.disabled = true;
         api("/lab/api/sock", { project: pid, bytes: toBytes(input.value) }).then(function (r) {
@@ -161,19 +119,15 @@
           .then(function () { send.disabled = false; });
       });
       sendRow.appendChild(send);
-      body.appendChild(sendRow);
-      body.appendChild(resp);
+      slot.appendChild(sendRow);
+      slot.appendChild(resp);
     }
 
     // ---- 实时日志
-    body.appendChild(el("div", "lab-hint", "实时日志（服务或 demo/测试进程的 stdout+stderr）："));
-    var log = el("pre", "", "（暂无输出）");
-    body.appendChild(log);
-    function appendLog(text) {
-      var atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
-      log.textContent = (log.textContent === "（暂无输出）" ? "" : log.textContent) + text + "\n";
-      if (atBottom) log.scrollTop = log.scrollHeight;
-    }
+    slot.appendChild(el("div", "lab-hint", "实时日志（服务或 demo/测试进程的 stdout+stderr）："));
+    log = el("pre", "", "（暂无输出）");
+    slot.appendChild(log);
+
     function refresh() {
       return api("/lab/api/log?project=" + encodeURIComponent(pid) + "&from=" + logFrom)
         .then(function (r) {
@@ -181,18 +135,19 @@
           (r.lines || []).forEach(function (ln) { appendLog(ln); });
           logFrom = r.from;
           var st = r.state || {};
-          status.textContent = "服务：" + (st.running
-            ? ("运行中 pid=" + st.pid + (st.port ? (":" + st.port) : "") + "（" + st.up + "s，" + st.kind + "）")
-            : "未运行") + "　·　实验台：" + (HUB ? "127.0.0.1:7788" : "同源");
+          status.textContent = "实验台已连接（" + (HUB ? "127.0.0.1:7788" : "同源") + "）　·　服务：" +
+            (st.running
+              ? ("运行中 pid=" + st.pid + (st.port ? (":" + st.port) : "") + "（" + st.up + "s，" + st.kind + "）")
+              : "未运行");
           if (wasRunning && !st.running) appendLog("[实验台] 进程已退出");
           wasRunning = !!st.running;
-        }).catch(function () { status.textContent = "服务：状态查询失败（实验台还在吗？）"; });
+        }).catch(function () {
+          status.textContent = "实验台连接已断开（服务状态未知；重新启动 lab.bat 后刷新本页）";
+        });
     }
     refresh();
-    pollTimer = setInterval(refresh, 1500);
+    var pollTimer = setInterval(refresh, 1500);
     window.addEventListener("beforeunload", function () { clearInterval(pollTimer); });
-
-    document.body.appendChild(box);
   }
 
   function toBytes(text) {
@@ -223,6 +178,9 @@
   }
 
   api("/lab/api/info?project=" + encodeURIComponent(pid))
-    .then(dock)
-    .catch(function () { absent(); });
+    .then(function (info) {
+      if (info && info.ok) consoleUI(info);
+      // 实验台没跑：保留 #lab-slot 里的静态启动说明，不动它
+    })
+    .catch(function () { /* 同上：静态说明保持原样 */ });
 })();

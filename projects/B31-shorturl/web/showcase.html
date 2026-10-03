@@ -22,7 +22,7 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 .pj-pane{display:none}.pj-pane.active{display:block}
 </style></head>
 <body data-showcase="B31-shorturl">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B14-java-paint/web/showcase.html">B14</a>　·　下一件 <a href="../../../projects/B39-tech-radar/web/showcase.html">B39</a></span>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B14-java-paint/web/showcase.html">B14</a>　·　下一件 <a href="../../../projects/B39-tech-radar/web/showcase.html">B39</a></span>　·　<a href="#lab">实时实验台</a>
 <h2>B31-shorturl · 短链服务：从"一个字符串"到"浏览器被领到另一个站点"</h2>
 <p>复用 B11 的 HTTP/1.1 子集（没有第二套解析器）：base62 短码 + 目标地址关卡 +
 SQLite 仓储 + 原生前端。本页数字全部现算自 <kbd>demo.py</kbd>（六段）——监听端口、Date 头、
@@ -116,6 +116,16 @@ SQLite 仓储 + 原生前端。本页数字全部现算自 <kbd>demo.py</kbd>（
 </ul>
 <p>服务默认起在 <kbd>127.0.0.1:8000</kbd>（页面零外链，此地址只是运行说明）；页面样式、
 手感与点击交互请自己起服务看。</p></section>
+<section id="lab" class="sw-panel"><h3>实时实验台</h3>
+<div id="lab-slot">
+<p><b>实验台未启动</b>：本页仍是静态生成物，双击即看；启动实验台后，这块会就地变成控制台——真启停后端服务、发原始请求（字节进字节出）、看实时日志、跑演示/测试。</p>
+<ul>
+<li>双击仓库根 <kbd>lab.bat</kbd>（或终端 <kbd>python showcase\lab.py</kbd>），然后刷新本页；</li>
+<li>只起服务不弹浏览器：<kbd>lab.bat no-open</kbd>；自检：<kbd>lab.bat selftest</kbd>。</li>
+</ul>
+</div>
+</section>
+
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
 <script>(function(){
@@ -130,7 +140,7 @@ SQLite 仓储 + 原生前端。本页数字全部现算自 <kbd>demo.py</kbd>（
   if (tabs.length) show(tabs[0].dataset.tab);
 })();</script>
 <script>
-/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+/* 实时实验台引导（双击 lab.bat 启动实验台后，页内该分节自动变成控制台） */
 "use strict";
 var s=document.createElement("script");
 s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\/\/127.0.0.1:7788/showcase/lab.js";
