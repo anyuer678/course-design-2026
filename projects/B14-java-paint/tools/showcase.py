@@ -49,7 +49,24 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 .sw-panel th{background:#eef2f7}
 .sw-shot{max-width:640px;border:1px solid #d5d9e0;border-radius:8px;background:#fff;padding:6px}
 .sw-footer{max-width:1150px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+.pj-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.pj-tab{font:inherit;font-size:13px;padding:4px 11px;border:1px solid #d5d9e0;border-radius:999px;background:#fff;cursor:pointer;color:#1c2330}
+.pj-tab:hover{border-color:#1d4ed8}
+.pj-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.pj-pane{display:none}.pj-pane.active{display:block}
 """
+
+TAB_JS = """(function(){
+  "use strict";
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".pj-tab"));
+  var panes = Array.prototype.slice.call(document.querySelectorAll(".pj-pane"));
+  function show(name){
+    tabs.forEach(function(t){ t.className = "pj-tab" + (t.dataset.tab === name ? " active" : ""); });
+    panes.forEach(function(p){ p.className = "pj-pane" + (p.dataset.pane === name ? " active" : ""); });
+  }
+  tabs.forEach(function(t){ t.addEventListener("click", function(){ show(t.dataset.tab); }); });
+  if (tabs.length) show(tabs[0].dataset.tab);
+})();"""
 
 
 def _run(args, cwd=None) -> str:
@@ -136,20 +153,25 @@ def render(payload: dict) -> str:
 <title>B14-java-paint · Java 图形编辑器（课设作品集）</title>
 <style>{SHELL_CSS}</style></head>
 <body data-showcase="B14-java-paint">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B34-path-planner/web/showcase.html">B34</a>　·　下一件 <a href="../../../projects/B31-shorturl/web/showcase.html">B31</a></span>
 <h2>B14-java-paint · 图形编辑器：命令/撤销重做 + 可信存盘 + 离屏渲染</h2>
 <p>纯 Java（零第三方库）：图形类体系与命令模式、原子写盘与读取防线、离屏渲染像素对账、
 Swing 事件语义、随机操作 vs 快照模型。本页数字全部现算——生成器按 run.bat 同命令行自包含
 构建，再真跑自检与离屏演示；<b>图是当场画出来的真产物</b>，不是示意图。</p></div>
 <section id="facts" class="sw-cards">{cards}</section>
-<section id="demo" class="sw-panel"><h3>自检 8 组（headless 现场输出）</h3>
-{module_table}
-<h3 style="margin-top:10px">离屏演示原文（现算；PNG 临时文件名已规范化）</h3>
-<pre>{e(p["demo"])}</pre>
-<h3 style="margin-top:10px">当场画出来的图（data URI 内嵌，sha1 {p["png_sha"][:12]}…）</h3>
-<img class="sw-shot" alt="离屏演示：矩形 + 椭圆 + 线段" src="data:image/png;base64,{p["png_b64"]}">
-<details style="margin-top:8px"><summary style="cursor:pointer;color:#1d4ed8">自检总输出原文（含逐组检查数）</summary>
-<pre>{e(p["selftest"])}</pre></details></section>
+<section id="demo" class="sw-panel"><h3>现场证据（点页签切换）</h3>
+<div class="pj-tabs">
+<button type="button" class="pj-tab" data-tab="1">1 自检 8 组</button>
+<button type="button" class="pj-tab" data-tab="2">2 离屏演示原文</button>
+<button type="button" class="pj-tab" data-tab="3">3 当场画出来的图</button>
+<button type="button" class="pj-tab" data-tab="4">4 自检完整原文</button>
+</div>
+<div class="pj-pane" data-pane="1">{module_table}</div>
+<div class="pj-pane" data-pane="2"><pre>{e(p["demo"])}</pre></div>
+<div class="pj-pane" data-pane="3"><p>data URI 内嵌，sha1 {p["png_sha"][:12]}…——真产物，
+不是示意图；跑 run.bat 第 3 步会重新画一张。</p>
+<img class="sw-shot" alt="离屏演示：矩形 + 椭圆 + 线段" src="data:image/png;base64,{p["png_b64"]}"></div>
+<div class="pj-pane" data-pane="4"><pre>{e(p["selftest"])}</pre></div></section>
 <section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
 <ul>
 <li><kbd>run.bat</kbd>：五步（编译 → 自检 → 离屏演示 → 展示页新鲜度 → 打开窗口）；
@@ -160,6 +182,7 @@ Swing 事件语义、随机操作 vs 快照模型。本页数字全部现算—�
 <p>Swing 窗口的手感、键盘与拖拽的真实表现请自己开窗口试——自动化只到离屏语义这一层。</p></section>
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
+<script>{TAB_JS}</script>
 </body></html>"""
 
 

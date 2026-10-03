@@ -169,7 +169,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B2-datastruct-lab">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B1-cpp-ministl/web/showcase.html">B1</a>　·　下一件 <a href="../../../projects/B7-mini-make/web/showcase.html">B7</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B2-datastruct-lab · 八个 ADT + 复杂度对照</h1>
 <p class="note">数据结构 · 顺序表/链表/栈与表达式/循环队列/BST/哈希/堆/并查集/图：
 每个结构都有手算边界与"参考答案"对拍；最出彩的是**计数器**——把复杂度变成实测步数

@@ -208,7 +208,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B37-industry-ai">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B35-iot-mqtt/web/showcase.html">B35</a>　·　下一件 <a href="../../../projects/B27-course-kg/web/showcase.html">B27</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B37-industry-ai · 预测性维护：遥测 → 特征 → 概率 → 阈值 → 告警</h1>
 <p class="note">行业软件 + AI · <b>预测性维护不是"训一个模型"</b>：要提前多久报警、误报/漏报各罚多少、
 阈值按什么口径选，全部写成可对账的清单。数据是<strong>模拟</strong>（复用 B35 的异常分类学与账本、

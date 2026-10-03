@@ -210,7 +210,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B35-iot-mqtt">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B24-cv-scanner/web/showcase.html">B24</a>　·　下一件 <a href="../../../projects/B37-industry-ai/web/showcase.html">B37</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B35-iot-mqtt · 手写极简 MQTT：字节 → broker → SQLite → SVG</h1>
 <p class="note">工业物联网技术 · <b>一行第三方库都不用</b>：CONNECT/PUBLISH/SUBSCRIBE 报文自己拼、
 broker 订阅路由自己写、断线重连自己扛、入库与曲线自己接——每一层都能指着字节说"它为什么长这样"。

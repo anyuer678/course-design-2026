@@ -35,7 +35,49 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 .sw-panel pre{background:#0f1115;color:#e6e9ef;border-radius:8px;padding:10px 12px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
 .sw-panel kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid #d5d9e0;border-radius:4px;padding:0 4px;background:#fff}
 .sw-footer{max-width:1150px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+.pj-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.pj-tab{font:inherit;font-size:13px;padding:4px 11px;border:1px solid #d5d9e0;border-radius:999px;background:#fff;cursor:pointer;color:#1c2330}
+.pj-tab:hover{border-color:#1d4ed8}
+.pj-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.pj-pane{display:none}.pj-pane.active{display:block}
 """
+
+TAB_JS = """(function(){
+  "use strict";
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".pj-tab"));
+  var panes = Array.prototype.slice.call(document.querySelectorAll(".pj-pane"));
+  function show(name){
+    tabs.forEach(function(t){ t.className = "pj-tab" + (t.dataset.tab === name ? " active" : ""); });
+    panes.forEach(function(p){ p.className = "pj-pane" + (p.dataset.pane === name ? " active" : ""); });
+  }
+  tabs.forEach(function(t){ t.addEventListener("click", function(){ show(t.dataset.tab); }); });
+  if (tabs.length) show(tabs[0].dataset.tab);
+})();"""
+
+
+def _tabbed(demo_html: str) -> tuple:
+    """把 'N) 标题' 分段文本切成 (tabs_html, panes_html)；整行 '=' 分隔线移除。"""
+    sections, cur = [], None
+    for ln in demo_html.splitlines():
+        m = re.match(r"^\s*(\d+)\)\s+(.+?)\s*$", ln)
+        if m:
+            if cur:
+                sections.append(cur)
+            cur = {"num": m.group(1), "title": m.group(2), "lines": []}
+        elif cur is not None:
+            if set(ln.strip()) == {"="}:
+                continue
+            cur["lines"].append(ln)
+    if cur:
+        sections.append(cur)
+    tabs, panes = [], []
+    for s in sections:
+        short = s["title"].split("：")[0][:14]
+        tabs.append(f'<button type="button" class="pj-tab" data-tab="{s["num"]}">'
+                    f'{s["num"]} {short}</button>')
+        body = "\n".join([s["title"]] + s["lines"]).rstrip()
+        panes.append(f'<div class="pj-pane" data-pane="{s["num"]}"><pre>{body}</pre></div>')
+    return "".join(tabs), "".join(panes)
 
 
 def _run(args) -> str:
@@ -88,7 +130,7 @@ def collect() -> dict:
         ["keep-alive 与管线化", "一条连接 30 次跳转命中 30；管线化 GET+HEAD 都是 302；HEAD 不计数"],
         ["统计与影子模型", f"120 步随机操作，SQLite（SQL 语句）与纯 Python 字典模型逐步一致；"
                      f"影子模型累计命中 {shadow_hits} == 数据库累计命中"],
-        ["浏览器交互", "页面观感与点击交互**待你实跑**（run.bat 第 5 步，我不代勾）——"
+        ["浏览器交互", "页面观感与点击交互待你实跑（run.bat 第 5 步，我不代勾）——"
                    "本页把服务器侧证据（字节/状态码/统计）摆全"],
     ]
     return {"facts": facts, "demo": demo}
@@ -106,19 +148,21 @@ def render(payload: dict) -> str:
     e = html.escape
     cards = "".join(f'<div class="sw-card"><b>{k}</b><span>{v}</span></div>' for k, v in p["facts"])
     demo_html = _neutralize_schemes(e(p["demo"].rstrip()))
+    tabs_html, panes_html = _tabbed(demo_html)
     return f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <title>B31-shorturl · 短链服务（课设作品集）</title>
 <style>{SHELL_CSS}</style></head>
 <body data-showcase="B31-shorturl">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B14-java-paint/web/showcase.html">B14</a>　·　下一件 <a href="../../../projects/B39-tech-radar/web/showcase.html">B39</a></span>
 <h2>B31-shorturl · 短链服务：从"一个字符串"到"浏览器被领到另一个站点"</h2>
 <p>复用 B11 的 HTTP/1.1 子集（没有第二套解析器）：base62 短码 + 目标地址关卡 +
 SQLite 仓储 + 原生前端。本页数字全部现算自 <kbd>demo.py</kbd>（六段）——监听端口、Date 头、
 创建响应长度三处易变值已按规则规范化为占位（页面干净、规则可审计）。</p></div>
 <section id="facts" class="sw-cards">{cards}</section>
-<section id="demo" class="sw-panel"><h3>六段演示原文（现算）</h3>
-<pre>{demo_html}</pre></section>
+<section id="demo" class="sw-panel"><h3>六段演示（现算；点页签切换段落）</h3>
+<div class="pj-tabs">{tabs_html}</div>
+<div>{panes_html}</div></section>
 <section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
 <ul>
 <li><kbd>run.bat</kbd>：五步（环境 → 测试 → demo → 展示页新鲜度 → 启动服务）；
@@ -130,6 +174,7 @@ SQLite 仓储 + 原生前端。本页数字全部现算自 <kbd>demo.py</kbd>（
 手感与点击交互请自己起服务看。</p></section>
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
+<script>{TAB_JS}</script>
 </body></html>"""
 
 

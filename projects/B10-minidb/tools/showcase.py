@@ -207,7 +207,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B10-minidb">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B32-sec-lab/web/showcase.html">B32</a>　·　下一件 <a href="../../../projects/B30-mini-raft/web/showcase.html">B30</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B10 · 教学数据库：B+ 树索引 + WAL 恢复 + 事务 + sqlite 对拍</h1>
 <p class="note">数据库系统 · 无第三方依赖：词法/语法解析 → 计划器 → 执行器 →
 B+ 树 → WAL → 崩溃恢复。压轴是与 sqlite3 的随机 SQL 对拍。</p>

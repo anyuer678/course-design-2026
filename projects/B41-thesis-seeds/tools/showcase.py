@@ -38,7 +38,24 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 .sw-panel th,.sw-panel td{border:1px solid #d5d9e0;padding:4px 8px;text-align:left;vertical-align:top}
 .sw-panel th{background:#eef2f7}
 .sw-footer{max-width:1150px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+.pj-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.pj-tab{font:inherit;font-size:13px;padding:4px 11px;border:1px solid #d5d9e0;border-radius:999px;background:#fff;cursor:pointer;color:#1c2330}
+.pj-tab:hover{border-color:#1d4ed8}
+.pj-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.pj-pane{display:none}.pj-pane.active{display:block}
 """
+
+TAB_JS = """(function(){
+  "use strict";
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".pj-tab"));
+  var panes = Array.prototype.slice.call(document.querySelectorAll(".pj-pane"));
+  function show(name){
+    tabs.forEach(function(t){ t.className = "pj-tab" + (t.dataset.tab === name ? " active" : ""); });
+    panes.forEach(function(p){ p.className = "pj-pane" + (p.dataset.pane === name ? " active" : ""); });
+  }
+  tabs.forEach(function(t){ t.addEventListener("click", function(){ show(t.dataset.tab); }); });
+  if (tabs.length) show(tabs[0].dataset.tab);
+})();"""
 
 
 def _run(args) -> str:
@@ -112,16 +129,21 @@ def render(payload: dict) -> str:
 <title>B41-thesis-seeds · 毕设候选三维可行性（课设作品集）</title>
 <style>{SHELL_CSS}</style></head>
 <body data-showcase="B41-thesis-seeds">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B40-career-map/web/showcase.html">B40</a>　·　下一件 <a href="../../../projects/dorm-repair/web/showcase.html">dorm-repair</a></span>
 <h2>B41-thesis-seeds · 毕设候选的三维可行性（数字会自己过期）</h2>
 <p>比较工具链的核心纪律：<b>行数重算 + 缺口探针重跑 + 证据锚点必真</b>——
 改错一处 <kbd>tools/check_seeds.py</kbd> 即红。5 个候选已由用户选定实施完毕（候选表清零，
 负面对照改用注入式夹具继续钉规则）。本页数字全部现算自 <kbd>demo.py</kbd> 与 <kbd>data/seeds.json</kbd>。</p></div>
 <section id="facts" class="sw-cards">{cards}</section>
-<section id="demo" class="sw-panel"><h3>选定清单与三维比较表（现算）</h3>
+<section id="demo" class="sw-panel"><h3>选定与比较（点页签切换）</h3>
+<div class="pj-tabs">
+<button type="button" class="pj-tab" data-tab="1">1 选定清单与证据</button>
+<button type="button" class="pj-tab" data-tab="2">2 演示原文（比较表/负面对照/基准）</button>
+</div>
+<div class="pj-pane" data-pane="1"><p>选定清单与三维比较表（现算）；证据 = 指针 + 锚点，随时可复核。</p>
 {table}
-<details><summary style="cursor:pointer;color:#1d4ed8;margin-top:8px">四段演示原文（含三维比较表与负面对照）</summary>
-<pre>{e(p["demo"].rstrip())}</pre></details></section>
+</div>
+<div class="pj-pane" data-pane="2"><pre>{e(p["demo"].rstrip())}</pre></div></section>
 <section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
 <ul>
 <li><kbd>run.bat</kbd>：三步（测试 → demo → 展示页新鲜度）；<kbd>python demo.py</kbd> 只看演示
@@ -132,6 +154,7 @@ def render(payload: dict) -> str:
 <p>候选题清单不等于开题；任何新候选开工前，先跑 run.bat 把基线与 fsync 基准过一遍。</p></section>
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
+<script>{TAB_JS}</script>
 </body></html>"""
 
 

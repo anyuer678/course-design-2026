@@ -237,7 +237,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B5-cpu-sim">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B4-algebra-rsa/web/showcase.html">B4</a>　·　下一件 <a href="../../../projects/B6-asm-lab/web/showcase.html">B6</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B5-cpu-sim · 单周期 CPU + 五级流水线</h1>
 <p class="note">数字设计与计算机原理 · 手写 ISA/汇编器/两种执行模型：单周期与五级流水线跑同一份程序，
 最终状态必须逐字节一致；流水线的每个周期、每个停顿（S）与冲刷（F）都在时空图里。</p>

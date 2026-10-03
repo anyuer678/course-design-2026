@@ -38,7 +38,49 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 .sw-panel th,.sw-panel td{border:1px solid #d5d9e0;padding:4px 8px;text-align:left;vertical-align:top}
 .sw-panel th{background:#eef2f7}
 .sw-footer{max-width:1100px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+.pj-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.pj-tab{font:inherit;font-size:13px;padding:4px 11px;border:1px solid #d5d9e0;border-radius:999px;background:#fff;cursor:pointer;color:#1c2330}
+.pj-tab:hover{border-color:#1d4ed8}
+.pj-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.pj-pane{display:none}.pj-pane.active{display:block}
 """
+
+TAB_JS = """(function(){
+  "use strict";
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".pj-tab"));
+  var panes = Array.prototype.slice.call(document.querySelectorAll(".pj-pane"));
+  function show(name){
+    tabs.forEach(function(t){ t.className = "pj-tab" + (t.dataset.tab === name ? " active" : ""); });
+    panes.forEach(function(p){ p.className = "pj-pane" + (p.dataset.pane === name ? " active" : ""); });
+  }
+  tabs.forEach(function(t){ t.addEventListener("click", function(){ show(t.dataset.tab); }); });
+  if (tabs.length) show(tabs[0].dataset.tab);
+})();"""
+
+
+def _tabbed(demo_html: str) -> tuple:
+    """把 'N) 标题' 分段文本切成 (tabs_html, panes_html)；整行 '=' 分隔线移除。"""
+    sections, cur = [], None
+    for ln in demo_html.splitlines():
+        m = re.match(r"^\s*(\d+)\)\s+(.+?)\s*$", ln)
+        if m:
+            if cur:
+                sections.append(cur)
+            cur = {"num": m.group(1), "title": m.group(2), "lines": []}
+        elif cur is not None:
+            if set(ln.strip()) == {"="}:
+                continue
+            cur["lines"].append(ln)
+    if cur:
+        sections.append(cur)
+    tabs, panes = [], []
+    for s in sections:
+        short = s["title"].split("：")[0][:14]
+        tabs.append(f'<button type="button" class="pj-tab" data-tab="{s["num"]}">'
+                    f'{s["num"]} {short}</button>')
+        body = "\n".join([s["title"]] + s["lines"]).rstrip()
+        panes.append(f'<div class="pj-pane" data-pane="{s["num"]}"><pre>{body}</pre></div>')
+    return "".join(tabs), "".join(panes)
 
 
 def _run(args) -> str:
@@ -95,22 +137,23 @@ def render(payload: dict) -> str:
     p = payload
     e = html.escape
     cards = "".join(f'<div class="sw-card"><b>{k}</b><span>{v}</span></div>' for k, v in p["facts"])
+    tabs_html, panes_html = _tabbed(e(p["demo"].rstrip()))
     return f"""<!DOCTYPE html>
 <html lang="zh-CN"><head><meta charset="utf-8">
 <title>B39-tech-radar · 技术雷达（课设作品集）</title>
 <style>{SHELL_CSS}</style></head>
 <body data-showcase="B39-tech-radar">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B31-shorturl/web/showcase.html">B31</a>　·　下一件 <a href="../../../projects/B40-career-map/web/showcase.html">B40</a></span>
 <h2>B39-tech-radar · 技术雷达：记录模板 + 可机验证据 + 一次最小复现</h2>
 <p>把"讲座笔记"变成<b>可核验</b>的资产：证据节里的每条指针（仓库路径 / @提交号）都会被
 <kbd>tools/check_record.py</kbd> 真的去仓库和 git 里找一遍——找不到就红。本页数字全部现算自
 <kbd>demo.py</kbd>（种子化、无计时输出）与示例记录本体。</p></div>
 <section id="facts" class="sw-cards">{cards}</section>
-<section id="demo" class="sw-panel"><h3>四段演示原文（现算）</h3>
-<pre>{e(p["demo"].rstrip())}</pre></section>
-<section class="sw-panel"><h3>示例记录原文 · docs/records/example-crdt.md（交付物本体）</h3>
-<details><summary style="cursor:pointer;color:#1d4ed8">展开示例记录（来源栏明确写着"示例（非真实讲座）"）</summary>
-<pre>{e(p["example"].rstrip())}</pre></details></section>
+<section id="demo" class="sw-panel"><h3>演示与示例记录（点页签切换）</h3>
+<div class="pj-tabs">{tabs_html}<button type="button" class="pj-tab" data-tab="5">5 示例记录</button></div>
+{panes_html}
+<div class="pj-pane" data-pane="5"><h3 style="font-size:14px">示例记录原文 · docs/records/example-crdt.md（交付物本体）</h3>
+<pre>{e(p["example"].rstrip())}</pre></div></section>
 <section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
 <ul>
 <li><kbd>run.bat</kbd>：三步（测试 → demo → 展示页新鲜度）；<kbd>python demo.py</kbd> 只看演示。</li>
@@ -120,6 +163,7 @@ def render(payload: dict) -> str:
 </ul></section>
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
+<script>{TAB_JS}</script>
 </body></html>"""
 
 

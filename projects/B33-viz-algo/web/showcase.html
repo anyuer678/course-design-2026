@@ -52,7 +52,7 @@
 .sw-footer{max-width:1300px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
 </style></head>
 <body data-showcase="B33-viz-algo">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a><h2>B33-viz-algo · 算法可视化：B2 导出操作记录，回放成可交互动画（不重算算法）</h2><p>本页是批次⑨「存量对齐」：原自包含动画页（vizlab/page.py 的产物）原位提升为提交物，动画/数据/控制条分毫未改。动画观感（动没动、清不清楚）仍归你实跑验收。</p></div>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B29-bigdata-spark/web/showcase.html">B29</a>　·　下一件 <a href="../../../projects/B34-path-planner/web/showcase.html">B34</a></span><h2>B33-viz-algo · 算法可视化：B2 导出操作记录，回放成可交互动画（不重算算法）</h2><p>本页是批次⑨「存量对齐」：原自包含动画页（vizlab/page.py 的产物）原位提升为提交物，动画/数据/控制条分毫未改。动画观感（动没动、清不清楚）仍归你实跑验收。</p></div>
 <section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>18 项（11 核心 + 7 展示页自测）</span></div><div class="sw-card"><b>操作记录（C++ 导出）</b><span>堆排序 20 事件（1 建堆 + 10 swap + 8 取顶 + 1 收尾）；三份 JSON 字节数 {'sort': 1274, 'bfs': 393, 'dfs': 396}</span></div><div class="sw-card"><b>回放保真</b><span>逐步回放失败 0 步；终态 == 升序排序 True；BFS 7 / True；DFS 7 / True（独立 Python 参照逐步对拍）</span></div><div class="sw-card"><b>页面</b><span>HTML 13601 字节（内嵌数据 2080 字节）；控制条：播放/暂停/单步/上一步/速度</span></div><div class="sw-card"><b>JS 语法体检</b><span>node --check 退出码 0（无 node 则如实跳过）</span></div><div class="sw-card"><b>演的是真算法</b><span>动画只移动'记录下标'，不重算算法；负面自证：改坏一条快照记录回放器必须报错（测试钉住）</span></div></section>
 <section id="demo">
 <h1>B33 算法可视化 —— 操作记录回放</h1>

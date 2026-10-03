@@ -250,7 +250,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B3-logic-lab">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B12-algo-arena/web/showcase.html">B12</a>　·　下一件 <a href="../../../projects/B4-algebra-rsa/web/showcase.html">B4</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B3-logic-lab · 命题逻辑 + 二元关系</h1>
 <p class="note">离散结构 · 递归下降解析 → 真值表与主范式；关系矩阵 → 性质判定 → 两种闭包互证。
 下面每个公式、每对等价、每个关系都是现算的，切换着看。</p>

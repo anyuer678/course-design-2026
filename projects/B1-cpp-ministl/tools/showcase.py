@@ -166,7 +166,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B1-cpp-ministl">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B9-os-sim/web/showcase.html">B9</a>　·　下一件 <a href="../../../projects/B2-datastruct-lab/web/showcase.html">B2</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B1-cpp-ministl · 手写 vector / list / string + 待办清单</h1>
 <p class="note">计算机程序设计基础(C++) · 三个容器的边界、RAII、深拷贝与自追加语义逐个钉住，
 每个容器都拿标准库当"参考答案"跑随机操作序列对拍；另有一个用这三个容器写的待办清单

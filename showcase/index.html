@@ -7,11 +7,13 @@
 :root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--ok:#14603a;--todo:#8a5a00}
 *{box-sizing:border-box}body{margin:0;padding:2rem 1.2rem 4rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
 main{max-width:62rem;margin:0 auto}h1{font-size:1.6rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .4rem}h2 .n{color:var(--muted);font-weight:400;font-size:.9rem}
-p.note{color:var(--muted);font-size:.88rem}ul{list-style:none;padding:0;margin:.2rem 0}li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.6rem .9rem;margin:.45rem 0;display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap}
+p.note{color:var(--muted);font-size:.88rem}ul{list-style:none;padding:0;margin:.2rem 0}li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.6rem .9rem;margin:.45rem 0;display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap;transition:border-color .12s,box-shadow .12s}li:hover{border-color:#1d4ed8;box-shadow:0 2px 8px rgba(29,78,216,.14)}
 a{color:#1d4ed8;text-decoration:none;font-weight:600}a:hover{text-decoration:underline}
 .course{color:var(--muted);font-size:.85rem}.note2{color:var(--muted);font-size:.85rem}
-.badge{font-size:.78rem;padding:.05rem .5rem;border-radius:999px;border:1px solid var(--line)}
-.badge.ok{color:var(--ok);border-color:var(--ok)}.badge.todo{color:var(--todo)}
+.badge{font-size:.78rem;padding:.05rem .5rem;border-radius:999px;border:1px solid var(--line)}.badge.ok{color:var(--ok);border-color:var(--ok)}.badge.todo{color:var(--todo)}
+.tools{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:.8rem 0 .2rem}.tools input{flex:1;min-width:16rem;font:inherit;font-size:.95rem;padding:.45rem .8rem;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}.tools input:focus{outline:2px solid #1d4ed8;outline-offset:1px}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .6rem}.chip{font:inherit;font-size:.85rem;padding:.22rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer;color:var(--ink)}.chip:hover{border-color:#1d4ed8}.chip.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.cnt{color:var(--muted);font-size:.85rem;white-space:nowrap}
 footer{color:var(--muted);font-size:.85rem;margin-top:2.5rem}
 </style>
 </head>
@@ -19,73 +21,161 @@ footer{color:var(--muted);font-size:.85rem;margin-top:2.5rem}
 <main>
 <h1>课设作品集</h1>
 <p class="note">33 个项目 · 已交付展示页 <strong>33</strong> 个（每页双击即看、零网络依赖；页面为生成物，检验器与批次表见 <code>showcase/SPEC.md</code>）。</p>
+<div class="tools"><input id="q" type="search" autocomplete="off" placeholder="搜索：项目编号 / 课程 / 关键词（按 / 聚焦，Esc 清空，回车打开第一条）"><span id="count" class="cnt"></span></div>
+<div class="chips" id="chips"></div>
+<section data-batch="1">
 <h2>批次 1 · 口径与试点（编译器透视） <span class="n">1 项</span></h2>
 <ul>
-<li><a href="../projects/B13-tinylang/web/showcase.html">B13-tinylang</a><span class="course">编译原理 · 编译流水线透视：词法→语法→语义→字节码→执行（含函数调用帧）</span><span class="badge ok">已交付</span></li>
+<li data-id="B13-tinylang" data-batch="1" data-course="编译原理 编译流水线透视：词法→语法→语义→字节码→执行（含函数调用帧）"><a href="../projects/B13-tinylang/web/showcase.html">B13-tinylang</a><span class="course">编译原理 · 编译流水线透视：词法→语法→语义→字节码→执行（含函数调用帧）</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
+<section data-batch="2">
 <h2>批次 2 · 算法与离散基本盘 <span class="n">3 项</span></h2>
 <ul>
-<li><a href="../projects/B12-algo-arena/web/showcase.html">B12-algo-arena</a><span class="course">算法分析与设计 · 算法实验场：分治/DP/贪心/回溯/图 + 暴力参照</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B3-logic-lab/web/showcase.html">B3-logic-lab</a><span class="course">离散结构 · 命题逻辑 + 二元关系：真值表/主范式/闭包</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B4-algebra-rsa/web/showcase.html">B4-algebra-rsa</a><span class="course">集合论与代数 · 数论底座 + 教学 RSA + 群运算表判定</span><span class="badge ok">已交付</span></li>
+<li data-id="B12-algo-arena" data-batch="2" data-course="算法分析与设计 算法实验场：分治/DP/贪心/回溯/图 + 暴力参照"><a href="../projects/B12-algo-arena/web/showcase.html">B12-algo-arena</a><span class="course">算法分析与设计 · 算法实验场：分治/DP/贪心/回溯/图 + 暴力参照</span><span class="badge ok">已交付</span></li>
+<li data-id="B3-logic-lab" data-batch="2" data-course="离散结构 命题逻辑 + 二元关系：真值表/主范式/闭包"><a href="../projects/B3-logic-lab/web/showcase.html">B3-logic-lab</a><span class="course">离散结构 · 命题逻辑 + 二元关系：真值表/主范式/闭包</span><span class="badge ok">已交付</span></li>
+<li data-id="B4-algebra-rsa" data-batch="2" data-course="集合论与代数 数论底座 + 教学 RSA + 群运算表判定"><a href="../projects/B4-algebra-rsa/web/showcase.html">B4-algebra-rsa</a><span class="course">集合论与代数 · 数论底座 + 教学 RSA + 群运算表判定</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
+<section data-batch="3">
 <h2>批次 3 · 系统底层 <span class="n">3 项</span></h2>
 <ul>
-<li><a href="../projects/B5-cpu-sim/web/showcase.html">B5-cpu-sim</a><span class="course">数字设计与计算机原理 · 单周期 CPU + 五级流水线 + 时空图</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B6-asm-lab/web/showcase.html">B6-asm-lab</a><span class="course">汇编语言 · x86-64 汇编四函数 + ABI 探针 + 反汇编对照</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B9-os-sim/web/showcase.html">B9-os-sim</a><span class="course">操作系统原理 · 操作系统模拟器：调度/内存/文件系统</span><span class="badge ok">已交付</span></li>
+<li data-id="B5-cpu-sim" data-batch="3" data-course="数字设计与计算机原理 单周期 CPU + 五级流水线 + 时空图"><a href="../projects/B5-cpu-sim/web/showcase.html">B5-cpu-sim</a><span class="course">数字设计与计算机原理 · 单周期 CPU + 五级流水线 + 时空图</span><span class="badge ok">已交付</span></li>
+<li data-id="B6-asm-lab" data-batch="3" data-course="汇编语言 x86-64 汇编四函数 + ABI 探针 + 反汇编对照"><a href="../projects/B6-asm-lab/web/showcase.html">B6-asm-lab</a><span class="course">汇编语言 · x86-64 汇编四函数 + ABI 探针 + 反汇编对照</span><span class="badge ok">已交付</span></li>
+<li data-id="B9-os-sim" data-batch="3" data-course="操作系统原理 操作系统模拟器：调度/内存/文件系统"><a href="../projects/B9-os-sim/web/showcase.html">B9-os-sim</a><span class="course">操作系统原理 · 操作系统模拟器：调度/内存/文件系统</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
+<section data-batch="4">
 <h2>批次 4 · 数据结构与工程 <span class="n">3 项</span></h2>
 <ul>
-<li><a href="../projects/B1-cpp-ministl/web/showcase.html">B1-cpp-ministl</a><span class="course">计算机程序设计基础(C++) · 手写 vector / list / string 容器</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B2-datastruct-lab/web/showcase.html">B2-datastruct-lab</a><span class="course">数据结构 · 八个 ADT + 复杂度对照 + 交互菜单</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B7-mini-make/web/showcase.html">B7-mini-make</a><span class="course">软件开发技术基础 · Makefile 子集 + 依赖图 + 增量构建</span><span class="badge ok">已交付</span></li>
+<li data-id="B1-cpp-ministl" data-batch="4" data-course="计算机程序设计基础(C++) 手写 vector / list / string 容器"><a href="../projects/B1-cpp-ministl/web/showcase.html">B1-cpp-ministl</a><span class="course">计算机程序设计基础(C++) · 手写 vector / list / string 容器</span><span class="badge ok">已交付</span></li>
+<li data-id="B2-datastruct-lab" data-batch="4" data-course="数据结构 八个 ADT + 复杂度对照 + 交互菜单"><a href="../projects/B2-datastruct-lab/web/showcase.html">B2-datastruct-lab</a><span class="course">数据结构 · 八个 ADT + 复杂度对照 + 交互菜单</span><span class="badge ok">已交付</span></li>
+<li data-id="B7-mini-make" data-batch="4" data-course="软件开发技术基础 Makefile 子集 + 依赖图 + 增量构建"><a href="../projects/B7-mini-make/web/showcase.html">B7-mini-make</a><span class="course">软件开发技术基础 · Makefile 子集 + 依赖图 + 增量构建</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
+<section data-batch="5">
 <h2>批次 5 · 网络与安全 <span class="n">3 项</span></h2>
 <ul>
-<li><a href="../projects/B8-mini-shell/web/showcase.html">B8-mini-shell</a><span class="course">开源操作系统 · mini-shell：fork/exec、管道、重定向、回收</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B11-net-lab/web/showcase.html">B11-net-lab</a><span class="course">计算机网络 · HTTP 子集 + 多路复用 + UDP 可靠传输</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B32-sec-lab/web/showcase.html">B32-sec-lab</a><span class="course">信息安全导论 · 四组“漏洞版 vs 修复版” + 静态扫描器</span><span class="badge ok">已交付</span></li>
+<li data-id="B8-mini-shell" data-batch="5" data-course="开源操作系统 mini-shell：fork/exec、管道、重定向、回收"><a href="../projects/B8-mini-shell/web/showcase.html">B8-mini-shell</a><span class="course">开源操作系统 · mini-shell：fork/exec、管道、重定向、回收</span><span class="badge ok">已交付</span></li>
+<li data-id="B11-net-lab" data-batch="5" data-course="计算机网络 HTTP 子集 + 多路复用 + UDP 可靠传输"><a href="../projects/B11-net-lab/web/showcase.html">B11-net-lab</a><span class="course">计算机网络 · HTTP 子集 + 多路复用 + UDP 可靠传输</span><span class="badge ok">已交付</span></li>
+<li data-id="B32-sec-lab" data-batch="5" data-course="信息安全导论 四组“漏洞版 vs 修复版” + 静态扫描器"><a href="../projects/B32-sec-lab/web/showcase.html">B32-sec-lab</a><span class="course">信息安全导论 · 四组“漏洞版 vs 修复版” + 静态扫描器</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
+<section data-batch="6">
 <h2>批次 6 · 数据库与分布式 <span class="n">3 项</span></h2>
 <ul>
-<li><a href="../projects/B10-minidb/web/showcase.html">B10-minidb</a><span class="course">数据库系统 · 教学数据库：WAL + 页式快照 + 事务</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B30-mini-raft/web/showcase.html">B30-mini-raft</a><span class="course">分布式与云计算 · Raft：快照 + 单步成员变更 + 哈希链账本</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B38-mini-redis/web/showcase.html">B38-mini-redis</a><span class="course">软件工程案例分析与实践 · 手写 Redis 子集：RESP2 + 过期 + 主从复制</span><span class="badge ok">已交付</span></li>
+<li data-id="B10-minidb" data-batch="6" data-course="数据库系统 教学数据库：WAL + 页式快照 + 事务"><a href="../projects/B10-minidb/web/showcase.html">B10-minidb</a><span class="course">数据库系统 · 教学数据库：WAL + 页式快照 + 事务</span><span class="badge ok">已交付</span></li>
+<li data-id="B30-mini-raft" data-batch="6" data-course="分布式与云计算 Raft：快照 + 单步成员变更 + 哈希链账本"><a href="../projects/B30-mini-raft/web/showcase.html">B30-mini-raft</a><span class="course">分布式与云计算 · Raft：快照 + 单步成员变更 + 哈希链账本</span><span class="badge ok">已交付</span></li>
+<li data-id="B38-mini-redis" data-batch="6" data-course="软件工程案例分析与实践 手写 Redis 子集：RESP2 + 过期 + 主从复制"><a href="../projects/B38-mini-redis/web/showcase.html">B38-mini-redis</a><span class="course">软件工程案例分析与实践 · 手写 Redis 子集：RESP2 + 过期 + 主从复制</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
+<section data-batch="7">
 <h2>批次 7 · 人工智能与数据 <span class="n">3 项</span></h2>
 <ul>
-<li><a href="../projects/B23-ml-from-scratch/web/showcase.html">B23-ml-from-scratch</a><span class="course">人工智能导论 · 手写机器学习五算法 + sklearn 同参对拍</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B25-nlp-lab/web/showcase.html">B25-nlp-lab</a><span class="course">自然语言处理 · 中文分词 + 朴素贝叶斯文本分类</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B26-datamining/web/showcase.html">B26-datamining</a><span class="course">数据挖掘与实践 · Apriori + K-means + 可追溯清洗链</span><span class="badge ok">已交付</span></li>
+<li data-id="B23-ml-from-scratch" data-batch="7" data-course="人工智能导论 手写机器学习五算法 + sklearn 同参对拍"><a href="../projects/B23-ml-from-scratch/web/showcase.html">B23-ml-from-scratch</a><span class="course">人工智能导论 · 手写机器学习五算法 + sklearn 同参对拍</span><span class="badge ok">已交付</span></li>
+<li data-id="B25-nlp-lab" data-batch="7" data-course="自然语言处理 中文分词 + 朴素贝叶斯文本分类"><a href="../projects/B25-nlp-lab/web/showcase.html">B25-nlp-lab</a><span class="course">自然语言处理 · 中文分词 + 朴素贝叶斯文本分类</span><span class="badge ok">已交付</span></li>
+<li data-id="B26-datamining" data-batch="7" data-course="数据挖掘与实践 Apriori + K-means + 可追溯清洗链"><a href="../projects/B26-datamining/web/showcase.html">B26-datamining</a><span class="course">数据挖掘与实践 · Apriori + K-means + 可追溯清洗链</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
+<section data-batch="8">
 <h2>批次 8 · 视觉 / 物联网 / 工业 <span class="n">3 项</span></h2>
 <ul>
-<li><a href="../projects/B24-cv-scanner/web/showcase.html">B24-cv-scanner</a><span class="course">计算机视觉 · 文档扫描仪：边缘→透视变换→二值化</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B35-iot-mqtt/web/showcase.html">B35-iot-mqtt</a><span class="course">工业物联网技术 · 手写 MQTT：传感器→broker→SQLite→曲线</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B37-industry-ai/web/showcase.html">B37-industry-ai</a><span class="course">行业软件前沿应用 · 设备故障预测 + 误报/漏报分析</span><span class="badge ok">已交付</span></li>
+<li data-id="B24-cv-scanner" data-batch="8" data-course="计算机视觉 文档扫描仪：边缘→透视变换→二值化"><a href="../projects/B24-cv-scanner/web/showcase.html">B24-cv-scanner</a><span class="course">计算机视觉 · 文档扫描仪：边缘→透视变换→二值化</span><span class="badge ok">已交付</span></li>
+<li data-id="B35-iot-mqtt" data-batch="8" data-course="工业物联网技术 手写 MQTT：传感器→broker→SQLite→曲线"><a href="../projects/B35-iot-mqtt/web/showcase.html">B35-iot-mqtt</a><span class="course">工业物联网技术 · 手写 MQTT：传感器→broker→SQLite→曲线</span><span class="badge ok">已交付</span></li>
+<li data-id="B37-industry-ai" data-batch="8" data-course="行业软件前沿应用 设备故障预测 + 误报/漏报分析"><a href="../projects/B37-industry-ai/web/showcase.html">B37-industry-ai</a><span class="course">行业软件前沿应用 · 设备故障预测 + 误报/漏报分析</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
+<section data-batch="9">
 <h2>批次 9 · 数据与可视化（存量对齐） <span class="n">5 项</span></h2>
 <ul>
-<li><a href="../projects/B27-course-kg/web/showcase.html">B27-course-kg</a><span class="course">知识图谱与知识工程 · 课程先修知识图谱（自包含交互 HTML 生成器）</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B28-bi-dashboard/web/showcase.html">B28-bi-dashboard</a><span class="course">数据分析与商务智能 · 商务智能看板：SQL/纯 Python 双路对拍</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B29-bigdata-spark/web/showcase.html">B29-bigdata-spark</a><span class="course">工业大数据处理技术 · PySpark 日志清洗/聚合/倾斜实验</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B33-viz-algo/web/showcase.html">B33-viz-algo</a><span class="course">可视化技术 · 算法可视化：B2 追踪导出 + 回放动画</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B34-path-planner/web/showcase.html">B34-path-planner</a><span class="course">无人系统 · 栅格 A*/Dijkstra/BFS + 搜索动画</span><span class="badge ok">已交付</span></li>
+<li data-id="B27-course-kg" data-batch="9" data-course="知识图谱与知识工程 课程先修知识图谱（自包含交互 HTML 生成器）"><a href="../projects/B27-course-kg/web/showcase.html">B27-course-kg</a><span class="course">知识图谱与知识工程 · 课程先修知识图谱（自包含交互 HTML 生成器）</span><span class="badge ok">已交付</span></li>
+<li data-id="B28-bi-dashboard" data-batch="9" data-course="数据分析与商务智能 商务智能看板：SQL/纯 Python 双路对拍"><a href="../projects/B28-bi-dashboard/web/showcase.html">B28-bi-dashboard</a><span class="course">数据分析与商务智能 · 商务智能看板：SQL/纯 Python 双路对拍</span><span class="badge ok">已交付</span></li>
+<li data-id="B29-bigdata-spark" data-batch="9" data-course="工业大数据处理技术 PySpark 日志清洗/聚合/倾斜实验"><a href="../projects/B29-bigdata-spark/web/showcase.html">B29-bigdata-spark</a><span class="course">工业大数据处理技术 · PySpark 日志清洗/聚合/倾斜实验</span><span class="badge ok">已交付</span></li>
+<li data-id="B33-viz-algo" data-batch="9" data-course="可视化技术 算法可视化：B2 追踪导出 + 回放动画"><a href="../projects/B33-viz-algo/web/showcase.html">B33-viz-algo</a><span class="course">可视化技术 · 算法可视化：B2 追踪导出 + 回放动画</span><span class="badge ok">已交付</span></li>
+<li data-id="B34-path-planner" data-batch="9" data-course="无人系统 栅格 A*/Dijkstra/BFS + 搜索动画"><a href="../projects/B34-path-planner/web/showcase.html">B34-path-planner</a><span class="course">无人系统 · 栅格 A*/Dijkstra/BFS + 搜索动画</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
+<section data-batch="10">
 <h2>批次 10 · 交互 / 工具 / 业务存量 <span class="n">6 项</span></h2>
 <ul>
-<li><a href="../projects/B14-java-paint/web/showcase.html">B14-java-paint</a><span class="course">Java 面向对象程序设计 · 画图程序：撤销/重做 + 可信文件存取（Swing）</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B31-shorturl/web/showcase.html">B31-shorturl</a><span class="course">Web 系统与技术 · 短链系统：base62 + 跳转统计 + 原生前端</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B39-tech-radar/web/showcase.html">B39-tech-radar</a><span class="course">专业前沿技术讲座 · 技术雷达：记录模板 + 可机验证据</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B40-career-map/web/showcase.html">B40-career-map</a><span class="course">专业实习 · 专业技能差距矩阵 + JD 映射器</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/B41-thesis-seeds/web/showcase.html">B41-thesis-seeds</a><span class="course">毕业设计（论文） · 毕设种子：五候选三维可行性（已清零收官）</span><span class="badge ok">已交付</span></li>
-<li><a href="../projects/dorm-repair/web/showcase.html">dorm-repair</a><span class="course">软件工程等（B15–B22 十门合集） · 宿舍报修系统：需求→原型→平台→测试→门禁</span><span class="badge ok">已交付</span></li>
+<li data-id="B14-java-paint" data-batch="10" data-course="Java 面向对象程序设计 画图程序：撤销/重做 + 可信文件存取（Swing）"><a href="../projects/B14-java-paint/web/showcase.html">B14-java-paint</a><span class="course">Java 面向对象程序设计 · 画图程序：撤销/重做 + 可信文件存取（Swing）</span><span class="badge ok">已交付</span></li>
+<li data-id="B31-shorturl" data-batch="10" data-course="Web 系统与技术 短链系统：base62 + 跳转统计 + 原生前端"><a href="../projects/B31-shorturl/web/showcase.html">B31-shorturl</a><span class="course">Web 系统与技术 · 短链系统：base62 + 跳转统计 + 原生前端</span><span class="badge ok">已交付</span></li>
+<li data-id="B39-tech-radar" data-batch="10" data-course="专业前沿技术讲座 技术雷达：记录模板 + 可机验证据"><a href="../projects/B39-tech-radar/web/showcase.html">B39-tech-radar</a><span class="course">专业前沿技术讲座 · 技术雷达：记录模板 + 可机验证据</span><span class="badge ok">已交付</span></li>
+<li data-id="B40-career-map" data-batch="10" data-course="专业实习 专业技能差距矩阵 + JD 映射器"><a href="../projects/B40-career-map/web/showcase.html">B40-career-map</a><span class="course">专业实习 · 专业技能差距矩阵 + JD 映射器</span><span class="badge ok">已交付</span></li>
+<li data-id="B41-thesis-seeds" data-batch="10" data-course="毕业设计（论文） 毕设种子：五候选三维可行性（已清零收官）"><a href="../projects/B41-thesis-seeds/web/showcase.html">B41-thesis-seeds</a><span class="course">毕业设计（论文） · 毕设种子：五候选三维可行性（已清零收官）</span><span class="badge ok">已交付</span></li>
+<li data-id="dorm-repair" data-batch="10" data-course="软件工程等（B15–B22 十门合集） 宿舍报修系统：需求→原型→平台→测试→门禁"><a href="../projects/dorm-repair/web/showcase.html">dorm-repair</a><span class="course">软件工程等（B15–B22 十门合集） · 宿舍报修系统：需求→原型→平台→测试→门禁</span><span class="badge ok">已交付</span></li>
 </ul>
+</section>
 <footer>
 <p>页面里的数字来自各项目真实产物的现算；观感与顺手程度归你实跑验收。</p>
 <p>重生成本页：<code>python showcase/check.py --write-index</code>（清单在 <code>showcase/manifest.json</code>）。</p>
 </footer>
 </main>
+<script>(function(){
+  "use strict";
+  var q = document.getElementById("q");
+  var cnt = document.getElementById("count");
+  var chipBox = document.getElementById("chips");
+  var items = Array.prototype.slice.call(document.querySelectorAll("li[data-id]"));
+  var sections = Array.prototype.slice.call(document.querySelectorAll("section[data-batch]"));
+  var cur = "all";
+
+  function visible(it){
+    var okB = cur === "all" || it.dataset.batch === cur;
+    var kw = q.value.trim().toLowerCase();
+    var okQ = !kw || (it.dataset.id + " " + it.dataset.course).toLowerCase().indexOf(kw) >= 0;
+    return okB && okQ;
+  }
+  function apply(){
+    var shown = 0;
+    items.forEach(function(it){
+      var vis = visible(it);
+      it.style.display = vis ? "" : "none";
+      if (vis) shown++;
+    });
+    sections.forEach(function(sec){
+      var any = items.some(function(it){
+        return it.dataset.batch === sec.dataset.batch && it.style.display !== "none";
+      });
+      sec.style.display = any ? "" : "none";
+    });
+    cnt.textContent = "显示 " + shown + " / " + items.length;
+  }
+  function chip(label, val){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip" + (val === cur ? " active" : "");
+    b.textContent = label;
+    b.addEventListener("click", function(){
+      cur = val;
+      Array.prototype.forEach.call(chipBox.children, function(c){
+        c.className = "chip" + (c === b ? " active" : "");
+      });
+      apply();
+    });
+    chipBox.appendChild(b);
+  }
+  chip("全部（" + items.length + "）", "all");
+  sections.forEach(function(sec){
+    var n = items.filter(function(it){ return it.dataset.batch === sec.dataset.batch; }).length;
+    chip("批次 " + sec.dataset.batch + "（" + n + "）", sec.dataset.batch);
+  });
+  q.addEventListener("input", apply);
+  document.addEventListener("keydown", function(e){
+    if (e.key === "/" && document.activeElement !== q){
+      e.preventDefault();
+      q.focus();
+    } else if (e.key === "Escape"){
+      q.value = "";
+      apply();
+      q.blur();
+    } else if (e.key === "Enter" && document.activeElement === q){
+      var first = items.filter(visible)[0];
+      var a = first && first.querySelector("a");
+      if (a) a.click();
+    }
+  });
+  apply();
+})();</script>
 </body>
 </html>

@@ -242,7 +242,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B12-algo-arena">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B13-tinylang/web/showcase.html">B13</a>　·　下一件 <a href="../../../projects/B3-logic-lab/web/showcase.html">B3</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B12-algo-arena · 五个范式，每步都有暴力参照</h1>
 <p class="note">算法分析与设计 · 分治 / DP / 贪心 / 回溯 / 图：每一个算法都配一个"更笨但不会错"的
 参照实现，页面上的每个数都是这次现算的<b>计数或方案</b>——不用时间数字，因为时间会飘。</p>

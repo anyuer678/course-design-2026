@@ -38,7 +38,7 @@ table.sw-t th:first-child,table.sw-t td:first-child{text-align:left}
 .sw-footer{max-width:1100px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
 </style></head>
 <body data-showcase="B34-path-planner">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a><h2>B34-path-planner · 栅格 A*/Dijkstra/BFS 同源对拍：搜索展开动画（218 步）</h2><p>本页是批次⑨「存量对齐」：原自包含搜索动画页（planner/viz.py 的产物）原位提升为提交物，动画/数据分毫未改。动画观感（动没动、清不清楚）仍归你实跑验收。</p></div>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B33-viz-algo/web/showcase.html">B33</a>　·　下一件 <a href="../../../projects/B14-java-paint/web/showcase.html">B14</a></span><h2>B34-path-planner · 栅格 A*/Dijkstra/BFS 同源对拍：搜索展开动画（218 步）</h2><p>本页是批次⑨「存量对齐」：原自包含搜索动画页（planner/viz.py 的产物）原位提升为提交物，动画/数据分毫未改。动画观感（动没动、清不清楚）仍归你实跑验收。</p></div>
 <section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>28 项（20 核心 + 8 展示页自测）</span></div><div class="sw-card"><b>同源对拍</b><span>4 邻域 30 图代价一致 30/30；8 邻域（octile）29/30——差 1 张是 1 ulp 浮点求和次序（断言用 almost-equal，演示如实打印）；无权图 BFS 等价 True/20 图</span></div><div class="sw-card"><b>可采纳性（是量出来的）</b><span>曼哈顿/octile/欧氏 slack = +0.000；故意撒谎的曼哈顿×8 邻域 slack = +4.686</span></div><div class="sw-card"><b>反例（seed=3）</b><span>Dijkstra 14.242641 vs A* 14.828427，差 0.585786（恰好 2-√2）</span></div><div class="sw-card"><b>动画页</b><span>build/plan.html build/plan.html（10179 字节，展开 218 步）；冷色越深展开越晚、红色当前格、到终点后绿色高亮最终路径；node --check 退出码 0</span></div><div class="sw-card"><b>手算基准</b><span>1×4 走廊代价 3.0（手算 3）；A* 代价/路径长度 12.0 / 13 格</span></div></section>
 <section id="demo">
 <h1>B34 路径规划 —— 搜索展开动画（A* / Dijkstra 同源）</h1>

@@ -39,7 +39,24 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 .sw-panel th{background:#eef2f7}
 .sw-gap{color:#a3341f;font-weight:600}
 .sw-footer{max-width:1150px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+.pj-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.pj-tab{font:inherit;font-size:13px;padding:4px 11px;border:1px solid #d5d9e0;border-radius:999px;background:#fff;cursor:pointer;color:#1c2330}
+.pj-tab:hover{border-color:#1d4ed8}
+.pj-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.pj-pane{display:none}.pj-pane.active{display:block}
 """
+
+TAB_JS = """(function(){
+  "use strict";
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".pj-tab"));
+  var panes = Array.prototype.slice.call(document.querySelectorAll(".pj-pane"));
+  function show(name){
+    tabs.forEach(function(t){ t.className = "pj-tab" + (t.dataset.tab === name ? " active" : ""); });
+    panes.forEach(function(p){ p.className = "pj-pane" + (p.dataset.pane === name ? " active" : ""); });
+  }
+  tabs.forEach(function(t){ t.addEventListener("click", function(){ show(t.dataset.tab); }); });
+  if (tabs.length) show(tabs[0].dataset.tab);
+})();"""
 
 
 def _run(args) -> str:
@@ -129,18 +146,24 @@ def render(payload: dict) -> str:
 <title>B40-career-map · 技能差距矩阵（课设作品集）</title>
 <style>{SHELL_CSS}</style></head>
 <body data-showcase="B40-career-map">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B39-tech-radar/web/showcase.html">B39</a>　·　下一件 <a href="../../../projects/B41-thesis-seeds/web/showcase.html">B41</a></span>
 <h2>B40-career-map · 求职证据的可核验化 + JD 差距矩阵</h2>
 <p>每个技能面挂<b>可机验</b>证据：指针路径 + @提交号 + 锚点字符串，<kbd>tools/check_evidence.py</kbd>
 逐条去仓库和 git 里找；改坏一条必须红。JD 映射把岗位关键词对到证据，缺口转成练习清单。
 本页数字全部现算自 <kbd>demo.py</kbd> 与 <kbd>data/*.json</kbd>。</p></div>
 <section id="facts" class="sw-cards">{cards}</section>
-<section id="demo" class="sw-panel"><h3>示例 JD 差距矩阵（现算；合成示例，非真实岗位）</h3>
+<section id="demo" class="sw-panel"><h3>展示区（点页签切换）</h3>
+<div class="pj-tabs">
+<button type="button" class="pj-tab" data-tab="1">1 JD 差距矩阵</button>
+<button type="button" class="pj-tab" data-tab="2">2 15 技能面全景</button>
+<button type="button" class="pj-tab" data-tab="3">3 演示原文（含 31 条证据明细）</button>
+</div>
+<div class="pj-pane" data-pane="1"><p>示例 JD 差距矩阵（现算；合成示例，非真实岗位）</p>
 {table}
-<details><summary style="cursor:pointer;color:#1d4ed8;margin-top:8px">四段演示原文（含 31 条证据明细）</summary>
-<pre>{e(p["demo"].rstrip())}</pre></details></section>
-<section class="sw-panel"><h3>15 个技能面全景（evidence 空 = 故意留空的缺口）</h3>
-{skills_table}</section>
+</div>
+<div class="pj-pane" data-pane="2"><p>15 个技能面全景（evidence 空 = 故意留空的缺口）</p>
+{skills_table}</div>
+<div class="pj-pane" data-pane="3"><pre>{e(p["demo"].rstrip())}</pre></div></section>
 <section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
 <ul>
 <li>把真实岗位 JD 存成 <kbd>jd\\岗位名.txt</kbd>（不要改 EXAMPLE 那个文件），
@@ -151,6 +174,7 @@ def render(payload: dict) -> str:
 <p>边界：本工具只做映射与核验，不替你选岗位/方向（PLAN §5），也不替代真实实习。</p></section>
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
+<script>{TAB_JS}</script>
 </body></html>"""
 
 

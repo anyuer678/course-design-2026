@@ -161,7 +161,7 @@ def _promote(artifact: str, pid: str, title: str, banner: str, cards_html: str,
         raise SystemExit("<body> 标签不在预期形态（提升逻辑要跟着改）")
     head = (f'<body data-showcase="{pid}">\n'
             f'<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">'
-            f'← 作品集总入口</a><h2>{html.escape(banner)}</h2>'
+            f'← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B27-course-kg/web/showcase.html">B27</a>　·　下一件 <a href="../../../projects/B29-bigdata-spark/web/showcase.html">B29</a></span><h2>{html.escape(banner)}</h2>'
             f'<p>本页是批次⑨「存量对齐」：本项目的自包含看板（bi/render 手写 SVG）原位提升为提交物，'
             f'图表与数据表分毫未改；上面加实测数字、下面加运行方式与指标血缘图。</p></div>\n'
             f'<section id="facts" class="sw-cards">{cards_html}</section>\n'

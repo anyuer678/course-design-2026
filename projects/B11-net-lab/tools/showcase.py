@@ -258,7 +258,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B11-net-lab">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B8-mini-shell/web/showcase.html">B8</a>　·　下一件 <a href="../../../projects/B32-sec-lab/web/showcase.html">B32</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B11-net-lab · HTTP/1.1 子集 + select 多路复用 + UDP 可靠传输</h1>
 <p class="note">计算机网络 · 应用层解析、传输层之上的单线程多路复用、传输层的 Go-Back-N 放同一份工程里：
 每个协议边界都按 RFC 讲得清道理，压轴是**与标准库解析器对拍**。下面全部来自刚跑完的现场输出

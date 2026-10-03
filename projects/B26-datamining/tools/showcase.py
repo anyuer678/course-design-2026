@@ -223,7 +223,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B26-datamining">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B25-nlp-lab/web/showcase.html">B25</a>　·　下一件 <a href="../../../projects/B24-cv-scanner/web/showcase.html">B24</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B26 · 数据挖掘：可追溯清洗链 + Apriori + K-means</h1>
 <p class="note">数据挖掘与实践 · 零依赖：Apriori 与 2^n-1 项集全穷举逐项对拍、
 K-means 与手写轮廓系数、缺陷按已知数量注入的清洗账本。合成数据来源声明见项目 README。</p>

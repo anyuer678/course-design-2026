@@ -18,48 +18,37 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 .sw-panel th,.sw-panel td{border:1px solid #d5d9e0;padding:4px 8px;text-align:left;vertical-align:top}
 .sw-panel th{background:#eef2f7}
 .sw-footer{max-width:1100px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+.pj-tabs{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+.pj-tab{font:inherit;font-size:13px;padding:4px 11px;border:1px solid #d5d9e0;border-radius:999px;background:#fff;cursor:pointer;color:#1c2330}
+.pj-tab:hover{border-color:#1d4ed8}
+.pj-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
+.pj-pane{display:none}.pj-pane.active{display:block}
 </style></head>
 <body data-showcase="B39-tech-radar">
-<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a>
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B31-shorturl/web/showcase.html">B31</a>　·　下一件 <a href="../../../projects/B40-career-map/web/showcase.html">B40</a></span>
 <h2>B39-tech-radar · 技术雷达：记录模板 + 可机验证据 + 一次最小复现</h2>
 <p>把"讲座笔记"变成<b>可核验</b>的资产：证据节里的每条指针（仓库路径 / @提交号）都会被
 <kbd>tools/check_record.py</kbd> 真的去仓库和 git 里找一遍——找不到就红。本页数字全部现算自
 <kbd>demo.py</kbd>（种子化、无计时输出）与示例记录本体。</p></div>
 <section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>26 项（18 核心 + 8 展示页自测）</span></div><div class="sw-card"><b>示例记录检查</b><span>PASS（0 个问题）；路径 4 条 + 提交 1 个（全部在仓库/git 里真实存在）</span></div><div class="sw-card"><b>负面对照（检查器有没有牙齿）</b><span>3 条改坏全部报红且红在该原因上（删必需小节 / 指针指向不存在文件 / 假提交号）</span></div><div class="sw-card"><b>CRDT 收敛复现</b><span>100 组置换（全部一致 = True）；并列计数器的赢家 'b'（时间戳 (1, 'b') 战胜 (1, 'a')）→ 值 'y'</span></div><div class="sw-card"><b>性质抽查</b><span>交换 50/50；结合 50/50；幂等 1/1</span></div><div class="sw-card"><b>记录五节结构</b><span>问题 / 原理 / 证据（可核验指针）/ 局限与适用边界 / 复现——缺节即红</span></div></section>
-<section id="demo" class="sw-panel"><h3>四段演示原文（现算）</h3>
-<pre>B39-tech-radar 演示：讲座记录模板 + 可机验证据 + 一次最小复现（技术雷达）
-
-==============================================================================
-  1) 模板与检查器：示例记录的每一条证据都要真实存在
-==============================================================================
+<section id="demo" class="sw-panel"><h3>演示与示例记录（点页签切换）</h3>
+<div class="pj-tabs"><button type="button" class="pj-tab" data-tab="1">1 模板与检查器</button><button type="button" class="pj-tab" data-tab="2">2 负面对照</button><button type="button" class="pj-tab" data-tab="3">3 最小复现</button><button type="button" class="pj-tab" data-tab="4">4 怎么用它</button><button type="button" class="pj-tab" data-tab="5">5 示例记录</button></div>
+<div class="pj-pane" data-pane="1"><pre>模板与检查器：示例记录的每一条证据都要真实存在
   检查示例记录                          PASS（0 个问题）
-  核验的指针                           路径 4 条 + 提交 1 个（全部在仓库/git 里真实存在）
-
-==============================================================================
-  2) 负面对照：改坏一处，检查器必须报红（否则它就是装饰）
-==============================================================================
+  核验的指针                           路径 4 条 + 提交 1 个（全部在仓库/git 里真实存在）</pre></div><div class="pj-pane" data-pane="2"><pre>负面对照：改坏一处，检查器必须报红（否则它就是装饰）
   删掉「局限与适用边界」节                    RED，首条：缺少必需小节：局限与适用边界
   证据指向不存在的文件                      RED，首条：证据路径在仓库里不存在：projects/B39-tech-radar/repro/NOPE.py
-  引用一个假提交号                        RED，首条：证据提交在 git 里不存在：@deadbeef0
-
-==============================================================================
-  3) 最小复现：LWW-Register 的收敛性（交换/结合/幂等 + 置换不变）
-==============================================================================
+  引用一个假提交号                        RED，首条：证据提交在 git 里不存在：@deadbeef0</pre></div><div class="pj-pane" data-pane="3"><pre>最小复现：LWW-Register 的收敛性（交换/结合/幂等 + 置换不变）
   收敛性（100 组置换）                    全部一致 = True
   并列计数器的赢家                        &#x27;b&#x27;（时间戳 (1, &#x27;b&#x27;) 战胜 (1, &#x27;a&#x27;)）→ 值 &#x27;y&#x27;
   性质抽查（50 组随机）                    交换 50/50；结合 50/50；幂等 1/1
-  向量时钟（因果进度）                      {&#x27;a&#x27;: 1, &#x27;b&#x27;: 1}
-
-==============================================================================
-  4) 怎么用它：写你自己的讲座记录
-==============================================================================
+  向量时钟（因果进度）                      {&#x27;a&#x27;: 1, &#x27;b&#x27;: 1}</pre></div><div class="pj-pane" data-pane="4"><pre>怎么用它：写你自己的讲座记录
   1. 复制 docs/record-template.md 到 docs/records/&lt;主题&gt;.md，逐节填写；
   2. 「证据」节每条写成可核验指针：`仓库内路径` 与/或 `@提交号`；
   3. 跑检查：python tools/check_record.py docs/records/&lt;主题&gt;.md
      红了就改——不是形式主义：指针不存在意味着这条&#x27;证据&#x27;其实没人验证过。
-  示例记录的来源栏明确写着「示例（非真实讲座）」——真讲座记录请照实填。</pre></section>
-<section class="sw-panel"><h3>示例记录原文 · docs/records/example-crdt.md（交付物本体）</h3>
-<details><summary style="cursor:pointer;color:#1d4ed8">展开示例记录（来源栏明确写着"示例（非真实讲座）"）</summary>
+  示例记录的来源栏明确写着「示例（非真实讲座）」——真讲座记录请照实填。</pre></div>
+<div class="pj-pane" data-pane="5"><h3 style="font-size:14px">示例记录原文 · docs/records/example-crdt.md（交付物本体）</h3>
 <pre># 记录：无协调多副本如何收敛——LWW-Register 与「(计数器, 副本)」全序
 
 - 来源：示例（非真实讲座）——按 `docs/record-template.md` 写的一次完整示范，演示模板怎么用
@@ -118,7 +107,7 @@ python demo.py                           # 分区→愈合演示：3 副本不�
 ```
 
 预期关键输出：`收敛性（100 组置换）` 行显示 `全部一致 = True`；
-`并列计数器的赢家` 行显示 `&#x27;b&#x27;（时间戳 (1, &#x27;b&#x27;) 战胜 (1, &#x27;a&#x27;)）→ 值 &#x27;y&#x27;`。</pre></details></section>
+`并列计数器的赢家` 行显示 `&#x27;b&#x27;（时间戳 (1, &#x27;b&#x27;) 战胜 (1, &#x27;a&#x27;)）→ 值 &#x27;y&#x27;`。</pre></div></section>
 <section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
 <ul>
 <li><kbd>run.bat</kbd>：三步（测试 → demo → 展示页新鲜度）；<kbd>python demo.py</kbd> 只看演示。</li>
@@ -128,4 +117,15 @@ python demo.py                           # 分区→愈合演示：3 副本不�
 </ul></section>
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
+<script>(function(){
+  "use strict";
+  var tabs = Array.prototype.slice.call(document.querySelectorAll(".pj-tab"));
+  var panes = Array.prototype.slice.call(document.querySelectorAll(".pj-pane"));
+  function show(name){
+    tabs.forEach(function(t){ t.className = "pj-tab" + (t.dataset.tab === name ? " active" : ""); });
+    panes.forEach(function(p){ p.className = "pj-pane" + (p.dataset.pane === name ? " active" : ""); });
+  }
+  tabs.forEach(function(t){ t.addEventListener("click", function(){ show(t.dataset.tab); }); });
+  if (tabs.length) show(tabs[0].dataset.tab);
+})();</script>
 </body></html>

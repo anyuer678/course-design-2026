@@ -16,7 +16,7 @@ from nlp25.bayes import MultinomialNB                             # noqa: E402
 from nlp25.corpus import make_corpus                              # noqa: E402
 from nlp25.metrics import accuracy, confusion_matrix              # noqa: E402
 from nlp25.metrics import precision_recall_f1                     # noqa: E402
-from nlp25.segment import bmm, fmm, segment                       # noqa: E402
+from nlp25.segment import fmm, segment                            # noqa: E402
 
 OUT = ROOT / "web" / "showcase.html"
 TESTS = ROOT / "tests"
@@ -193,7 +193,7 @@ def render(payload: dict) -> str:
 </head>
 <body data-showcase="B25-nlp-lab">
 <main>
-<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B23-ml-from-scratch/web/showcase.html">B23</a>　·　下一件 <a href="../../../projects/B26-datamining/web/showcase.html">B26</a></span>（本页双击即看，零网络依赖）</p>
 <h1>B25 · 中文分词 + 朴素贝叶斯文本分类</h1>
 <p class="note">自然语言处理 · 零依赖：FMM/BMM 最大匹配分词（含"研究生命起源"歧义对拍）、
 多项式朴素贝叶斯（拉普拉斯平滑）、手写混淆矩阵与 P/R/F1。语料为种子化合成

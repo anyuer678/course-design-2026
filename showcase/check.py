@@ -137,6 +137,75 @@ def lint_page_text(text: str, pid: str) -> tuple:
 
 # ------------------------------------------------------------------ 总入口
 
+INDEX_JS = """\
+(function(){
+  "use strict";
+  var q = document.getElementById("q");
+  var cnt = document.getElementById("count");
+  var chipBox = document.getElementById("chips");
+  var items = Array.prototype.slice.call(document.querySelectorAll("li[data-id]"));
+  var sections = Array.prototype.slice.call(document.querySelectorAll("section[data-batch]"));
+  var cur = "all";
+
+  function visible(it){
+    var okB = cur === "all" || it.dataset.batch === cur;
+    var kw = q.value.trim().toLowerCase();
+    var okQ = !kw || (it.dataset.id + " " + it.dataset.course).toLowerCase().indexOf(kw) >= 0;
+    return okB && okQ;
+  }
+  function apply(){
+    var shown = 0;
+    items.forEach(function(it){
+      var vis = visible(it);
+      it.style.display = vis ? "" : "none";
+      if (vis) shown++;
+    });
+    sections.forEach(function(sec){
+      var any = items.some(function(it){
+        return it.dataset.batch === sec.dataset.batch && it.style.display !== "none";
+      });
+      sec.style.display = any ? "" : "none";
+    });
+    cnt.textContent = "显示 " + shown + " / " + items.length;
+  }
+  function chip(label, val){
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip" + (val === cur ? " active" : "");
+    b.textContent = label;
+    b.addEventListener("click", function(){
+      cur = val;
+      Array.prototype.forEach.call(chipBox.children, function(c){
+        c.className = "chip" + (c === b ? " active" : "");
+      });
+      apply();
+    });
+    chipBox.appendChild(b);
+  }
+  chip("全部（" + items.length + "）", "all");
+  sections.forEach(function(sec){
+    var n = items.filter(function(it){ return it.dataset.batch === sec.dataset.batch; }).length;
+    chip("批次 " + sec.dataset.batch + "（" + n + "）", sec.dataset.batch);
+  });
+  q.addEventListener("input", apply);
+  document.addEventListener("keydown", function(e){
+    if (e.key === "/" && document.activeElement !== q){
+      e.preventDefault();
+      q.focus();
+    } else if (e.key === "Escape"){
+      q.value = "";
+      apply();
+      q.blur();
+    } else if (e.key === "Enter" && document.activeElement === q){
+      var first = items.filter(visible)[0];
+      var a = first && first.querySelector("a");
+      if (a) a.click();
+    }
+  });
+  apply();
+})();"""
+
+
 def render_index(manifest: dict) -> str:
     projects = manifest["projects"]
     batches = manifest["batch_names"]
@@ -155,11 +224,21 @@ def render_index(manifest: dict) -> str:
         "h2 .n{color:var(--muted);font-weight:400;font-size:.9rem}",
         "p.note{color:var(--muted);font-size:.88rem}ul{list-style:none;padding:0;margin:.2rem 0}"
         "li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.6rem .9rem;margin:.45rem 0;"
-        "display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap}",
+        "display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap;transition:border-color .12s,box-shadow .12s}"
+        "li:hover{border-color:#1d4ed8;box-shadow:0 2px 8px rgba(29,78,216,.14)}",
         "a{color:#1d4ed8;text-decoration:none;font-weight:600}a:hover{text-decoration:underline}",
         ".course{color:var(--muted);font-size:.85rem}.note2{color:var(--muted);font-size:.85rem}",
-        ".badge{font-size:.78rem;padding:.05rem .5rem;border-radius:999px;border:1px solid var(--line)}",
+        ".badge{font-size:.78rem;padding:.05rem .5rem;border-radius:999px;border:1px solid var(--line)}"
         ".badge.ok{color:var(--ok);border-color:var(--ok)}.badge.todo{color:var(--todo)}",
+        ".tools{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:.8rem 0 .2rem}"
+        ".tools input{flex:1;min-width:16rem;font:inherit;font-size:.95rem;padding:.45rem .8rem;"
+        "border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}"
+        ".tools input:focus{outline:2px solid #1d4ed8;outline-offset:1px}",
+        ".chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .6rem}"
+        ".chip{font:inherit;font-size:.85rem;padding:.22rem .7rem;border:1px solid var(--line);"
+        "border-radius:999px;background:#fff;cursor:pointer;color:var(--ink)}"
+        ".chip:hover{border-color:#1d4ed8}.chip.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}",
+        ".cnt{color:var(--muted);font-size:.85rem;white-space:nowrap}",
         "footer{color:var(--muted);font-size:.85rem;margin-top:2.5rem}",
         "</style>",
         "</head>",
@@ -168,28 +247,38 @@ def render_index(manifest: dict) -> str:
         "<h1>课设作品集</h1>",
         f'<p class="note">{len(projects)} 个项目 · 已交付展示页 <strong>{len(done)}</strong> 个（每页双击即看、零网络依赖；'
         "页面为生成物，检验器与批次表见 <code>showcase/SPEC.md</code>）。</p>",
+        '<div class="tools">'
+        '<input id="q" type="search" autocomplete="off" '
+        'placeholder="搜索：项目编号 / 课程 / 关键词（按 / 聚焦，Esc 清空，回车打开第一条）">'
+        '<span id="count" class="cnt"></span></div>',
+        '<div class="chips" id="chips"></div>',
     ]
     for batch in sorted(batches, key=int):
         members = [p for p in projects if str(p["batch"]) == batch]
         if not members:
             continue
+        lines.append(f'<section data-batch="{batch}">')
         lines.append(f'<h2>批次 {batch} · {html.escape(batches[batch])} '
                      f'<span class="n">{len(members)} 项</span></h2>')
         lines.append("<ul>")
         for p in members:
             title = html.escape(p["title"])
             course = html.escape(p["course"])
+            attrs = (f'data-id="{html.escape(p["id"], quote=True)}" '
+                     f'data-batch="{batch}" '
+                     f'data-course="{html.escape(p["course"] + " " + p["title"], quote=True)}"')
             if p["status"] == "done":
                 href = html.escape("../" + p["page"])
-                lines.append(f'<li><a href="{href}">{p["id"]}</a>'
+                lines.append(f'<li {attrs}><a href="{href}">{p["id"]}</a>'
                              f'<span class="course">{course} · {title}</span>'
                              f'<span class="badge ok">已交付</span></li>')
             else:
                 note = f' · {html.escape(p["note"])}' if p.get("note") else ""
-                lines.append(f'<li><span>{p["id"]}</span>'
+                lines.append(f'<li {attrs}><span>{p["id"]}</span>'
                              f'<span class="course">{course} · {title}{note}</span>'
                              f'<span class="badge todo">待补</span></li>')
         lines.append("</ul>")
+        lines.append("</section>")
     lines += [
         "<footer>",
         "<p>页面里的数字来自各项目真实产物的现算；观感与顺手程度归你实跑验收。</p>",
@@ -197,6 +286,7 @@ def render_index(manifest: dict) -> str:
         "<code>showcase/manifest.json</code>）。</p>",
         "</footer>",
         "</main>",
+        f"<script>{INDEX_JS}</script>",
         "</body>",
         "</html>",
         "",
