@@ -333,6 +333,13 @@ WSL2 Ubuntu-24.04 里跑完的现场输出（生成器用一次 wsl 调用完成
 </footer>
 </main>
 <script>{TOGGLE_JS}</script>
+<script>
+/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+"use strict";
+var s=document.createElement("script");
+s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";
+document.body.appendChild(s);
+</script>
 </body>
 </html>
 """

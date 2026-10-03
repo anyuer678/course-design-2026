@@ -282,6 +282,10 @@ def render_index(manifest: dict) -> str:
     lines += [
         "<footer>",
         "<p>页面里的数字来自各项目真实产物的现算；观感与顺手程度归你实跑验收。</p>",
+        "<p><strong>实时控制真实后端</strong>：仓库根跑 <code>python showcase/lab.py</code> 后，"
+        "从 http://127.0.0.1:7788/showcase/index.html 打开（或刷新任一页），右下角会出现实验台面板："
+        "可启动/停止各项目的真实服务（B11/B31/B38/B35/B28/dorm 六个已注册）、发送真实请求、"
+        "实时看服务与 demo/测试的输出。实验台没启动时页面仍是原来的静态自包含页。</p>",
         "<p>重生成本页：<code>python showcase/check.py --write-index</code>（清单在 "
         "<code>showcase/manifest.json</code>）。</p>",
         "</footer>",

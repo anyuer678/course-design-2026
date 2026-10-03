@@ -183,6 +183,13 @@ def render(payload: dict) -> str:
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。
 本页只做展示，不进流水线——层数被门禁表锁死，先例见 tools/walkthrough_pack.py docstring。</p></div>
 <script>{TAB_JS}</script>
+<script>
+/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+"use strict";
+var s=document.createElement("script");
+s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";
+document.body.appendChild(s);
+</script>
 </body></html>"""
 
 

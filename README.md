@@ -538,6 +538,7 @@ SOA 这一轮的唯一考点是：**多一种接口，会不会顺便长出第�
   `projects/B40-career-map/web/showcase.html`（JD 矩阵成表 + 技能全景）、`projects/B41-thesis-seeds/web/showcase.html`（选定清单 + 比较表）、
   `projects/dorm-repair/web/showcase.html`（13 段 walkthrough + 数字卡）——六页数据全部现算、`--check` 过期即红；总入口已 **33/33**
 - **交互升级（2026-10-03，用户反馈驱动）**：总入口加**实时搜索/批次筛选/键盘**（`/` 聚焦、Esc 清空、回车打开第一条）；**33 页统一前后导航**（← 作品集总入口 · 上一件 · 下一件，顺序=总入口序）；**六个长文页页签化**（B14/B31/B39/B40/B41/dorm——演示原文可切换段落）——交互是生成物的一部分，口径不变（改生成器再 --write，--check 过期仍红）
+- **实时实验台（2026-10-03，反馈"前端像 PPT"驱动）**：`python showcase/lab.py` 后页面右下角出现**控制台**——真启停 6 个真实服务（B11/B31/B38/B35/B28/dorm）、真发原始请求（字节进/字节出）、真看 demo/测试/服务实时日志；`--selftest` 可复跑（真起 B31→真请求 201→真停），全服务冒烟 6/6；实验台未启动时页面仍是原静态自包含页
 - **批次④（2026-10-03）**：`projects/B1-cpp-ministl/web/showcase.html`（五段演示分段 + 逐模块断言 + 三类对拍计数）、
   `projects/B2-datastruct-lab/web/showcase.html`（六段演示 + 逐模块断言 + 交互菜单版式截取）、
   `projects/B7-mini-make/web/showcase.html`（**增量构建全序列回放** + Makefile 依赖图 + 日志聚合）——

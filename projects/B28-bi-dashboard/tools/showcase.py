@@ -170,7 +170,7 @@ def _promote(artifact: str, pid: str, title: str, banner: str, cards_html: str,
     out = out.replace("</body>", f"</section>\n{repro_html}\n"
                                  f'<div class="sw-footer"><p>生成物：python tools/showcase.py --write'
                                  f'（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。'
-                                 f'看板与血缘图由本项目既有生成器产出。</p></div>\n</body>', 1)
+                                 f'看板与血缘图由本项目既有生成器产出。</p></div>\n<script>\n/* 实时实验台引导（未启动则静默）：python showcase/lab.py */\n"use strict";\nvar s=document.createElement("script");\ns.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";\ndocument.body.appendChild(s);\n</script>\n</body>', 1)
     return out
 
 

@@ -146,4 +146,11 @@ document.querySelectorAll('.node').forEach(node => {
 本轮没做的（别把演示当生产）：无 pandas/Streamlit（本机没这两个库，替代方案是 SQLite + 手写 SVG + 标准库服务器）；不做真实业务数据、不做预警与权限、不宣称任何预测能力；数据是固定种子合成的，共现结构为演示而植入。
 浏览器里的观感与点击只能由你实跑判断（run.bat 第 5 步），我不代勾。</pre></details></section>
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。看板与血缘图由本项目既有生成器产出。</p></div>
+<script>
+/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+"use strict";
+var s=document.createElement("script");
+s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\/\/127.0.0.1:7788/showcase/lab.js";
+document.body.appendChild(s);
+</script>
 </body></html>

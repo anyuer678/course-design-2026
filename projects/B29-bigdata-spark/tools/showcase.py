@@ -235,6 +235,13 @@ Spark 的 JVM 日志在 stderr，天然不进页面；三处现场值已按规�
 </footer>
 </main>
 <script>{TOGGLE_JS}</script>
+<script>
+/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+"use strict";
+var s=document.createElement("script");
+s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";
+document.body.appendChild(s);
+</script>
 </body>
 </html>
 """

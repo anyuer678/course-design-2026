@@ -241,6 +241,13 @@ B+ 树 → WAL → 崩溃恢复。压轴是与 sqlite3 的随机 SQL 对拍。</
 </main>
 <script>const DATA = {data};</script>
 <script>{APP_JS}</script>
+<script>
+/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+"use strict";
+var s=document.createElement("script");
+s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";
+document.body.appendChild(s);
+</script>
 </body>
 </html>
 """

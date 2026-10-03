@@ -183,6 +183,13 @@ Swing 事件语义、随机操作 vs 快照模型。本页数字全部现算—�
 <div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
 仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
 <script>{TAB_JS}</script>
+<script>
+/* 实时实验台引导（未启动则静默）：python showcase/lab.py */
+"use strict";
+var s=document.createElement("script");
+s.src=(location.protocol==="http:")?("/showcase/lab.js"):"http:\\/\\/127.0.0.1:7788/showcase/lab.js";
+document.body.appendChild(s);
+</script>
 </body></html>"""
 
 
