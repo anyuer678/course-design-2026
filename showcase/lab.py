@@ -310,6 +310,28 @@ class Handler(SimpleHTTPRequestHandler):
         except ValueError:
             return {}
 
+    def send_error(self, code, message=None, explain=None):
+        # 404 换成指路页：实验台的静态根 = 仓库根，总入口最省事（2026-10-03 用户实测 404 后补）
+        if code == 404:
+            body = (
+                "<!DOCTYPE html>\n<html lang=\"zh-CN\">\n<head><meta charset=\"utf-8\">"
+                "<title>404 · 展示层实验台</title></head>\n"
+                "<body style=\"font:15px/1.8 system-ui,'Microsoft YaHei',sans-serif;"
+                "margin:2rem;color:#1c2330\">\n"
+                "<h2>404：没有这个路径</h2>\n"
+                "<p>实验台的静态根是<b>仓库根</b>——总入口在 "
+                "<a href=\"/showcase/index.html\">/showcase/index.html</a>，"
+                "各项目页在 /projects/&lt;项目&gt;/web/showcase.html（从总入口点进去最省事）。</p>\n"
+                "</body></html>").encode("utf-8")
+            self.send_response(404)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            if self.command != "HEAD":
+                self.wfile.write(body)
+            return
+        super().send_error(code, message, explain)
+
     # 跨源预检：file:// 打开页面时，POST JSON 会先发 OPTIONS
     def do_OPTIONS(self):
         self._json({"ok": True})
@@ -317,6 +339,12 @@ class Handler(SimpleHTTPRequestHandler):
     def do_GET(self):
         from urllib.parse import parse_qs, urlparse
         u = urlparse(self.path)
+        if u.path == "/":
+            self.send_response(302)
+            self.send_header("Location", "/showcase/index.html")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
         if not u.path.startswith("/lab/api/"):
             return super().do_GET()
         q = parse_qs(u.query)

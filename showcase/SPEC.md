@@ -111,6 +111,8 @@ python -m unittest discover -s showcase/tests
   B35 MQTT broker、B28 看板、dorm 原型），对运行中的服务**发任意原始请求**（文本框里 `\r \n \t \\ \xNN` 转义成字节；回复文本 + 字节并排显示），对全部 Python 项目**真跑 demo.py/测试套件**（B1/B2/B5/B6/B7/B9/B14
   走 `run.bat`），并**实时看**这些进程的 stdout/stderr。B8 要在 WSL 里跑，实验台不替它选环境（如实显示未接）。
 - **API**（页面 lab.js 与 lab.py 一一对应）：`/lab/api/ping|info|start|stop|run|log|sock`。
+- **友好路由**：`GET /` 302 到总入口；404 换成**指路页**（写明静态根=仓库根、总入口
+  `/showcase/index.html` 可直接点）——2026-10-03 用户误敲 `/projects/showcase/index.html` 后补齐。
 - **安全边界（写死）**：只绑回环；只执行 `lab.py` 注册表里的**固定命令**（客户端只能选 id，
   带不了命令/参数/路径）；`sock` 只转发到实验台自己启动过的端口；进程在实验台退出时统一清理。
 - **页面侧**：每页生成物里内嵌一段引导脚本（无花括号、f-string 安全；`file://` 时从 127.0.0.1:7788
