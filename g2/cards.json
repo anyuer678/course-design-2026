@@ -658,5 +658,545 @@
         "anchor": "分类必须恰好覆盖全部编号，重号漏号都红"
       }
     ]
+  },
+  {
+    "id": "B23",
+    "project": "B23-ml-from-scratch",
+    "title": "五个机器学习算法全手写",
+    "course": "人工智能导论",
+    "oral": [
+      "线性回归的两条路：正规方程与梯度下降——为什么先标准化再比收敛（尺度如何拖垮 GD）？",
+      "数值梯度中心差分对拍反传：怎么证明手写梯度没写错？",
+      "决策树的\"零增益即停\"为什么会学不会 XOR——贪心与全局信息的关系？",
+      "感知机的 sign(0) 归属（Novikoff 约定）为什么是\"实现的一部分\"？"
+    ],
+    "modify": "实现 k-fold 交叉验证，报告 KNN 的均值±标准差，体会\"单一切分的偶然性\"。",
+    "modify_from": "练习建议 1",
+    "fail": "把决策树的\"零增益即停\"改回来（坑 1 的现场），跑自测——精度会掉到多少？为什么 XOR 是\"贪心 + 局部零增益 ≠ 全局无信息\"的标准反例？",
+    "fail_from": "踩坑 1（决策树\"零增益即停\"学不会 XOR）",
+    "sources": [
+      {
+        "file": "projects/B23-ml-from-scratch/README.md",
+        "anchor": "实现 k-fold 交叉验证，报告 KNN 的均值±标准差"
+      },
+      {
+        "file": "projects/B23-ml-from-scratch/README.md",
+        "anchor": "决策树\"零增益即停\"学不会 XOR"
+      },
+      {
+        "file": "projects/B23-ml-from-scratch/README.md",
+        "anchor": "数值梯度中心差分对拍（< 1e-6）"
+      }
+    ]
+  },
+  {
+    "id": "B24",
+    "project": "B24-cv-scanner",
+    "title": "文档扫描仪（检测→还原→二值化）",
+    "course": "计算机视觉",
+    "oral": [
+      "检测管道：Canny → 闭运算 → 轮廓 → 四边形判定，每一环漏掉会怎样？",
+      "角点排序为什么要\"按已知四角\"来对账——合成真值在测试里扮演什么角色？",
+      "Otsu 与自适应二值化各自的适用面与失败面（平坦区域为什么会冒噪点）？",
+      "\"拒识\"为什么是正功能：五类原因的意义与边缘密度阈值怎么量出来？"
+    ],
+    "modify": "给 `detect_document` 加\"候选四边形打分\"（面积 + 角度接近 90° + 边长比例），构造一张\"背景里还有一个大四边形\"的合成图，验证你的打分选对文档。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 1：把 demo 的 PNG 落盘改回 `cv2.imwrite` + 中文绝对路径——为什么它会\"静默失败\"（返回 False、文件不出现）、run.bat 还会\"成功\"？修法为什么必须\"写后验证字节数\"？",
+    "fail_from": "踩坑 1（cv2.imwrite 对中文绝对路径静默失败）",
+    "sources": [
+      {
+        "file": "projects/B24-cv-scanner/README.md",
+        "anchor": "给 `detect_document` 加\"候选四边形打分\""
+      },
+      {
+        "file": "projects/B24-cv-scanner/README.md",
+        "anchor": "对含中文的绝对路径静默失败"
+      },
+      {
+        "file": "projects/B24-cv-scanner/README.md",
+        "anchor": "纯噪声 ~37%，差两个数量级"
+      }
+    ]
+  },
+  {
+    "id": "B25",
+    "project": "B25-nlp-lab",
+    "title": "中文分词 + 朴素贝叶斯",
+    "course": "自然语言处理",
+    "oral": [
+      "FMM 与 BMM 各自的心智模型；\"两边分歧\"为什么能当歧义信号？",
+      "能断言的正确性有哪几条（合法切分/拼接不变式/与 BMM 分歧），不能断言什么？",
+      "拉普拉斯平滑为什么必须 α>0（log(0) 的死法）？",
+      "合成语料的\"三方同源\"（词池/词典/生成器）为什么用单文件保证？"
+    ],
+    "modify": "实现 HMM 分词（B/M/E/S 四标注 + Viterbi），用本词典造标注语料，对比 FMM/BMM 在歧义句上的表现。",
+    "modify_from": "练习建议 1",
+    "fail": "把\"FMM = 词数最少\"当成定理写进一条测试（坑 1 的现场）——先手推一个反例再跑；为什么能断言的只有\"合法切分\"而不是\"最少词\"？",
+    "fail_from": "踩坑 1（贪心最大匹配没有\"词数最少\"保证）",
+    "sources": [
+      {
+        "file": "projects/B25-nlp-lab/README.md",
+        "anchor": "实现 HMM 分词（B/M/E/S 四标注 + Viterbi）"
+      },
+      {
+        "file": "projects/B25-nlp-lab/README.md",
+        "anchor": "贪心最大匹配没有\"词数最少\"保证"
+      },
+      {
+        "file": "projects/B25-nlp-lab/README.md",
+        "anchor": "并用\"语料回切不变式\"测试担保"
+      }
+    ]
+  },
+  {
+    "id": "B26",
+    "project": "B26-datamining",
+    "title": "Apriori + K-means + 可追溯清洗链",
+    "course": "数据挖掘与实践",
+    "oral": [
+      "支持度/置信度/**提升度**三件套：为什么 conf 高不代表有关系？",
+      "反单调性剪枝的正确性怎么证（被剪候选 + 生成候选 ≤ 全组合数）？",
+      "清洗账本的守恒式怎么写：total = clean + 四类剔除之和（填补为什么不算剔除）？",
+      "空簇分支\"很难自然触发\"时，测试该断言什么（用户可见不变式 vs 计数器）？"
+    ],
+    "modify": "实现 FP-growth（无候选生成），并与 Apriori 在同一数据上比候选数/扫描次数。",
+    "modify_from": "练习建议 1",
+    "fail": "把缺陷注入的顺序改回\"先注入、后追加重复行\"（坑 1 的现场），跑清洗链——账本为什么对不上？\"重复行最后追加 + 缺陷打在互不重叠的基础行上\"各防什么？",
+    "fail_from": "踩坑 1（缺陷注入的顺序与重叠）",
+    "sources": [
+      {
+        "file": "projects/B26-datamining/README.md",
+        "anchor": "实现 FP-growth（无候选生成）"
+      },
+      {
+        "file": "projects/B26-datamining/README.md",
+        "anchor": "互不重叠的基础行上，重复行**最后**追加"
+      },
+      {
+        "file": "projects/B26-datamining/README.md",
+        "anchor": "探针跑了三种配置 900 个 seed 都没触发"
+      }
+    ]
+  },
+  {
+    "id": "B27",
+    "project": "B27-course-kg",
+    "title": "课程知识图谱（先修关系）",
+    "course": "知识图谱与知识工程",
+    "oral": [
+      "三元组带 kind（先修/概念支撑/迭代阶段）有什么好处；数据源与断言如何互为照妖镜？",
+      "传递闭包与拓扑排序在\"缺先修/解锁数\"这类问题上各解决什么？",
+      "\"事实源 + 断言\"结构为什么能把\"转写遗漏\"变成机器可见的红？",
+      "白名单写死 vs 从定义现算（missing = 闭包 - 已完成）的差别？"
+    ],
+    "modify": "给边加\"学期\"属性，把拓扑序改成分学期的排课方案（每学期学分上限）。",
+    "modify_from": "练习建议 1",
+    "fail": "从 `data/prereqs.csv` 里删掉一条先修边（坑 1 的现场：B31 → B32），跑测试——哪条断言抓住它？这正是\"数据缺边由断言抓\"的设计演示。",
+    "fail_from": "踩坑 1（数据缺边，测试抓的）",
+    "sources": [
+      {
+        "file": "projects/B27-course-kg/README.md",
+        "anchor": "给边加\"学期\"属性，把拓扑序改成分学期的排课方案"
+      },
+      {
+        "file": "projects/B27-course-kg/README.md",
+        "anchor": "PLAN §3 明文有\"B31 → B32 的 Web 安全实验\""
+      },
+      {
+        "file": "projects/B27-course-kg/README.md",
+        "anchor": "与测试内独立 DFS 交叉验证（15 个任务）"
+      }
+    ]
+  },
+  {
+    "id": "B28",
+    "project": "B28-bi-dashboard",
+    "title": "BI 看板 + 指标口径",
+    "course": "数据分析与商务智能",
+    "oral": [
+      "\"口径即交付物\"：一个指标的三件套（口径文字 + SQL + 纯 Python 参照）各自防什么？",
+      "`mismatches()` 的语义：为什么\"缺字段\"也必须是红（gmv 的现场教训）？",
+      "星型模型与筛选白名单：参数顺序/列名注入面在哪里收口？",
+      "血缘图\"能不能追到清洗步骤\"检查的是什么（复用了 B27 的什么）？"
+    ],
+    "modify": "把 `metrics.gmv` 的口径从\"按完成月\"改成\"按下单月\"，看**哪几条**测试红、`monthly_gmv` 的未完整月标记需不需要跟着改。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 3：把 `mismatches()` 里\"缺字段同样是红\"改回 `row.get(\"equal\", True)`——最重要指标的被对拍状态为什么会被静默洗白？",
+    "fail_from": "踩坑 3（`row.get(\"equal\", True)` 让 gmv 从来没被对拍）",
+    "sources": [
+      {
+        "file": "projects/B28-bi-dashboard/README.md",
+        "anchor": "把 `metrics.gmv` 的口径从\"按完成月\"改成\"按下单月\""
+      },
+      {
+        "file": "projects/B28-bi-dashboard/README.md",
+        "anchor": "最重要的指标**从来没被对拍检查过**"
+      },
+      {
+        "file": "projects/B28-bi-dashboard/README.md",
+        "anchor": "The process cannot access the file"
+      }
+    ]
+  },
+  {
+    "id": "B29",
+    "project": "B29-bigdata-spark",
+    "title": "PySpark 日志清洗与倾斜实验",
+    "course": "工业大数据处理技术",
+    "oral": [
+      "对拍纪律三件套：账本注入、DataFrame vs 纯 Python 逐行、SQL == DataFrame == 参照。",
+      "倾斜比 2.51 是怎么读出来的；salting 两阶段为什么结果不变？",
+      "\"下载体积 vs 安装体积\"为何必须两个口径（503MB 的现实）？",
+      "`PYSPARK_PYTHON` 本机坑：占位桩 python3 会让 worker 起不来——A/B 对照说明了什么？"
+    ],
+    "modify": "把 `skew_device_ratio` 调到 0.8、数据提到 200 万行，重测 plain/salted 耗时，找出\"salting 开始划算\"的拐点，并解释它和 shuffle 分区数的关系。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 3 的变体：把时间戳正则改回 `[0-2]\\d`（放行 25 点），跑两侧对拍——为什么\"测试期望对了、正则错了\"仍然会被两侧一致性抓住？",
+    "fail_from": "踩坑 3（`[0-2]\\d` 会放行 25 点）",
+    "sources": [
+      {
+        "file": "projects/B29-bigdata-spark/README.md",
+        "anchor": "把 `skew_device_ratio` 调到 0.8、数据提到 200 万行"
+      },
+      {
+        "file": "projects/B29-bigdata-spark/README.md",
+        "anchor": "Microsoft Store 的占位桩"
+      },
+      {
+        "file": "projects/B29-bigdata-spark/README.md",
+        "anchor": "实测安装占用 **503MB**"
+      }
+    ]
+  },
+  {
+    "id": "B30",
+    "project": "B30-mini-raft",
+    "title": "Raft 共识模拟（快照 + 成员变更）",
+    "course": "分布式与云计算",
+    "oral": [
+      "选举/日志复制的基本盘；§5.4.2\"只提交本任期条目\"防的是什么？（ghost 索引）",
+      "快照与 InstallSnapshot：被压缩落后的节点怎么追上；索引抽象\"快照+相对段\"解决了什么？",
+      "单步成员变更的\"一次一个\"与配置交叠检查各防什么？",
+      "\"断言过强\"与\"实现有 bug\"怎么区分（check_log_matching 的现场）？"
+    ],
+    "modify": "把 `check_log_matching` 改回\"公共前缀逐条相同\"再跑测试，看它是**在哪一条**上红、红得是否说清了\"合法中间态\"——这题考的是你能不能分辨\"断言过强\"与\"实现有 bug\"。",
+    "modify_from": "练习建议 1",
+    "fail": "按坑 2 的做法：把 demo 第 4 段的任期读数挪回\"愈合之后\"取——为什么\"同任期选出两个 leader\"的假象会消失？读数该在什么时刻取？",
+    "fail_from": "踩坑 2（演示读数取错了时刻）",
+    "sources": [
+      {
+        "file": "projects/B30-mini-raft/README.md",
+        "anchor": "把 `check_log_matching` 改回\"公共前缀逐条相同\"再跑测试"
+      },
+      {
+        "file": "projects/B30-mini-raft/README.md",
+        "anchor": "不变式被写强了，不是实现有 bug"
+      },
+      {
+        "file": "projects/B30-mini-raft/README.md",
+        "anchor": "注入同任期分叉必须仍被抓"
+      }
+    ]
+  },
+  {
+    "id": "B31",
+    "project": "B31-shorturl",
+    "title": "短链服务（HTTP + SQLite）",
+    "course": "Web系统与技术",
+    "oral": [
+      "\"从浏览器点下到数据库 +1\"的完整链路：谁解析、谁定状态码、谁防计数丢失？",
+      "SQLite 跨线程：`check_same_thread` 与业务级锁各管什么（BEGIN…COMMIT 的原子性）？",
+      "`urlsplit` 在拆分那一刻就抛异常：为什么\"try 包晚了\"会把 400 变成 500？",
+      "`re.match` 前缀匹配的安全陷阱（`a-.com`），`fullmatch` 如何收口？"
+    ],
+    "modify": "加过期时间：`expires_at` 列 + 命中时判断，过期返回 **410 Gone**（先去 PLAN/B11 的 `STATUS` 表补码，顺便体会\"表里少一条\"会带来什么样的静默故障）。",
+    "modify_from": "练习建议 1",
+    "fail": "按练习 5 的三条\"故意改坏\"逐条跑：(a) 把 `_reject_invisible` 挪到 `urlsplit` 之后；(b) 把 `visit()` 改成\"先读再加再写\"；(c) 去掉静态目录包含检查——每条都应被现有测试抓到；抓不到就是补测试的地方。",
+    "fail_from": "练习建议 5（故意改坏看哪条测试先红）+ 踩坑 4",
+    "sources": [
+      {
+        "file": "projects/B31-shorturl/README.md",
+        "anchor": "加过期时间：`expires_at` 列 + 命中时判断"
+      },
+      {
+        "file": "projects/B31-shorturl/README.md",
+        "anchor": "`urlsplit` 在拆分那一刻就抛 `ValueError`"
+      },
+      {
+        "file": "projects/B31-shorturl/README.md",
+        "anchor": "校验一律用 `fullmatch`"
+      }
+    ]
+  },
+  {
+    "id": "B32",
+    "project": "B32-sec-lab",
+    "title": "安全实验四组（漏洞版 vs 修复版）",
+    "course": "信息安全导论",
+    "oral": [
+      "四组对照（SQL 注入 / XSS / 口令存储 / 路径穿越）各自的\"漏洞版为什么坏、修复版为什么好\"？",
+      "\"数据拿到了语法身份\"是什么意思；为什么拼接版注定分不清？",
+      "上下文相关转义：四种上下文（文本/属性/JS/href）各防什么载荷？",
+      "静态扫描器 + 人工登记表的\"双向比对\"：把包装函数从 sink 摘掉会怎样？"
+    ],
+    "modify": "把 `login_bound` 改回拼接，跑测试：哪几条先红？错误信息能不能指出\"数据拿到了语法身份\"？",
+    "modify_from": "练习建议 1",
+    "fail": "复跑\"沙箱守卫\"的三条反向测试（坑：本项目事故的根因）：守卫必须拒绝仓库内路径、拒绝它没建过的目录——口述事故链（`work.parent` 为什么正好是 `projects/`）与现在的两道防线。",
+    "fail_from": "项目事故记录（沙箱守卫 + 三条反向测试）",
+    "sources": [
+      {
+        "file": "projects/B32-sec-lab/README.md",
+        "anchor": "把 `login_bound` 改回拼接，跑测试"
+      },
+      {
+        "file": "projects/B32-sec-lab/README.md",
+        "anchor": "临时副本**只能建在仓库之外**"
+      },
+      {
+        "file": "projects/B32-sec-lab/README.md",
+        "anchor": "含三处\"改坏临时副本\"的反向证明与沙箱守卫"
+      }
+    ]
+  },
+  {
+    "id": "B33",
+    "project": "B33-viz-algo",
+    "title": "算法可视化（操作记录回放动画）",
+    "course": "可视化技术",
+    "oral": [
+      "\"记录 → 独立回放核对 → 自包含 HTML\"三段各防什么错？",
+      "回放协议为什么要\"读源码得来\"（`Heap::pop` 的未记录收缩教训）？",
+      "\"每帧长度都等于 n\"的假假设说明了什么：断言要写精确相等还是整齐假设？",
+      "导出器与页面各自掌握什么上下文（逐步解释文本该由谁生成）？"
+    ],
+    "modify": "给导出器加 BST 场景（借 B2 的 `ds::bst.hpp` 也加同款 trace 口），在页面加第三张卡片——先把\"节点/边快照\"的记录格式定死，再写渲染；体会\"数据格式先行\"。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 1 的后半段：在 run.bat 的 `echo` 里再写一个箭头让 cmd 造出垃圾文件 `node`，看 `shutil.which('node')` 解析到的是什么——\"垃圾文件劫持 PATH 同名可执行文件\"的现场。",
+    "fail_from": "踩坑 1（垃圾文件遮蔽真 node）",
+    "sources": [
+      {
+        "file": "projects/B33-viz-algo/README.md",
+        "anchor": "给导出器加 BST 场景"
+      },
+      {
+        "file": "projects/B33-viz-algo/README.md",
+        "anchor": "回放协议必须\"读源码得来\""
+      },
+      {
+        "file": "projects/B33-viz-algo/README.md",
+        "anchor": "垃圾文件不只是垃圾，还能**劫持 PATH 上的同名可执行文件**"
+      }
+    ]
+  },
+  {
+    "id": "B34",
+    "project": "B34-path-planner",
+    "title": "栅格 A* / Dijkstra / BFS 规划",
+    "course": "无人系统",
+    "oral": [
+      "\"一个 best_first 只换启发式\"的同源设计买到了什么（h≡0 即 Dijkstra）？",
+      "可采纳性 slack 是量出来的（+0.000 vs +4.686）——为什么\"从目标回溯真实距离\"是对的参照？",
+      "轻微不可采纳（octile×1.001）为什么比明显撒谎更难被对拍抓住？",
+      "\"确定性 ≠ 唯一性\"：邻居顺序改了，什么必须不变、什么可以变？"
+    ],
+    "modify": "把 `octile` 乘 1.001（轻微不可采纳），跑 `test_astar_equals_dijkstra_8nb` 与反例测试，说清哪些会红、为什么\"轻微撒谎\"比\"明显撒谎\"更难被对拍抓住（提示：次优解出现的条件）。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 1：把 `walled_scene` 改回\"只封目标一侧\"，先让\"应当不可达\"的测试断言它真的失败——构造失败场景时必须让测试断言\"它真的失败\"，否则演示讲的是另一回事。",
+    "fail_from": "踩坑 1（\"围死\"场景第一版没围死）",
+    "sources": [
+      {
+        "file": "projects/B34-path-planner/README.md",
+        "anchor": "把 `octile` 乘 1.001（轻微不可采纳）"
+      },
+      {
+        "file": "projects/B34-path-planner/README.md",
+        "anchor": "\"围死\"场景第一版没围死"
+      },
+      {
+        "file": "projects/B34-path-planner/README.md",
+        "anchor": "求和次序不同会在最后一位分道"
+      }
+    ]
+  },
+  {
+    "id": "B35",
+    "project": "B35-iot-mqtt",
+    "title": "手写 MQTT（broker + 客户端 + 入库对账）",
+    "course": "工业物联网技术",
+    "oral": [
+      "字节级编解码：变长 Remaining Length 的编码与\"坏包只断一条连接\"的边界。",
+      "QoS0 语义：为什么\"唯一的存活探针是 PING\"（半关闭下 sendall 假成功）？",
+      "断线重连的三段（探活/重连/重订阅）与\"QoS0 不补历史\"的语义。",
+      "完整性对账四口（实收/分布/异常/缺口），seq 缺口数为什么==dropout 数？"
+    ],
+    "modify": "实现 QoS1 的 PUBACK：发送端缓存未确认消息并在重连后重发——先写\"进程内掉线重发\"的测试，再说清为什么 QoS1 也只是\"至少一次\"（重复投递要靠接收端去重，代码里的幂等主键正是为此）。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 1：把 `Recorder` 的 `subscribe` 调用删掉（只留 `on_message`），跑端到端测试——\"实收 0 != 445\"会在哪一层先红？这演示的是\"消息链路里少挂一环=静默断链\"。",
+    "fail_from": "踩坑 1（入库端忘了订阅）",
+    "sources": [
+      {
+        "file": "projects/B35-iot-mqtt/README.md",
+        "anchor": "实现 QoS1 的 PUBACK"
+      },
+      {
+        "file": "projects/B35-iot-mqtt/README.md",
+        "anchor": "`Recorder` 第一版只挂 `on_message` 没调 `subscribe`"
+      },
+      {
+        "file": "projects/B35-iot-mqtt/README.md",
+        "anchor": "注释里写明\"QoS0 不补历史\""
+      }
+    ]
+  },
+  {
+    "id": "B37",
+    "project": "B37-industry-ai",
+    "title": "设备故障预测（复用的边界由实测决定）",
+    "course": "行业软件前沿应用",
+    "oral": [
+      "复用的边界是量出来的：B35 仿真器为什么不能整包复用（饱和读数）？",
+      "\"尖峰加在哪一层\"的语义：为什么单点离群必须只进输出、不进状态？",
+      "误报解剖：20/20 全被 spike/freeze 骗说明阈值基线的什么缺陷？",
+      "\"提前量 horizon\"为什么是业务给的、不是模型选的？"
+    ],
+    "modify": "把 `horizon` 从 24 改成 6 与 48 各跑一遍：提前量分布与召回怎么变？说清\"要提前多久\"是业务给的，不是模型选的。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 3：去掉 logistic 的 L2（坑 2 的现场是权差发散），跑 GD vs Newton 互拍——为什么\"先有唯一最优，双实现互拍才有意义\"？",
+    "fail_from": "踩坑 3（无惩罚 logistic 的 MLE 在可分开方向上发散）",
+    "sources": [
+      {
+        "file": "projects/B37-industry-ai/README.md",
+        "anchor": "把 `horizon` 从 24 改成 6 与 48 各跑一遍"
+      },
+      {
+        "file": "projects/B37-industry-ai/README.md",
+        "anchor": "温度均值 141.3°C、18.3% 夹取"
+      },
+      {
+        "file": "projects/B37-industry-ai/README.md",
+        "anchor": "单点离群必须只进输出、不进状态"
+      }
+    ]
+  },
+  {
+    "id": "B38",
+    "project": "B38-mini-redis",
+    "title": "mini-redis（RESP2 + 过期 + 主从复制）",
+    "course": "软件工程案例分析与实践",
+    "oral": [
+      "RESP2 流式解析：粘包/拆包、内联×数组、六类协议错误的分类。",
+      "过期双策略（惰性 + 主动采样）与\"时钟可注入\"为什么让边界全可测？",
+      "主从复制：偏移=规范化帧字节数意味着什么；从库被动过期的取舍？",
+      "\"对拍三条腿\"（第二解析器交叉读 + 语义表 + fuzz）各覆盖什么？"
+    ],
+    "modify": "给主动过期加\"时间触发\"通道（与命令计数并行：`select` 每次循环检查上次周期距今超过 T 秒就触发），用假时钟写测试——顺便说清\"为什么真实 Redis 需要它\"（空闲时也清内存）。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 1：让客户端用 **int** 参数发 `EXPIRE k 10`（被编成 `:10` 整数帧），跑脚本——为什么\"探针用字符串全过、脚本用 int 全挂\"会把排查带偏？教训\"先打印自己发出去的字节\"接下来怎么用？",
+    "fail_from": "踩坑 1（int 参数编成 RESP 整数帧）",
+    "sources": [
+      {
+        "file": "projects/B38-mini-redis/README.md",
+        "anchor": "给主动过期加\"时间触发\"通道"
+      },
+      {
+        "file": "projects/B38-mini-redis/README.md",
+        "anchor": "客户端把 int 参数编成了 RESP 整数帧"
+      },
+      {
+        "file": "projects/B38-mini-redis/README.md",
+        "anchor": "（`close_after_flush`），错误帧稳定送达"
+      }
+    ]
+  },
+  {
+    "id": "B39",
+    "project": "B39-tech-radar",
+    "title": "技术雷达（记录模板 + 可机验证据）",
+    "course": "专业前沿技术讲座",
+    "oral": [
+      "记录五节（问题/原理/证据/局限/复现）各防什么含糊？",
+      "\"证据 = 指针\"：反引号路径与 @提交 的契约为什么要有反引号这层收口？",
+      "诚实标注规则（示例必须写\"非真实来源\"）防的是什么？",
+      "最小复现 CRDT：交换/结合/幂等的性质测试为什么比\"跑一个例子\"强？"
+    ],
+    "modify": "给检查器加一条新规则：\"证据至少两条、且至少一条来自 B39 之外的目录\"，并**先补一条负面对照测试**再让它通过——体会\"规则与对照成对出现\"。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 2 的现场：把示例里一处 `@提交号` 的**反引号**去掉（裸写），跑检查器——为什么第一版负面对照没红？\"规则的可信度取决于触发条件是否写得没有歧义\"这条教训具体指什么？",
+    "fail_from": "踩坑 2（口径必须写进模板）",
+    "sources": [
+      {
+        "file": "projects/B39-tech-radar/README.md",
+        "anchor": "证据至少两条、且至少一条来自 B39 之外的目录"
+      },
+      {
+        "file": "projects/B39-tech-radar/README.md",
+        "anchor": "三条负面对照（各对应一条规则）进测试"
+      },
+      {
+        "file": "projects/B39-tech-radar/README.md",
+        "anchor": "规则的可信度取决于\"触发条件\"是否写得没有歧义"
+      }
+    ]
+  },
+  {
+    "id": "B40",
+    "project": "B40-career-map",
+    "title": "技能差距矩阵（证据可核验 + JD 映射器）",
+    "course": "专业实习",
+    "oral": [
+      "31 条证据的三层核验（路径存在/@提交在 git/锚点逐字）各防什么？",
+      "\"没有装饰条目\"：每条证据必须被至少一个技能面引用——为什么这是台账纪律？",
+      "匹配口径显式化：英文词边界 vs 中文子串，`go` 不被 `gold` 命中是怎么保证的？",
+      "缺口是诚实输出：两个故意空证据的技能面钉在测试里防什么？"
+    ],
+    "modify": "用 B39 的模板把一次技术主题复盘写成记录（问题/原理/证据/局限），证据指针指到本索引里的条目——两条工具链就接上了。",
+    "modify_from": "练习建议 1",
+    "fail": "在临时副本里改坏一条真实证据（假提交号），跑 `check_evidence.py`——为什么三条负面对照必须红、而且红在预期原因上？顺带解释\"锚点要防平凡\"（`36` 为什么不行）。",
+    "fail_from": "踩坑 2（锚点要\"防平凡\"）+ 踩坑 3（缺口故意留空）",
+    "sources": [
+      {
+        "file": "projects/B40-career-map/README.md",
+        "anchor": "用 B39 的模板把一次技术主题复盘写成记录"
+      },
+      {
+        "file": "projects/B40-career-map/README.md",
+        "anchor": "两个技能面**故意保持空证据**"
+      },
+      {
+        "file": "projects/B40-career-map/README.md",
+        "anchor": "锚点要\"防平凡\"**：`36` 这种短数字哪都能命中"
+      }
+    ]
+  },
+  {
+    "id": "B41",
+    "project": "B41-thesis-seeds",
+    "title": "毕设候选三维可行性（数字会过期）",
+    "course": "毕业设计（论文）",
+    "oral": [
+      "\"行数逐字重算 + 探针实跑 + 锚点必真\"三件套各盯什么漂移？",
+      "为什么裸\"计数=0\"会骗过检查，探针必须先要求 glob 匹配到文件？",
+      "基准数字为什么不进核验器（flaky 的教训），放 demo 的【实测】+ logdiff 换来什么？",
+      "\"负面对照的输入必须是合法但错的值\"——`1 == True` 的空操作现场？"
+    ],
+    "modify": "给某个候选加一个 `import-check` 探针（例如确认 B29 用到的 pyspark 仍在位），再写它的负面对照——体会\"环境事实也是会过期的数字\"。",
+    "modify_from": "练习建议 1",
+    "fail": "复现坑 4：把一条负面对照的期望值改成 `1`（`1 == True` 的空操作），跑演示——为什么它\"什么都没改\"？正确做法为什么必须写 `False` 并补\"整段负面对照必须全红\"的测试？",
+    "fail_from": "踩坑 4（\"故意改坏\"本身可能是个空操作）",
+    "sources": [
+      {
+        "file": "projects/B41-thesis-seeds/README.md",
+        "anchor": "给某个候选加一个 `import-check` 探针"
+      },
+      {
+        "file": "projects/B41-thesis-seeds/README.md",
+        "anchor": "\"故意改坏\"本身可能是个空操作"
+      },
+      {
+        "file": "projects/B41-thesis-seeds/README.md",
+        "anchor": "裸写\"fsync 出现 0 次\"能骗过任何检查"
+      }
+    ]
   }
 ]

@@ -1,6 +1,6 @@
 """g2/render.py —— G2 练习卡片的渲染器与校验器（口径见 g2/README.md）。
 
-唯一事实源：`g2/cards.json`（22 张卡：B1–B22）。
+唯一事实源：`g2/cards.json`（40 张卡：B1–B41，B36 未做——用户主动跳过）。
 - `--write`：渲染 `g2/README.md`（索引）+ `g2/B<编号>.md`（每张卡）；
 - `--check`：重算比对（渲染过期即红），并逐条核验事实来源——
   每张卡的每个来源锚点必须**逐字**存在于目标文件里（README 措辞一漂就红），
@@ -19,7 +19,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 G2 = ROOT / "g2"
 CARDS = G2 / "cards.json"
-EXPECTED_IDS = [f"B{i}" for i in range(1, 23)]
+EXPECTED_IDS = [f"B{i}" for i in range(1, 42) if i != 36]
 
 VERIFY_CARD = "python g2/render.py --check"
 
@@ -75,7 +75,7 @@ def render_index(cards: list) -> str:
     lines = [
         "# G2 练习册（生成物：`python g2/render.py --write`）",
         "",
-        "> 22 张卡片（B1–B22）：**口述提纲 / 独立修改任务 / 失败复现任务**——内容全部取自",
+        f"> {len(cards)} 张卡片（B1–B41；B36 未做）：**口述提纲 / 独立修改任务 / 失败复现任务**——内容全部取自",
         "> 各项目 README 的「练习建议」与「踩过的坑」（或 dorm-repair 的练习），**不新造题**；",
         f"> 每张卡的来源锚点由 `{VERIFY_CARD}` 逐字核对，README 一改就红。",
         "> **完成归你**：卡片只搭脚手架，不代做、不代勾。",
@@ -85,7 +85,7 @@ def render_index(cards: list) -> str:
         "1. 先做「口述提纲」：关掉代码把这些讲给空气听一遍；卡壳的点就是该回读的。",
         "2. 做「独立修改任务」：改完跑项目 `run.bat`，全绿再收手。",
         "3. 做「失败复现任务」：先写下「我预言哪条会红」，再跑——对不上是更有价值的收获。",
-        "4. 填「完成记录」。22 张全做完，你对这个仓库的掌握就不再是「我写过」，而是「我能改」。",
+        f"4. 填「完成记录」。{len(cards)} 张全做完，你对这个仓库的掌握就不再是「我写过」，而是「我能改」。",
         "",
         "## 卡片",
         "",
@@ -182,7 +182,7 @@ def write(root: Path | None = None) -> None:
     (root / "g2" / "README.md").write_text(render_index(cards), encoding="utf-8", newline="\n")
     for c in cards:
         (root / "g2" / f"{c['id']}.md").write_text(render_card(c), encoding="utf-8", newline="\n")
-    print(f"已写出 g2/README.md 与 {len(cards)} 张卡片（B1–B22）")
+    print(f"已写出 g2/README.md 与 {len(cards)} 张卡片（B1–B41）")
 
 
 def main(argv) -> int:
@@ -201,7 +201,7 @@ def main(argv) -> int:
         return 1
     cards = load_cards()
     n_anchor = sum(len(c["sources"]) for c in cards)
-    print(f"G2 校验通过：{len(cards)} 张卡片（B1–B22）、{n_anchor} 个来源锚点逐字可验、"
+    print(f"G2 校验通过：{len(cards)} 张卡片（B1–B41）、{n_anchor} 个来源锚点逐字可验、"
           "渲染物与现算一致。")
     return 0
 

@@ -1,6 +1,6 @@
 # G2 练习册（生成物：`python g2/render.py --write`）
 
-> 22 张卡片（B1–B22）：**口述提纲 / 独立修改任务 / 失败复现任务**——内容全部取自
+> 40 张卡片（B1–B41；B36 未做）：**口述提纲 / 独立修改任务 / 失败复现任务**——内容全部取自
 > 各项目 README 的「练习建议」与「踩过的坑」（或 dorm-repair 的练习），**不新造题**；
 > 每张卡的来源锚点由 `python g2/render.py --check` 逐字核对，README 一改就红。
 > **完成归你**：卡片只搭脚手架，不代做、不代勾。
@@ -10,7 +10,7 @@
 1. 先做「口述提纲」：关掉代码把这些讲给空气听一遍；卡壳的点就是该回读的。
 2. 做「独立修改任务」：改完跑项目 `run.bat`，全绿再收手。
 3. 做「失败复现任务」：先写下「我预言哪条会红」，再跑——对不上是更有价值的收获。
-4. 填「完成记录」。22 张全做完，你对这个仓库的掌握就不再是「我写过」，而是「我能改」。
+4. 填「完成记录」。40 张全做完，你对这个仓库的掌握就不再是「我写过」，而是「我能改」。
 
 ## 卡片
 
@@ -38,6 +38,24 @@
 | [B20](B20.md) | 测试与验证工程：收缩 / 变异 / 流水线 | 软件测试 | `projects/dorm-repair` |
 | [B21](B21.md) | 质量门禁与失败分诊 | 软件质量保证 | `projects/dorm-repair` |
 | [B22](B22.md) | 项目管理：事实台账 + 风险/复盘 | 软件项目管理 | `projects/dorm-repair` |
+| [B23](B23.md) | 五个机器学习算法全手写 | 人工智能导论 | `projects/B23-ml-from-scratch` |
+| [B24](B24.md) | 文档扫描仪（检测→还原→二值化） | 计算机视觉 | `projects/B24-cv-scanner` |
+| [B25](B25.md) | 中文分词 + 朴素贝叶斯 | 自然语言处理 | `projects/B25-nlp-lab` |
+| [B26](B26.md) | Apriori + K-means + 可追溯清洗链 | 数据挖掘与实践 | `projects/B26-datamining` |
+| [B27](B27.md) | 课程知识图谱（先修关系） | 知识图谱与知识工程 | `projects/B27-course-kg` |
+| [B28](B28.md) | BI 看板 + 指标口径 | 数据分析与商务智能 | `projects/B28-bi-dashboard` |
+| [B29](B29.md) | PySpark 日志清洗与倾斜实验 | 工业大数据处理技术 | `projects/B29-bigdata-spark` |
+| [B30](B30.md) | Raft 共识模拟（快照 + 成员变更） | 分布式与云计算 | `projects/B30-mini-raft` |
+| [B31](B31.md) | 短链服务（HTTP + SQLite） | Web系统与技术 | `projects/B31-shorturl` |
+| [B32](B32.md) | 安全实验四组（漏洞版 vs 修复版） | 信息安全导论 | `projects/B32-sec-lab` |
+| [B33](B33.md) | 算法可视化（操作记录回放动画） | 可视化技术 | `projects/B33-viz-algo` |
+| [B34](B34.md) | 栅格 A* / Dijkstra / BFS 规划 | 无人系统 | `projects/B34-path-planner` |
+| [B35](B35.md) | 手写 MQTT（broker + 客户端 + 入库对账） | 工业物联网技术 | `projects/B35-iot-mqtt` |
+| [B37](B37.md) | 设备故障预测（复用的边界由实测决定） | 行业软件前沿应用 | `projects/B37-industry-ai` |
+| [B38](B38.md) | mini-redis（RESP2 + 过期 + 主从复制） | 软件工程案例分析与实践 | `projects/B38-mini-redis` |
+| [B39](B39.md) | 技术雷达（记录模板 + 可机验证据） | 专业前沿技术讲座 | `projects/B39-tech-radar` |
+| [B40](B40.md) | 技能差距矩阵（证据可核验 + JD 映射器） | 专业实习 | `projects/B40-career-map` |
+| [B41](B41.md) | 毕设候选三维可行性（数字会过期） | 毕业设计（论文） | `projects/B41-thesis-seeds` |
 
 ## 维护
 
