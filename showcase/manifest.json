@@ -208,9 +208,9 @@
    "course": "计算机视觉",
    "title": "文档扫描仪：边缘→透视变换→二值化",
    "batch": 8,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B24-cv-scanner/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": "已有 PNG 处理产物"
   },
   {
@@ -218,9 +218,9 @@
    "course": "工业物联网技术",
    "title": "手写 MQTT：传感器→broker→SQLite→曲线",
    "batch": 8,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B35-iot-mqtt/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": "已有 SVG 曲线产物"
   },
   {
@@ -228,9 +228,9 @@
    "course": "行业软件前沿应用",
    "title": "设备故障预测 + 误报/漏报分析",
    "batch": 8,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B37-industry-ai/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {

@@ -27,10 +27,11 @@
 ## 运行
 
 ```
-run.bat                                   # 两步：27 项测试 → demo（生成 build\ 下 3 张 SVG）
-python -m unittest discover -s tests      # 27 项（双入口同数）
-python tests/test_fault.py                # 直跑同 27 项
+run.bat                                   # 三步：36 项测试 → demo（生成 build\ 下 3 张 SVG）→ 展示页新鲜度
+python -m unittest discover -s tests      # 36 项（27 核心 + 9 展示页）
+python tests/test_fault.py                # 直跑 27 项核心
 python demo.py                            # 六段演示（唯一实时测量是第 3 段耗时列）
+python tools\showcase.py --write          # 重生展示页 web\showcase.html（--check 过期即红）
 python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则两类，会打印计数）
 ```
 
@@ -47,29 +48,35 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则
 | `fault/metrics.py` | 混淆矩阵/P/R/F1、阈值扫描、ROC/AUC、提前量、误报解剖、铭牌阈值规则 |
 | `fault/report.py` | 两张静态 SVG：告警预算曲线 + 设备时间线（复用 B35 svgplot） |
 | `tests/test_fault.py` | 27 项（账本对账 / 标签边界 / 梯度检查 / 负面自证 / 报表） |
+| `tests/test_showcase.py` | 9 项展示页测试（新鲜度/篡改必红/三模型表逐格钉住/耗时列脱敏真生效/3 张 SVG 逐字节对账） |
+| `tools/showcase.py` | 展示页生成器 → `web/showcase.html`（六段演示 + 三模型/阈值表 + 3 张产物 SVG 内联） |
 | `docs/plan.md` | **行业方案书**：场景/数据/方法/评估/运营建议/局限与外推禁令 |
 | `demo.py` · `run.bat` · `tools/logdiff.py` | 演示与交付三件套（本仓库通例） |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
-| 预测性维护的口径 | `window_label`（horizon=24、排除暂态窗） | 逐边界断言：f−t=24 正、25 负、t≥f 起排除、f+W+decay 后回归负样本 |
+| 预测性维护的口径 | `window_label`（horizon=24、排除暂态窗） | 逐边界断言：f-t=24 正、25 负、t≥f 起排除、f+W+decay 后回归负样本 |
 | 特征不泄漏未来 | `window_features` 只用窗口内读数 | 把某窗口之后的所有读数改掉，该窗口特征**逐位不变**（且更晚的窗口确实变了） |
 | 概率分数与阈值 | 手写逻辑回归（sigmoid + 交叉熵） | 解析梯度 vs 数值梯度（实测 2.8e-11）；GD vs Newton 最大权差 1.9e-3（L2 下的唯一最优） |
 | 复用不抄第二份 | `ml.tree.DecisionTree` / `ml.data` | `isinstance` 断言 + 跨项目路径存在性断言；模型改动测试特征后权重分毫不动 |
-| 误报/漏报权衡 | `sweep` / `roc_points` / `auc` | 阈值降 ⇒ 召回与报警数单调不降（断言）；打乱标签 AUC 跌回随机（10 种子实测 [0.33, 0.56]） |
+| 误报/漏报权衡 | `sweep` / `roc_points` / `auc` | 阈值降 => 召回与报警数单调不降（断言）；打乱标签 AUC 跌回随机（10 种子实测 [0.33, 0.56]） |
 | 数据质量 ≠ 设备故障 | `fp_context` + B35 账本 | 固定阈值 20/20 条误报**全部**发生在含 spike/freeze 的窗口（可追溯到读数行） |
-| 提前量的定义 | `lead_times` | 只认 [f−horizon, f−1] 内首次报警；手算用例 + 全车队 6 个故障逐个钉值 |
+| 提前量的定义 | `lead_times` | 只认 [f-horizon, f-1] 内首次报警；手算用例 + 全车队 6 个故障逐个钉值 |
 | 切分口径 | `split_by_device` vs B23 `train_test_split` | 两臂都跑、数字都报；解释为什么部署口径必须按设备 |
 | 静态可视化 | `report.py`（复用 B35） | 两遍构建**字节相同**；设备时间线的红圈数 == 该设备故障数 |
 
 ## 实测（2026-10-02，首次交付；数字均为本轮现算）
 
-- **27 项测试双入口同数**（`discover` 与直跑均 27 OK）；`run.bat` **两次退出码 0**、
+- **36 项测试（27 核心 + 9 展示页）**（`discover` 36 = 直跑 27 + 展示页 9）；`run.bat` **两次退出码 0**、
   `build/` 外无新增（产物 = alert_budget.svg 3066 字节、dev08_temp.svg 7750、
   dev08_vib.svg 7751）、两次日志经 `tools/logdiff.py` 规范化后**逐字相同**
-  （各 66 行；规范项 = 单测计时 1 + 耗时列 3，两侧计数对称）。
+  （各 69 行；规范项 = 单测计时 1 + 耗时列 3，两侧计数对称；2026-10-03 展示层批次⑧后按三步重测）。
+- 展示页（2026-10-03 展示层工程批次⑧）：`web/showcase.html` 单文件自包含——六段演示原文
+  （第 3 段耗时列脱敏成 <当场>）、**三模型对比表 + 阈值敏感性表**（结构化，来自现场输出）、
+  **三张 SVG 内联**（alert_budget/dev08_temp/dev08_vib，同一份产物）；与现算**逐字一致**
+  （`--check` 过期即红）。展示页测试 9 项（`python tests\test_showcase.py`）。
 - 数据账：10 台 × 480 步 = 4800 条读数；故障 30 次（overheat 10 / wear 20）；
   异常账本 spike 147 / freeze 142 / dropout 0，逐类与行数对账相等。
 - 样本账：724 窗口（排除 66 个故障后暂态窗）；训练 580（正 96）、测试 144（正 24）；
@@ -102,7 +109,7 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则
    先有唯一最优，双实现互拍才有意义。
 4. **logdiff 要连补位空格一起规范化**：耗时列 `{ms:>10.1f}` 在 766 与 1040 两种量级下
    位数不同，只替换数字会把"补位空格数"的差异留成假差异——规则改成连前置空格一起吃掉。
-5. **GBK 控制台扫净（B4 同款教训复发）**：⇒ ⇔ − ∂ ᵀ ² ³ 等字符让 `python demo.py`
+5. **GBK 控制台扫净（B4 同款教训复发）**：一堆数学记号（蕴含/等价/偏导/转置/上标等）让 `python demo.py`
    直接在 GBK 控制台崩（UnicodeEncodeError）；已对全源码做非 GBK 字符扫描并替换
    （16 处），这条每次动手写中文注释都得再扫一遍。
 

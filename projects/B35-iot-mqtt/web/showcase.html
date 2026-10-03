@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B35-iot-mqtt · 手写 MQTT 全链路（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+pre.code{margin:.6rem 0 0;padding:.8rem .9rem;background:#0f1115;color:#e6e9ef;border-radius:8px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+pre.code.wrap{white-space:pre-wrap;word-break:break-word}
+table.plain{border-collapse:collapse;font-size:.88rem;margin:.5rem 0;width:100%}
+table.plain th,table.plain td{border:1px solid var(--line);padding:.3rem .7rem;text-align:left;vertical-align:top}
+table.plain code{font-size:.85em}
+.svgbox{background:#fff;border:1px solid var(--line);border-radius:10px;padding:.6rem;overflow:auto}
+.svgbox svg{max-width:100%;height:auto;display:block}
+td.ok{color:var(--ok)}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+</style>
+</head>
+<body data-showcase="B35-iot-mqtt">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B35-iot-mqtt · 手写极简 MQTT：字节 → broker → SQLite → SVG</h1>
+<p class="note">工业物联网技术 · <b>一行第三方库都不用</b>：CONNECT/PUBLISH/SUBSCRIBE 报文自己拼、
+broker 订阅路由自己写、断线重连自己扛、入库与曲线自己接——每一层都能指着字节说"它为什么长这样"。
+下面的曲线就是 build/ 里的真实产物内联（同一条模拟链路的输出）。</p>
+
+<h2>实测数字（本页现算）</h2>
+<section id="facts" class="cards"><div class="card"><b>测试</b><span>32 项（23 同步核心 + 9 展示页自测；tests/ def test_ 现数）</span></div><div class="card"><b>链路完整性</b><span>实发 590 == 实收 590（按设备 {'dev-01': 196, 'dev-02': 198, 'dev-03': 196}；解析失败 0）</span></div><div class="card"><b>账本对账</b><span>异常 {'freeze': 19, 'spike': 25} 与库相等；缺口 {'dev-01': 4, 'dev-02': 2, 'dev-03': 4} 与库 seq 缺口相等</span></div><div class="card"><b>协议字节</b><span>3 条报文实现与手算**逐字节一致**；变长 RL 边界（127/128/16383/16384）手算表</span></div><div class="card"><b>断线重连</b><span>宕机前/中/后发布 True / False / True；自动重连 1 次、重订阅恢复 True</span></div></section>
+
+<h2>展示区</h2>
+<section id="demo" class="panel">
+  <div class="chips" data-tabs="panels">
+    <button class="chip" data-tab="raw">演示 · 六段原文</button>
+    <button class="chip" data-tab="proto">协议字节手算表</button>
+    <button class="chip" data-tab="svg">SVG 曲线（真实产物内联）</button>
+  </div>
+  <div data-pane="panels">
+    <div data-pane-id="raw">
+      <p class="note">`python demo.py` 的完整现场输出；两处【实测】数字（吞吐/重连耗时）按规则规范化，
+      其余由固定种子驱动（tools/logdiff.py 同款口径核对两遍日志）。</p>
+      <pre class="code wrap">B35-iot-mqtt 演示：手写 MQTT（协议字节 → broker → SQLite → SVG 曲线）
+
+==============================================================================
+  1) 协议字节：手算表与实现的十六进制并排
+==============================================================================
+  CONNECT(c1)               10 0e 00 04 4d 51 54 54 04 02 00 3c 00 02 63 31
+    手算                      10 0e 00 04 4d 51 54 54 04 02 00 3c 00 02 63 31
+  PUBLISH(a/b, hi)          30 07 00 03 61 2f 62 68 69
+    手算                      30 07 00 03 61 2f 62 68 69
+  SUBSCRIBE(1, a/b)         82 08 00 01 00 03 61 2f 62 00
+    手算                      82 08 00 01 00 03 61 2f 62 00
+  RL 边界 127/128/16383/16384 {127: &#x27;7f&#x27;, 128: &#x27;80 01&#x27;, 16383: &#x27;ff 7f&#x27;, 16384: &#x27;80 80 01&#x27;}
+
+==============================================================================
+  2) 链路：broker + 3 台传感器 + 入库端(SQLite) + 通配符监控端
+==============================================================================
+  设备数 / 订阅端                 3 / recorder + watcher(通配符)
+
+==============================================================================
+  3) 固定轮数运行：实发 / 实收 / 分布（吞吐是实测）
+==============================================================================
+  轮数 × 设备                   200 × 3
+  传感器实发合计                   590
+  入库端实收                     590
+  按设备分布                     {&#x27;dev-01&#x27;: 196, &#x27;dev-02&#x27;: 198, &#x27;dev-03&#x27;: 196}
+  吞吐【实测】 &lt;当场&gt; 条/秒（含解析与入库）
+
+==============================================================================
+  4) 完整性对账：账本 vs 库（四项逐数）
+==============================================================================
+  异常账本（spike/freeze）        {&#x27;freeze&#x27;: 19, &#x27;spike&#x27;: 25}
+  库里异常计数                    {&#x27;freeze&#x27;: 19, &#x27;spike&#x27;: 25}
+    一致                      True
+  缺口账本（dropout）             {&#x27;dev-01&#x27;: 4, &#x27;dev-02&#x27;: 2, &#x27;dev-03&#x27;: 4}
+  库里 seq 缺口                 {&#x27;dev-01&#x27;: 4, &#x27;dev-02&#x27;: 2, &#x27;dev-03&#x27;: 4}
+    一致                      True
+  解析失败（应为 0）                0
+
+==============================================================================
+  5) 断线重连：停 broker → 丢一条（QoS0）→ 重启同端口 → 自动恢复
+==============================================================================
+  宕机前发布 / 宕机中发布 / 恢复后发布     True / False / True
+  自动重连次数                    1
+  重订阅是否恢复                   True
+  重连耗时【实测】 &lt;当场&gt; ms（含 broker 启动）
+
+==============================================================================
+  6) SVG 曲线：dev-01 温度（异常红圈）
+==============================================================================
+  产物                        build/dev01_temperature.svg
+  字节数                       11094
+  曲线点数（三设备合计）               590
+  dev-01 异常标记数              17
+
+==============================================================================
+完成：6 段演示全部跑通。标【实测】的两处是实时测量（吞吐 / 重连耗时），
+其余内容由固定种子驱动，逐字可复现（tools/logdiff.py 可核对两次 run.bat 日志）。</pre>
+    </div>
+    <div data-pane-id="proto" hidden>
+      <p class="note">三条报文的**实现输出 vs 手算**并排（十六进制）：逐字节一致才算过。
+      变长 Remaining Length 的手算边界表在下面。</p>
+      <table class="plain"><tr><th>报文</th><th>实现输出</th><th>手算</th><th>结论</th></tr><tr><td>CONNECT(c1)</td><td><code>10 0e 00 04 4d 51 54 54 04 02 00 3c 00 02 63 31</code></td><td><code>10 0e 00 04 4d 51 54 54 04 02 00 3c 00 02 63 31</code></td><td class="ok">一致</td></tr><tr><td>PUBLISH(a/b, hi)</td><td><code>30 07 00 03 61 2f 62 68 69</code></td><td><code>30 07 00 03 61 2f 62 68 69</code></td><td class="ok">一致</td></tr><tr><td>SUBSCRIBE(1, a/b)</td><td><code>82 08 00 01 00 03 61 2f 62 00</code></td><td><code>82 08 00 01 00 03 61 2f 62 00</code></td><td class="ok">一致</td></tr></table>
+      <p class="note">RL 边界（字节值越小越省——物联网协议的设计动机之一）：</p>
+      <table class="plain"><tr><th>值</th><th>编码</th></tr><tr><td>127</td><td><code>7f</code></td></tr><tr><td>128</td><td><code>80 01</code></td></tr><tr><td>16383</td><td><code>ff 7f</code></td></tr><tr><td>16384</td><td><code>80 80 01</code></td></tr></table>
+    </div>
+    <div data-pane-id="svg" hidden>
+      <p class="note">`build/dev01_temperature.svg`（11094 字节，手写 svgplot 的产物）内联展示：
+      dev-01 温度曲线 + 异常红圈（spike/freeze）。同一条链路的数据库里能查到每一个圈对应的读数行。</p>
+      <div class="svgbox">
+      <svg xmlns="http://www.w3.org/2000/svg" width="900" height="420" viewBox="0 0 900 420">
+<rect width="900" height="420" fill="#ffffff"/>
+<text x="450.0" y="26" text-anchor="middle" font-size="18" font-family="sans-serif">工业传感器温度曲线（dev-01..03，200 轮）</text>
+<line x1="60" y1="360" x2="840" y2="360" stroke="#333"/>
+<line x1="60" y1="60" x2="60" y2="360" stroke="#333"/>
+<line x1="60" y1="360.0" x2="840" y2="360.0" stroke="#eeeeee"/>
+<text x="54" y="364.0" text-anchor="end" font-size="11" font-family="sans-serif">59.8</text>
+<line x1="60" y1="285.0" x2="840" y2="285.0" stroke="#eeeeee"/>
+<text x="54" y="289.0" text-anchor="end" font-size="11" font-family="sans-serif">93.9</text>
+<line x1="60" y1="210.0" x2="840" y2="210.0" stroke="#eeeeee"/>
+<text x="54" y="214.0" text-anchor="end" font-size="11" font-family="sans-serif">128.0</text>
+<line x1="60" y1="135.0" x2="840" y2="135.0" stroke="#eeeeee"/>
+<text x="54" y="139.0" text-anchor="end" font-size="11" font-family="sans-serif">162.1</text>
+<line x1="60" y1="60.0" x2="840" y2="60.0" stroke="#eeeeee"/>
+<text x="54" y="64.0" text-anchor="end" font-size="11" font-family="sans-serif">196.2</text>
+<polyline points="60.0,252.4 63.9,253.9 67.8,254.1 71.8,251.7 75.7,251.2 79.6,253.1 83.5,254.4 87.4,256.5 95.3,258.7 99.2,257.0 103.1,258.3 107.0,258.1 111.0,260.2 114.9,172.7 118.8,173.3 122.7,173.2 126.6,174.5 130.6,176.5 134.5,176.5 138.4,176.4 142.3,173.9 146.2,170.9 150.2,171.0 154.1,171.0 158.0,172.0 161.9,169.1 165.8,167.0 169.7,76.5 173.7,161.6 177.6,161.6 181.5,161.6 185.4,163.9 189.3,165.6 193.3,165.0 197.2,161.9 201.1,161.7 205.0,162.5 208.9,161.6 212.9,161.6 216.8,161.6 220.7,161.6 224.6,73.8 228.5,161.6 232.5,164.2 236.4,163.2 240.3,165.8 244.2,167.1 248.1,78.8 252.1,161.6 256.0,162.2 259.9,163.8 263.8,162.5 267.7,163.0 271.7,163.9 275.6,166.8 283.4,169.7 287.3,172.0 291.3,173.7 295.2,176.3 299.1,85.6 303.0,161.6 306.9,163.3 310.9,161.6 314.8,161.6 318.7,161.6 322.6,164.1 326.5,163.4 330.5,162.0 334.4,73.6 338.3,161.6 342.2,163.8 346.1,163.3 350.1,163.1 354.0,161.6 357.9,161.8 361.8,161.6 365.7,161.6 369.6,164.6 373.6,165.8 377.5,165.3 381.4,167.6 385.3,164.4 389.2,162.0 393.2,162.0 397.1,161.6 401.0,161.6 404.9,161.6 408.8,161.6 412.8,163.3 416.7,161.6 420.6,164.5 424.5,164.5 428.4,167.7 432.4,169.6 436.3,169.6 440.2,168.8 444.1,168.8 448.0,169.7 455.9,172.0 459.8,174.5 463.7,172.3 467.6,173.8 471.6,176.9 475.5,178.7 479.4,175.8 483.3,172.7 487.2,170.0 491.2,170.1 495.1,170.1 499.0,170.7 502.9,169.3 506.8,171.7 510.8,169.2 514.7,166.5 518.6,167.1 522.5,164.8 526.4,164.8 530.4,163.4 534.3,161.7 538.2,161.6 542.1,163.7 546.0,163.6 549.9,163.6 553.9,163.6 557.8,161.6 561.7,161.9 565.6,161.6 569.5,161.6 573.5,161.6 577.4,162.5 581.3,162.5 585.2,161.6 589.1,162.2 593.1,161.8 597.0,163.6 600.9,163.6 604.8,166.6 608.7,169.7 612.7,170.7 616.6,171.5 620.5,174.0 624.4,177.2 628.3,177.6 632.3,179.4 636.2,178.0 640.1,174.7 644.0,175.7 647.9,175.6 651.9,175.6 655.8,178.7 659.7,178.8 663.6,179.9 667.5,181.2 671.5,180.1 675.4,93.5 679.3,161.6 683.2,73.6 687.1,161.6 691.1,161.6 695.0,163.6 698.9,161.6 702.8,163.6 706.7,166.3 710.7,166.8 714.6,169.9 718.5,171.6 722.4,170.3 726.3,169.9 730.3,170.2 734.2,80.0 738.1,161.6 742.0,161.6 745.9,161.6 749.8,161.6 753.8,161.6 757.7,161.6 761.6,163.0 765.5,163.5 769.4,161.6 773.4,162.8 777.3,165.9 781.2,164.4 785.1,165.3 789.0,166.3 793.0,169.5 796.9,172.5 800.8,174.7 804.7,171.6 808.6,174.1 812.6,177.1 816.5,180.4 820.4,181.8 824.3,181.4 832.2,180.3 836.1,181.1 840.0,181.5" fill="none" stroke="#1f77b4" stroke-width="1.6"/>
+<line x1="72" y1="44" x2="94" y2="44" stroke="#1f77b4" stroke-width="3"/>
+<text x="100" y="48" font-size="12" font-family="sans-serif">dev-01</text>
+<polyline points="60.0,335.8 63.9,337.8 67.8,337.8 71.8,337.6 75.7,336.9 79.6,334.5 83.5,334.7 87.4,337.8 91.4,337.9 95.3,340.9 99.2,339.1 103.1,341.3 107.0,343.7 111.0,345.7 114.9,344.7 118.8,342.3 122.7,343.3 126.6,344.1 130.6,345.1 134.5,346.1 138.4,345.5 142.3,342.4 146.2,345.0 150.2,342.6 154.1,343.9 158.0,346.4 161.9,260.8 165.8,261.8 169.7,261.1 173.7,172.7 177.6,175.6 181.5,175.6 185.4,174.4 189.3,174.7 193.3,173.0 197.2,174.7 201.1,174.0 205.0,173.2 208.9,176.4 212.9,175.4 216.8,174.2 220.7,171.7 224.6,172.5 228.5,171.9 232.5,172.2 236.4,173.8 240.3,175.2 244.2,172.2 248.1,170.2 252.1,170.4 256.0,170.1 259.9,166.9 263.8,168.7 267.7,167.8 271.7,169.8 275.6,168.5 279.5,169.9 283.4,172.3 287.3,175.4 295.2,179.0 299.1,177.8 303.0,177.5 306.9,179.1 310.9,179.6 314.8,176.9 318.7,174.5 322.6,173.2 326.5,174.2 330.5,174.0 334.4,175.1 338.3,177.3 342.2,178.1 346.1,177.5 350.1,175.9 354.0,172.9 357.9,170.1 361.8,173.1 365.7,173.2 369.6,176.0 373.6,174.1 377.5,174.9 381.4,176.4 389.2,174.8 393.2,174.7 397.1,85.8 401.0,161.6 404.9,161.6 408.8,161.6 412.8,162.9 416.7,164.1 420.6,164.1 424.5,167.0 428.4,166.8 432.4,166.0 436.3,164.2 440.2,162.5 444.1,165.5 448.0,168.3 452.0,170.1 455.9,167.7 459.8,165.5 463.7,166.3 467.6,166.8 471.6,79.4 475.5,161.6 479.4,163.4 483.3,163.3 487.2,164.4 491.2,166.1 495.1,168.3 499.0,169.9 502.9,168.9 506.8,168.2 510.8,170.6 514.7,168.3 518.6,168.7 522.5,166.9 526.4,170.0 530.4,172.4 534.3,172.5 538.2,172.7 542.1,169.9 546.0,170.1 549.9,167.7 553.9,165.5 557.8,168.7 561.7,167.3 565.6,169.9 569.5,172.9 573.5,171.9 577.4,171.4 581.3,174.0 585.2,174.0 589.1,173.5 593.1,173.3 597.0,171.7 600.9,170.6 604.8,170.5 608.7,171.9 612.7,170.4 616.6,168.2 620.5,167.5 624.4,167.4 628.3,167.7 632.3,170.3 636.2,167.3 640.1,166.6 644.0,168.2 647.9,169.1 651.9,168.1 655.8,168.8 659.7,167.0 663.6,169.6 667.5,170.7 671.5,172.7 675.4,170.9 679.3,170.4 683.2,168.6 687.1,168.5 691.1,168.1 695.0,171.0 698.9,170.7 702.8,173.7 706.7,172.9 710.7,174.0 714.6,172.2 718.5,170.2 722.4,171.4 726.3,171.4 730.3,174.2 734.2,173.6 738.1,172.2 742.0,170.7 745.9,172.5 749.8,170.9 753.8,168.9 757.7,171.4 761.6,172.2 765.5,174.7 769.4,172.3 773.4,170.6 777.3,172.2 781.2,175.1 785.1,178.3 789.0,175.1 793.0,174.4 796.9,177.3 800.8,175.1 804.7,175.1 808.6,176.9 812.6,177.1 816.5,178.7 820.4,178.1 824.3,179.1 828.2,179.5 832.2,181.9 836.1,184.0 840.0,186.6" fill="none" stroke="#d62728" stroke-width="1.6"/>
+<line x1="222" y1="44" x2="244" y2="44" stroke="#d62728" stroke-width="3"/>
+<text x="250" y="48" font-size="12" font-family="sans-serif">dev-02</text>
+<polyline points="60.0,340.3 63.9,342.2 67.8,340.0 71.8,338.2 75.7,335.6 79.6,332.3 83.5,333.1 87.4,334.4 91.4,248.0 95.3,245.8 103.1,245.0 107.0,245.5 111.0,242.6 114.9,245.5 118.8,243.7 122.7,245.2 126.6,245.2 130.6,245.7 134.5,245.8 138.4,242.9 142.3,239.7 146.2,239.1 150.2,239.9 154.1,243.0 158.0,246.3 161.9,243.8 165.8,245.7 169.7,245.3 173.7,242.2 177.6,242.1 181.5,241.7 185.4,244.3 189.3,244.8 197.2,241.7 201.1,242.5 205.0,239.9 208.9,242.0 212.9,240.7 216.8,239.8 220.7,242.3 224.6,241.4 228.5,244.0 232.5,243.5 236.4,240.6 240.3,239.2 244.2,237.9 248.1,237.9 252.1,238.9 256.0,239.2 259.9,239.5 263.8,236.8 267.7,234.8 271.7,232.0 275.6,231.1 279.5,231.6 283.4,231.9 287.3,145.4 291.3,161.6 295.2,161.9 299.1,161.6 303.0,161.6 306.9,164.0 310.9,164.0 314.8,162.3 318.7,161.6 322.6,161.6 326.5,163.2 330.5,161.6 334.4,161.6 338.3,163.6 342.2,163.3 346.1,164.4 350.1,166.2 357.9,161.7 361.8,164.8 365.7,161.9 369.6,161.6 373.6,163.7 377.5,166.5 381.4,163.3 385.3,162.6 389.2,162.1 393.2,75.0 397.1,161.6 401.0,161.6 404.9,161.6 408.8,161.6 412.8,163.4 416.7,161.6 420.6,161.6 424.5,162.6 428.4,164.3 432.4,163.3 436.3,76.5 440.2,161.6 444.1,161.6 448.0,164.3 452.0,166.9 455.9,165.3 459.8,162.9 463.7,161.6 467.6,161.6 471.6,161.6 475.5,164.2 479.4,164.2 483.3,165.5 487.2,164.1 491.2,163.3 495.1,161.6 499.0,161.6 502.9,161.6 506.8,164.1 510.8,163.7 514.7,164.0 518.6,162.4 522.5,162.4 526.4,161.6 530.4,163.2 534.3,163.9 538.2,165.2 542.1,79.9 546.0,161.6 549.9,161.6 553.9,161.8 557.8,161.6 561.7,164.6 565.6,162.9 569.5,163.0 573.5,161.6 577.4,164.7 581.3,164.4 585.2,163.9 589.1,74.8 593.1,161.6 597.0,161.6 600.9,161.6 608.7,162.6 612.7,161.6 616.6,164.6 620.5,163.3 624.4,165.9 628.3,164.3 632.3,161.6 636.2,162.9 640.1,161.6 644.0,161.6 647.9,161.6 651.9,161.6 655.8,161.6 659.7,161.6 663.6,161.6 667.5,161.6 671.5,161.6 675.4,163.0 679.3,161.6 683.2,163.9 687.1,163.3 691.1,162.8 695.0,161.6 698.9,163.4 702.8,73.6 706.7,161.6 710.7,73.6 714.6,161.6 718.5,163.9 722.4,73.6 726.3,161.6 730.3,73.6 734.2,161.6 738.1,161.6 742.0,163.1 745.9,163.7 749.8,77.9 753.8,161.6 757.7,161.6 761.6,161.6 765.5,162.7 769.4,161.6 773.4,161.6 777.3,162.2 781.2,163.3 785.1,163.9 789.0,166.2 793.0,163.1 796.9,161.6 800.8,161.6 804.7,161.6 808.6,164.2 812.6,164.2 816.5,164.7 820.4,165.9 824.3,163.7 828.2,162.3 832.2,162.3 836.1,164.6 840.0,166.6" fill="none" stroke="#2ca02c" stroke-width="1.6"/>
+<line x1="372" y1="44" x2="394" y2="44" stroke="#2ca02c" stroke-width="3"/>
+<text x="400" y="48" font-size="12" font-family="sans-serif">dev-03</text>
+<circle cx="60.0" cy="252.4" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="114.9" cy="172.7" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="169.7" cy="76.5" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="224.6" cy="73.8" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="248.1" cy="78.8" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="299.1" cy="85.6" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="334.4" cy="73.6" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="393.2" cy="162.0" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>freeze</title></circle>
+<circle cx="444.1" cy="168.8" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>freeze</title></circle>
+<circle cx="526.4" cy="164.8" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>freeze</title></circle>
+<circle cx="553.9" cy="163.6" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>freeze</title></circle>
+<circle cx="581.3" cy="162.5" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>freeze</title></circle>
+<circle cx="651.9" cy="175.6" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>freeze</title></circle>
+<circle cx="675.4" cy="93.5" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="683.2" cy="73.6" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="734.2" cy="80.0" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>spike</title></circle>
+<circle cx="757.7" cy="161.6" r="4" fill="none" stroke="#d62728" stroke-width="1.6"><title>freeze</title></circle>
+<text x="60" y="378" font-size="11" font-family="sans-serif">1</text>
+<text x="840" y="378" text-anchor="end" font-size="11" font-family="sans-serif">200</text>
+<text x="14" y="60" font-size="12" font-family="sans-serif">temperature C</text>
+</svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<h2>怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：三步（测试 → 六段演示 → 展示页新鲜度）；DB 与 SVG 落在 build\。</li>
+    <li><kbd>python demo.py</kbd>：六段演示；<kbd>python tools\logdiff.py a.log b.log</kbd>：两次日志规范化比对。</li>
+    <li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令真跑 demo.py 现算（测试数按 tests/ 静态现数；
+  两处【实测】数字已按规则替换成 &lt;当场&gt;）。零依赖：纯标准库。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  function activate(group, id){
+    var chips = document.querySelectorAll('[data-tabs="' + group + '"] [data-tab]');
+    for (var i = 0; i < chips.length; i++){
+      var on = chips[i].getAttribute("data-tab") === id;
+      chips[i].className = on ? "chip active" : "chip";
+    }
+    var panes = document.querySelectorAll('[data-pane="' + group + '"] [data-pane-id]');
+    for (var j = 0; j < panes.length; j++){
+      panes[j].hidden = panes[j].getAttribute("data-pane-id") !== id;
+    }
+  }
+  var lines = document.querySelectorAll("[data-tabs]");
+  for (var k = 0; k < lines.length; k++){
+    (function(line){
+      var group = line.getAttribute("data-tabs");
+      var chips = line.querySelectorAll("[data-tab]");
+      for (var c = 0; c < chips.length; c++){
+        chips[c].addEventListener("click", function(){
+          activate(group, this.getAttribute("data-tab"));
+        });
+      }
+      if (chips.length) activate(group, chips[0].getAttribute("data-tab"));
+    })(lines[k]);
+  }
+})();
+</script>
+</body>
+</html>

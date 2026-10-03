@@ -16,10 +16,12 @@
 ## 运行
 
 ```
-run.bat                                          # 两步：16 项测试 → 六段演示（并写 PNG 到 build\）
-python -m unittest discover -s tests             # 16 项
-python tests\test_cv.py                          # 同上（双入口同数）
+run.bat                                          # 三步：23 项测试 → 六段演示（并写 PNG 到 build\）→ 展示页新鲜度
+python -m unittest discover -s tests             # 23 项（16 核心 + 7 展示页）
+python tests\test_cv.py                          # 16 项核心（直跑入口）
+python tests\test_showcase.py                    # 7 项展示页（直跑单文件）
 python demo.py                                   # 六段演示；产物在 build\demo_*.png（可直接打开）
+python tools\showcase.py --write                 # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
 依赖只有 cv2 与 numpy（均已安装），**零新依赖**。
@@ -36,8 +38,10 @@ python demo.py                                   # 六段演示；产物在 buil
 | `cvscan/io.py` | PNG 读写（`imencode` + Python 落盘，绕开 cv2.imwrite 的中文路径坑） |
 | `tests/test_cv.py` | 16 项测试（真值对账 / 拒识路径 / 排序 / 确定性 / 读写往返） |
 | `demo.py` | 六段演示 + 产物 PNG（build/ 下） |
+| `tests/test_showcase.py` | 7 项展示页测试（新鲜度/篡改必红/缩略图与产物的字节对账/标记与零外链） |
+| `tools/showcase.py` | 展示页生成器 → `web/showcase.html`（六段演示 + 三张产物缩略图内联，数据现算） |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -46,17 +50,21 @@ python demo.py                                   # 六段演示；产物在 buil
 | 角点排序（TL/TR/BR/BL） | `order_points` | 手摆打乱的四点排对；检出结果的**结构关系**（上边两点 y 更小等）逐条断言 |
 | 透视变换 8 参数求解 | `rectify.four_point_warp` | 还原图逐像素 vs 原始顶视图：MAD ≤ 15（实测最差 11.2） |
 | 二值化两派 | `binarize.py` | 与真值掩码一致率 ≥ 0.95（实测最差 0.961）、IoU ≥ 0.75；Otsu 阈值落在纸/字之间 |
-| **失败样例对照** | `detect_document` 的原因分支 | 五类样例全拒且**原因各不相同**：无边缘 / 边缘密度过高（噪声）/ 面积不达标 / 图像太小 / 空图 |
+| **失败样例对照** | `detect_document` 的原因分支 | 五类样例全拒且各自有原因（检测器共 5 条原因分支：无边缘 / 边缘密度过高 / 面积不达标 / 图像太小 / 空图）。**如实修正**：演示的五个场景里纯背景与低对比共用"无边缘"——测试断言 ≥4 种并逐条点名 |
 | 噪声假阳性防线 | 边缘密度检查 | 纯噪声 37% vs 真实场景 1.1%——差两个数量级，阈值 0.25 有大量余量 |
 | 确定性 | 全程 `default_rng(seed)` | 同种子两遍：图像、角点、二值图 `array_equal` |
 | 中文路径的 I/O | `cvscan/io.py` | PNG 往返 `array_equal`；缺文件抛 FileNotFoundError |
 
 ## 实测（2026-10-02，首次交付；数字均为本轮现算）
 
-- 测试：**16 项全过、双入口同数**。容差全部按"40 种子全量探针的实测最差 + 余量"定：
+- 测试：**23 项全过（16 核心 + 7 展示页）**；discover 23 = 直跑 16 + 展示页 7。容差全部按"40 种子全量探针的实测最差 + 余量"定：
   角点最大误差 0.51~2.00px、MAD 5.7~11.2、掩码一致率 0.961~0.999、IoU 0.791~0.997、
   Otsu 与自适应一致率 0.988~0.998。
-- `run.bat` 连跑两次退出码 **0**、`build/` 之外无新增、两次日志差异只有 1 行 unittest 计时。
+- `run.bat` 连跑两次退出码 **0**、`build/` 之外无新增、两次日志差异只有 1 行 unittest 计时
+  （2026-10-03 展示层批次⑧后按三步重测：各 73 行，规范化后逐字相同）。
+- 展示页（2026-10-03 展示层工程批次⑧）：`web/showcase.html` 单文件自包含——三张**真实产物缩略图**
+  （与 build/demo_*.png 同源，340px JPEG/PNG 内联，原字节数标注图上）+ 六段演示原文 + 失败样例对照表；
+  与现算**逐字一致**（`--check` 过期即红）。展示页测试 7 项（`python tests\test_showcase.py`）。
 - 演示现算：检出 20/20 种子；示例角点误差 ≤ 0.82px、还原 MAD 6.00、掩码一致率 0.9982；
   Otsu 阈值 138；五类失败样例各自的原因打印在演示第 5 段。
 - 产物：`build/demo_input.png`（728KB）、`demo_rectified.png`（244KB）、`demo_binary.png`（3KB）

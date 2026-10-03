@@ -18,10 +18,11 @@ Will 消息、用户名/密码、TLS、会话保持（每次连接都是干净�
 ## 运行
 
 ```
-run.bat                                          # 两步：23 项测试 → 六段演示（几秒钟）
-python -m unittest discover -s tests             # 23 项（真 socket 端到端，约 24s）
-python tests\test_mqtt.py                        # 同上（双入口同数）
+run.bat                                          # 三步：32 项测试 → 六段演示（几秒钟）→ 展示页新鲜度
+python -m unittest discover -s tests             # 32 项（23 核心 + 9 展示页；含真 socket 端到端，约 50s）
+python tests\test_mqtt.py                        # 23 项核心（直跑入口）
 python demo.py                                   # 六段；DB 与 SVG 产物在 build\
+python tools\showcase.py --write                 # 重生展示页 web\showcase.html（--check 过期即红）
 python tools\logdiff.py a.log b.log              # 两次 run.bat 日志的规范化比对
 ```
 
@@ -38,16 +39,18 @@ python tools\logdiff.py a.log b.log              # 两次 run.bat 日志的规�
 | `mqttlite/recorder.py` | 入库端：订阅 `sensors/+/data` → SQLite（幂等主键；实收/分布/异常/缺口四个对账口） |
 | `mqttlite/svgplot.py` | 手写 SVG 折线图（异常红圈、多设备曲线、自包含） |
 | `tests/test_mqtt.py` | 23 项测试（字节级手算表 / QoS0 语义 / 重连恢复 / 完整性账本 / SVG 结构） |
+| `tests/test_showcase.py` | 9 项展示页测试（新鲜度/篡改必红/协议表逐条一致/规范化真生效/SVG 与产物逐字节对账） |
+| `tools/showcase.py` | 展示页生成器 → `web/showcase.html`（六段演示 + 协议字节表 + 产物 SVG 内联，数据现算） |
 | `tools/logdiff.py` | 日志规范化比对（只规范两处【实测】数字与 unittest 计时） |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
 | 固定头与变长 Remaining Length | `encode/decode_remaining_length` | **手算边界表**：127→`7f`、128→`80 01`、16383→`ff 7f`、16384→`80 80 01`；超 4 字节拒收 |
 | 报文字节级正确 | `encode_connect/publish/subscribe` | **逐字节十六进制对照**（CONNECT 16 字节、PUBLISH 9 字节、SUBSCRIBE 9 字节全部手算），demo 第 1 段并排打印 |
 | QoS0 的"至多一次" | broker 不做 ack/离线队列 | 断线期间的发布**不补收**（专项用例）；"宕机中 safe_publish=False → 重启后只收到之后那条" |
-| 通配符路由 | `topic_matches` | 12 条手算表（`a/+/c` ✓、`a/+` 不匹配三层、`a/#` 匹配 `a`、`#` 不匹配 `$SYS/x`…） |
+| 通配符路由 | `topic_matches` | 12 条手算表（`a/+/c` 匹配、`a/+` 不匹配三层、`a/#` 匹配 `a`、`#` 不匹配 `$SYS/x`…） |
 | 订阅表与多订阅者 | `broker._subs` | 两个订阅者都收到（route 返回 2）；不相关主题 0 投递 |
 | 坏包隔离 | `MalformedPacket` → 只断该连接 | 未知类型/先发 PUBLISH 未握手 → 该连接被关闭，**另一条好连接毫发无损**（断言） |
 | 会话接管（同 id 顶号） | `broker._dispatch(CONNECT)` | 同 client id 第二次连接 → 旧连接被顶、`takeovers=1`、`client_count=1` |
@@ -58,7 +61,8 @@ python tools\logdiff.py a.log b.log              # 两次 run.bat 日志的规�
 
 ## 实测（2026-10-02，首次交付；数字均为本轮现算）
 
-- 测试：**23 项全过、双入口同数**（约 24s）。
+- 测试：**32 项全过（23 核心 + 9 展示页）**；discover 32 = 直跑 23 + 展示页 9
+  （核心约 24s；展示页测试会真跑两遍演示，整套约 50s）。
 - 演示链路：3 设备 × 200 轮 → 实发 590 / 实收 590；按设备 {dev-01: 196, dev-02: 198, dev-03: 196}；
   异常账本 {spike: 25, freeze: 19} 与库一致；缺口账本 {4, 2, 4} 与库一致；解析失败 0。
 - 吞吐【实测】：357 条/秒（含 JSON 解析与 SQLite 落库，本机 localhost）。
@@ -66,7 +70,12 @@ python tools\logdiff.py a.log b.log              # 两次 run.bat 日志的规�
   自动重连 1 次、订阅恢复、耗时【实测】17 ms（含 broker 启动）。
 - 产物：`build/sensors.db`（53KB）、`build/dev01_temperature.svg`（11KB，17 个异常标记）。
 - `run.bat` 连跑两次退出码 **0**、`build/` 之外无新增、`not recognized` 0；
-  两次日志经 `tools/logdiff.py` 规范化后**逐字相同（各 67 行）**，规范项两侧对称（吞吐/重连耗时/单测计时各 1）。
+  两次日志经 `tools/logdiff.py` 规范化后**逐字相同（各 70 行）**，规范项两侧对称
+  （A=B={unittest 计时 1, 吞吐实测 1, 重连耗时实测 1}；2026-10-03 展示层批次⑧后按三步重测）。
+- 展示页（2026-10-03 展示层工程批次⑧）：`web/showcase.html` 单文件自包含——六段演示原文、
+  **协议字节手算表**（三条报文实现 vs 手算逐字节并排 + RL 边界表）、**SVG 曲线内联**
+  （build/dev01_temperature.svg 同一份产物）；两处【实测】数字按规则规范化；与现算**逐字一致**
+  （`--check` 过期即红）。展示页测试 9 项（`python tests\test_showcase.py`）。
 
 ## 坑（都留了钉子）
 
@@ -74,7 +83,7 @@ python tools\logdiff.py a.log b.log              # 两次 run.bat 日志的规�
    立刻红在"实收 0 != 445"上。消息链路里"少挂一环"是静默断链的典型，测试要端到端才看得见。
 2. **`ensure_connected` 必须用 PING 探活**：TCP 半关闭下，对端已死时 `sendall` 仍会"成功"，
    于是"宕机中发布"会假报 True。QoS0 没有 ack，**唯一的存活探针就是 PINGREQ/PINGRESP**。
-3. **重连测试的"顺序"本身就是语义**：先发布后重连 ⇒ 消息在无人订阅时就丢了——
+3. **重连测试的"顺序"本身就是语义**：先发布后重连 => 消息在无人订阅时就丢了——
    测试第一版正是这么写红的，注释里写明"QoS0 不补历史"。
 4. **漏关 socket 会污染日志比对**：ResourceWarning 里带随机 fd 与端口号，日志没法逐字比；
    `Client.connect()` 现在**先 close 旧连接**（重复 connect 不再把旧 socket 丢给 GC）。

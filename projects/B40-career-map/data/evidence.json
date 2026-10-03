@@ -138,11 +138,11 @@
   },
   {
    "id": "b24-cv",
-   "claim": "文档扫描仪（Canny→四边逼近→透视变换→二值化）：16 项全过、双入口同数，合成真值像素级对账",
+   "claim": "文档扫描仪（Canny→四边逼近→透视变换→二值化）：23 项全过（16 核心 + 7 展示页），合成真值像素级对账；展示页（第⑧批）三张产物缩略图内联",
    "pointers": [
     "projects/B24-cv-scanner/README.md"
    ],
-   "anchor": "16 项全过、双入口同数",
+   "anchor": "23 项全过（16 核心 + 7 展示页）",
    "commit": "5c1d205"
   },
   {
@@ -237,20 +237,20 @@
   },
   {
    "id": "b35-mqtt",
-   "claim": "手写 MQTT 子集（字节级报文/selectors broker/断线重连/账本）：23 项全过、双入口同数",
+   "claim": "手写 MQTT 子集（字节级报文/selectors broker/断线重连/账本）：32 项全过（23 核心 + 9 展示页）；展示页（第⑧批）协议表 + SVG 内联",
    "pointers": [
     "projects/B35-iot-mqtt/README.md"
    ],
-   "anchor": "23 项全过、双入口同数",
+   "anchor": "32 项全过（23 核心 + 9 展示页）",
    "commit": "5821891"
   },
   {
    "id": "b37-ai",
-   "claim": "设备故障预测 + 误报/漏报解剖（复用 B35/B23，边界按实测换 OU）：27 项测试双入口同数",
+   "claim": "设备故障预测 + 误报/漏报解剖（复用 B35/B23，边界按实测换 OU）：36 项测试（27 核心 + 9 展示页）；展示页（第⑧批）三模型表 + 3 张 SVG 内联",
    "pointers": [
     "projects/B37-industry-ai/README.md"
    ],
-   "anchor": "27 项测试双入口同数",
+   "anchor": "36 项测试（27 核心 + 9 展示页）",
    "commit": "b55eb21"
   },
   {
