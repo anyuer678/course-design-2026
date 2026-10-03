@@ -118,9 +118,9 @@
    "course": "开源操作系统",
    "title": "mini-shell：fork/exec、管道、重定向、回收",
    "batch": 5,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B8-mini-shell/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -128,9 +128,9 @@
    "course": "计算机网络",
    "title": "HTTP 子集 + 多路复用 + UDP 可靠传输",
    "batch": 5,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B11-net-lab/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -138,9 +138,9 @@
    "course": "信息安全导论",
    "title": "四组“漏洞版 vs 修复版” + 静态扫描器",
    "batch": 5,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B32-sec-lab/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
