@@ -1,0 +1,662 @@
+[
+  {
+    "id": "B1",
+    "project": "B1-cpp-ministl",
+    "title": "手写 vector / list / string + 待办清单",
+    "course": "计算机程序设计基础(C++)",
+    "oral": [
+      "vector 的三指针与 ×2 倍增：为什么\"每一步 capacity() >= size()\"值得断言，摊还 O(1) 是什么意思？",
+      "rule of five：拷贝要独立、自赋值安全、移动后源对象为什么还能复用（不是置空）？",
+      "RAII 的取证方式：为什么\"文件句柄用删除成功来证明已关闭\"在 Windows 上成立？",
+      "对拍引擎在测什么：同一随机操作序列喂给 mini 与 std，比的是每一步之后的状态——为什么这比手写用例狠？"
+    ],
+    "modify": "把 `grow()` 的 ×2 改成 ×1.5，用 `reserve + push_back` 循环数出总拷贝次数，比较两种系数在 n=1000 时的实际搬移量，解释摊还分析里\"Σ2^k = O(n)\"那一步。",
+    "modify_from": "练习建议 2",
+    "fail": "把 `string` 构造后写 `c_str()` 终止符的那一步去掉（坑 1 的现场），再跑自测——先红的是哪条断言？为什么\"size 对了\"不等于\"门面对了\"？",
+    "fail_from": "踩坑 1（c_str 的 '\\0' 不是自动的）",
+    "sources": [
+      {
+        "file": "projects/B1-cpp-ministl/README.md",
+        "anchor": "把 `grow()` 的 ×2 改成 ×1.5"
+      },
+      {
+        "file": "projects/B1-cpp-ministl/README.md",
+        "anchor": "`strcmp == 0` 当场抓住"
+      },
+      {
+        "file": "projects/B1-cpp-ministl/README.md",
+        "anchor": "253,086 次逐元素比较"
+      }
+    ]
+  },
+  {
+    "id": "B2",
+    "project": "B2-datastruct-lab",
+    "title": "八个 ADT + 复杂度对照",
+    "course": "数据结构",
+    "oral": [
+      "moves() 与 hops() 各计的是什么动作？头插 300 次为什么是 44850 步（n(n-1)/2）？",
+      "循环队列用 size 记账区分空/满的取舍？改成\"留一个空位\"要动哪些断言？",
+      "BST 删除三情形（叶/单子/双子后继顶替）——以及\"升序 31 个高 31 vs 折半插入高 5\"说明什么？",
+      "线性建堆为什么 O(n)：494 次比较 vs 逐个插入 1538 次要靠什么数据形状才逼得出来？"
+    ],
+    "modify": "把循环队列改成\"留一个空位\"区分空/满（不用 size 记账），写出被改红的测试。",
+    "modify_from": "练习建议 2",
+    "fail": "故意把某条计数的期望值写错一位（例如\"删头部 5 个、搬 4 步\"写成 3 步），跑测试——它抓不抓？这条练习的教训是\"失败先怀疑自己的期望值\"。",
+    "fail_from": "踩坑 2（手算计数也会错）",
+    "sources": [
+      {
+        "file": "projects/B2-datastruct-lab/README.md",
+        "anchor": "把循环队列改成\"留一个空位\"区分空/满"
+      },
+      {
+        "file": "projects/B2-datastruct-lab/README.md",
+        "anchor": "教训同仓库记过的：**失败先怀疑自己的期望值**"
+      },
+      {
+        "file": "projects/B2-datastruct-lab/README.md",
+        "anchor": "建堆 494 次比较 vs 逐个插入 1538 次"
+      }
+    ]
+  },
+  {
+    "id": "B3",
+    "project": "B3-logic-lab",
+    "title": "命题逻辑 + 二元关系",
+    "course": "离散结构",
+    "oral": [
+      "真值表穷举 2^n 行 vs 公式化简：为什么判定\"重言/可满足/等价\"选前者？",
+      "主析取/合取范式 = 真值表的两半：极小项覆盖与极大项取反方向各是什么？",
+      "两字符运算符（-> / <=>）的切分次序为什么是规范的一部分？",
+      "传递闭包两套独立实现（Warshall 与逐点 BFS）互拍——\"独立参照\"为什么非要两套？"
+    ],
+    "modify": "给关系加\"传递闭包的三条路\"：Warshall、BFS、反复平方 `R := R ∪ R^2` 直到不动点，三者对拍；说明为什么反复平方是 O(n^3 log n) 而前两者是 O(n^3)。",
+    "modify_from": "练习建议 3",
+    "fail": "把 `to_cnf` 的极大项取反方向写反（坑 2 的经典错误），跑 36 项——哪条\"逐字符\"测试先红？为什么这个错误会输出与原式不等价的公式？",
+    "fail_from": "踩坑 2（极大项的取反方向写反）",
+    "sources": [
+      {
+        "file": "projects/B3-logic-lab/README.md",
+        "anchor": "给关系加\"传递闭包的三条路\""
+      },
+      {
+        "file": "projects/B3-logic-lab/README.md",
+        "anchor": "极大项的取反方向写反是经典错误"
+      },
+      {
+        "file": "projects/B3-logic-lab/README.md",
+        "anchor": "Warshall 与逐点 BFS 闭包互证"
+      }
+    ]
+  },
+  {
+    "id": "B4",
+    "project": "B4-algebra-rsa",
+    "title": "数论 + 教学 RSA",
+    "course": "集合论与代数",
+    "oral": [
+      "egcd 的接口约定\"(0,0) 全 0\"是什么？为什么两版实现（递归/迭代）必须逐格一致？",
+      "教学 RSA 的红线：为什么演示可以、真秘密不行（写在文件头的哪句话）？",
+      "群判定器\"四张坏表全拒（带反例）\"——举反例和只报\"不是群\"差在哪？",
+      "对拍对象的选择：为什么与内建 pow / 暴力枚举对，而不是自己证自己？"
+    ],
+    "modify": "给 `mod_pow` 加\"窗口法\"（每次看 k 位），统计 k=1..4 的模乘次数，找到本实现的最优窗口。",
+    "modify_from": "练习建议 1",
+    "fail": "把 egcd 两版实现里的 `(0,0)` 约定改成不一致（一版 `(0,0,0)`、一版 `(0,1,0)`），跑对拍——它是不是当场逮住？这条就是坑 3 的复现。",
+    "fail_from": "踩坑 3（(0,0) 的约定要两边一致）",
+    "sources": [
+      {
+        "file": "projects/B4-algebra-rsa/README.md",
+        "anchor": "给 `mod_pow` 加\"窗口法\""
+      },
+      {
+        "file": "projects/B4-algebra-rsa/README.md",
+        "anchor": "`(0,0)` 的约定要两边一致"
+      },
+      {
+        "file": "projects/B4-algebra-rsa/README.md",
+        "anchor": "实现 Miller–Rabin（确定性底集对 64 位够用）"
+      }
+    ]
+  },
+  {
+    "id": "B5",
+    "project": "B5-cpu-sim",
+    "title": "五级流水线 CPU 模拟",
+    "course": "数字设计与计算机原理(计组)",
+    "oral": [
+      "数据冒险为什么要转发？load-use 停顿插几拍、为什么转发救不了它？",
+      "控制冒险的冲刷从哪来：分支在 ID 判定 + 静态预测不跳，数一数冲刷几次？",
+      "双模型（单周期 vs 流水线）对拍能抓到什么单周期看不见的 bug（坑 5 是例子）？",
+      "流水线时空图的 S/F 格与\"冲刷次数×2 = F 格数\"这条口径。"
+    ],
+    "modify": "给流水线加\"分支在 ID 判定 + 预测不跳\"，数冲刷次数怎么变、为什么。",
+    "modify_from": "练习建议 1",
+    "fail": "把 `is_load` 标志挪回 EX 才置（坑 4 的现场），跑双模型对拍——load-use 检测失灵时结果是\"读到旧值\"还是崩？为什么单周期模型看不出来？",
+    "fail_from": "踩坑 4（is_load 标志设得太晚）",
+    "sources": [
+      {
+        "file": "projects/B5-cpu-sim/README.md",
+        "anchor": "给流水线加\"分支在 ID 判定 + 预测不跳\""
+      },
+      {
+        "file": "projects/B5-cpu-sim/README.md",
+        "anchor": "`is_load` 标志设得太晚"
+      },
+      {
+        "file": "projects/B5-cpu-sim/README.md",
+        "anchor": "双模型对拍**抓出来的（单周期一直是对的）"
+      }
+    ]
+  },
+  {
+    "id": "B6",
+    "project": "B6-asm-lab",
+    "title": "x86-64 汇编四函数 + ABI 纪律",
+    "course": "汇编语言",
+    "oral": [
+      "Windows x64 的 callee-saved 有哪些？ABI 探针的\"掩码全 0\"具体在证明什么？",
+      "参数宽度陷阱：`long`(32 位) 零扩展进 rdx 为什么会被汇编读成 42.9 亿？接口契约怎么钉住？",
+      "为什么\"跑通\"还不够、要看 objdump 结构对照（序言/收尾/叶函数无 push）？",
+      "反面教材（故意不保存 rbx）为什么必须亮 bit0——它在防\"探针恰好通过\"。"
+    ],
+    "modify": "写递归版 `asm_fib_rec`，用 gdb 或 `objdump -d` 数每一层的栈帧怎么叠；与迭代版对比。",
+    "modify_from": "练习建议 2",
+    "fail": "把一个 C++ 侧参数从 `long long` 改回 `long`（坑 1 的现场），跑自测——是编译期报错、还是运行时段错误？这说明\"宽度\"该写在契约的哪里？",
+    "fail_from": "踩坑 1（参数宽度）+ 踩坑 2（数组步长）",
+    "sources": [
+      {
+        "file": "projects/B6-asm-lab/README.md",
+        "anchor": "写递归版 `asm_fib_rec`，用 gdb 或 `objdump -d` 数每一层的栈帧怎么叠；与迭代版对比。"
+      },
+      {
+        "file": "projects/B6-asm-lab/README.md",
+        "anchor": "Windows x64 陷阱一：参数宽度"
+      },
+      {
+        "file": "projects/B6-asm-lab/README.md",
+        "anchor": "汇编没有类型系统，\"宽度\"必须由接口契约写清"
+      }
+    ]
+  },
+  {
+    "id": "B7",
+    "project": "B7-mini-make",
+    "title": "迷你 make + 日志统计",
+    "course": "软件开发技术基础",
+    "oral": [
+      "增量构建的判定条件（时间戳/依赖图/伪目标）各自缺了会怎样？",
+      "\"失败传播是流程不是崩溃\"：上游失败时下游\"没执行\"这件事怎么被断言？",
+      "相对路径以 Makefile 目录为锚（-C/-f 语义）——用进程 cwd 会错在哪？",
+      "logstat 的两个问题：\"哪类消息最多\"与\"哪个文件最脏\"为什么不是同一个视图？"
+    ],
+    "modify": "把分批并发改成\"依赖就绪即调度\"的流水线，用 `time.sleep` 当 recipe 比较总耗时。",
+    "modify_from": "练习建议 2",
+    "fail": "把 makefile 里一条相对路径改成相对进程 cwd 解析（坑 1 的现场），跑测试——在临时目录里跑时它红在哪一条？产物是不是还会被写进仓库？",
+    "fail_from": "踩坑 1（相对路径必须相对 Makefile 目录）",
+    "sources": [
+      {
+        "file": "projects/B7-mini-make/README.md",
+        "anchor": "把分批并发改成\"依赖就绪即调度\"的流水线"
+      },
+      {
+        "file": "projects/B7-mini-make/README.md",
+        "anchor": "相对路径必须相对 Makefile 目录"
+      },
+      {
+        "file": "projects/B7-mini-make/README.md",
+        "anchor": "先 `assert 锚点 in 文本` 再替换"
+      }
+    ]
+  },
+  {
+    "id": "B8",
+    "project": "B8-mini-shell",
+    "title": "迷你 shell（fork/exec/管道/重定向）",
+    "course": "开源操作系统",
+    "oral": [
+      "fork / exec / waitpid 的次序与逐 pid 回收；僵尸是怎么被 /proc 数出来的？",
+      "管道端点的关闭语义：父不关写端，下游凭什么等不到 EOF？",
+      "stdio 预读为什么会吞掉子进程的 stdin——逐字节 read 换来了什么？",
+      "`$?` 的口径：三段管道整体 = 最后一段；`exit` 无参数 = 上一条的 `$?`。"
+    ],
+    "modify": "加 `&` 与 `jobs`：后台子进程不 wait、另存 pid 表；说明\"后台任务\"为什么必须改回收逻辑（SIGCHLD / WNOHANG 轮询），以及僵尸检查要跟着改什么。",
+    "modify_from": "练习建议 1",
+    "fail": "把 `read_line` 的空行返回值（0）当成 EOF（坑 1 的真 bug），跑测试——哪条测试先红？为什么\"第一行是空行\"会让整个 shell 退出？",
+    "fail_from": "踩坑 1（\"空行 = EOF\"的真 bug）",
+    "sources": [
+      {
+        "file": "projects/B8-mini-shell/README.md",
+        "anchor": "加 `&` 与 `jobs`"
+      },
+      {
+        "file": "projects/B8-mini-shell/README.md",
+        "anchor": "\"空行 = EOF\"的真 bug"
+      },
+      {
+        "file": "projects/B8-mini-shell/README.md",
+        "anchor": "**管道端点必须关干净**：父进程不关写端"
+      }
+    ]
+  },
+  {
+    "id": "B9",
+    "project": "B9-os-sim",
+    "title": "OS 模拟器：调度 / 页面置换 / FAT / 银行家",
+    "course": "操作系统原理",
+    "oral": [
+      "五种调度的判定口径与甘特图读法；RR 的入队顺序（新到达先入 vs 到期回队尾）为什么是约定？",
+      "LRU ≤ FIFO 不是定理——构造一个 LRU 更差的反例，说清能断言的只有 OPT ≤ 任何算法。",
+      "FAT 的\"分配\"是一次写盘：空闲判定与占用标记为什么必须原子做完？",
+      "覆盖写的顺序决定失败时还剩什么（先建新链→成功后释放旧链→填数据）。"
+    ],
+    "modify": "实现 SRTF（最短剩余时间优先，抢占版 SJF），对比平均等待。",
+    "modify_from": "练习建议 1",
+    "fail": "把 `alloc_one()` 的占用标记去掉（坑 4 的现场），跑测试——为什么同一个块会被连续分配、`fat_[0]` 自指成环，最后从哪里越界崩？",
+    "fail_from": "踩坑 4（分配器必须\"边分配边占位\"）",
+    "sources": [
+      {
+        "file": "projects/B9-os-sim/README.md",
+        "anchor": "实现 SRTF（最短剩余时间优先，抢占版 SJF），对比平均等待。"
+      },
+      {
+        "file": "projects/B9-os-sim/README.md",
+        "anchor": "分配器必须\"边分配边占位\""
+      },
+      {
+        "file": "projects/B9-os-sim/README.md",
+        "anchor": "覆盖写的顺序决定失败时还剩什么"
+      }
+    ]
+  },
+  {
+    "id": "B10",
+    "project": "B10-minidb",
+    "title": "教学数据库：WAL + 事务 + B+ 树",
+    "course": "数据库系统",
+    "oral": [
+      "提交即落盘的次序（LSN / flush / fsync）与\"最后一条提交可能丢吗\"的答案？",
+      "CHECKPOINT 的写前次序（数据 fsync → 头 fsync → 删 WAL）各防的是什么？",
+      "崩溃对账：已提交必在、未提交必不在——`os._exit` 硬退帮证了什么？",
+      "\"WAL 最后一行撕裂\"为什么只有\"文件末尾且没有换行\"的那行可以丢？"
+    ],
+    "modify": "把页式快照从\"整库重写\"升级到**行/索引增量分页**：B+ 树页落盘、根页号写进头槽位、CHECKPOINT 只写脏页——先量一次\"改了 1 行要写多少页\"，再决定值不值。",
+    "modify_from": "练习建议 1",
+    "fail": "在 WAL 中间（不是末尾）手动破坏一条记录再启动（坑 5 的边界），跑恢复——它该拒绝打开还是静默跳过？为什么\"静默跳过等于丢数据\"？",
+    "fail_from": "踩坑 5（WAL 最后一行撕裂）",
+    "sources": [
+      {
+        "file": "projects/B10-minidb/README.md",
+        "anchor": "升级到**行/索引增量分页**：B+ 树页落盘"
+      },
+      {
+        "file": "projects/B10-minidb/README.md",
+        "anchor": "WAL 最后一行撕裂会让整个库打不开"
+      },
+      {
+        "file": "projects/B10-minidb/README.md",
+        "anchor": "给 WAL 加**组提交窗口**"
+      }
+    ]
+  },
+  {
+    "id": "B11",
+    "project": "B11-net-lab",
+    "title": "HTTP/1.1 子集 + GBN 可靠传输",
+    "course": "计算机网络",
+    "oral": [
+      "HTTP 子集的边界语义：chunked 拒绝、CL 冲突、裸 LF 立刻 400——为什么这些由解析器统一收口？",
+      "协议层的非法输入必须是 400：什么情况会让它冒成 500、为什么那是协议实现错误？",
+      "`Connection: close` 的承诺要在行为上兑现：发完承诺的响应 → SHUT_WR → 读干净 → EOF 回收。",
+      "GBN 的累积确认 vs SR 的缓存：同一丢包轨迹下有效载荷比不同在哪？"
+    ],
+    "modify": "把固定超时换成 SRTT/RTTVAR（Jacobson/Karels）估计，用同一 seed 比较重传次数与时隙。",
+    "modify_from": "练习建议 2",
+    "fail": "在\"发完 503 立刻 close\"的路径上复现坑 7：为什么 Windows 上 503 会被 RST 冲掉？对照\"发完 → SHUT_WR → 读干净\"的修法，说清每一步各解决什么。",
+    "fail_from": "踩坑 7（503 被 RST 冲掉）",
+    "sources": [
+      {
+        "file": "projects/B11-net-lab/README.md",
+        "anchor": "把固定超时换成 SRTT/RTTVAR（Jacobson/Karels）估计"
+      },
+      {
+        "file": "projects/B11-net-lab/README.md",
+        "anchor": "503 被 RST 冲掉"
+      },
+      {
+        "file": "projects/B11-net-lab/README.md",
+        "anchor": "让客户端在收到响应前断开"
+      }
+    ]
+  },
+  {
+    "id": "B12",
+    "project": "B12-algo-arena",
+    "title": "五大范式算法竞技场",
+    "course": "算法分析与设计",
+    "oral": [
+      "五个范式各一道代表题；\"暴力参照\"在每一题里断言的是什么？",
+      "对拍比的是约定：三种图实现\"边方向\"不一致的 118 组分歧说明了什么？",
+      "实测复杂度的前提是\"输入能触发最坏情况\"：Bellman-Ford 斜率 1.20 怎么修到 1.96？",
+      "计时口径：为什么实验一律用 `bench.sweep`（输入先备好、只测算法本体）？"
+    ],
+    "modify": "给 Dijkstra 加 A*，启发式分别用曼哈顿距离和欧几里得距离，说明**容许性**（不高估剩余代价）为什么是\"结果仍最优\"的前提，以及欧几里得版为什么必须小心浮点比较。",
+    "modify_from": "练习建议 5",
+    "fail": "把三个图实现的\"边方向\"约定再次弄不一致（坑 1 的现场：两个当无向、一个当有向），跑 200 组随机图对拍——多少组不一致？这说明对拍比的是什么？",
+    "fail_from": "踩坑 1（三种图实现各用各的\"边方向\"约定）",
+    "sources": [
+      {
+        "file": "projects/B12-algo-arena/README.md",
+        "anchor": "给 Dijkstra 加 A*，启发式分别用曼哈顿距离和欧几里得距离"
+      },
+      {
+        "file": "projects/B12-algo-arena/README.md",
+        "anchor": "200 组随机图对拍里 **118 组不一致**——对拍比的是约定"
+      },
+      {
+        "file": "projects/B12-algo-arena/README.md",
+        "anchor": "计时把输入生成也算进去了"
+      }
+    ]
+  },
+  {
+    "id": "B13",
+    "project": "B13-tinylang",
+    "title": "编译器 tinylang（词法→VM）",
+    "course": "编译原理",
+    "oral": [
+      "六阶段流水线各层的产物与\"行列定位\"是怎么带下去、又怎么在错误里用出来的？",
+      "双后端（字节码 VM vs 树遍历）互证：300 个随机程序逐字节一致说明什么？",
+      "常量池按 (类型, 值) 去重；`list.count(1)` 数出 3 个常量的巧合怎么解释？",
+      "调用帧与深度上限 100：为什么树遍历侧要临时抬高宿主递归上限（护栏公式）？"
+    ],
+    "modify": "**给语言加数组与越界检查**，然后写快排：先定\"数组怎么作为参数传递（引用还是拷贝）\"，再实现下标与越界错误——做完它，`tests/test_recursion.py` 里那句\"快排不在其中\"就可以删掉。",
+    "modify_from": "练习建议 1",
+    "fail": "把词法运算符表里的 `,` 去掉（坑 9 的现场），解析 `hanoi.tiny`——错误信息说的是\"无法识别的字符\"还是别的？为什么冒烟解析能当场抓出它？",
+    "fail_from": "踩坑 9（词法漏了逗号）",
+    "sources": [
+      {
+        "file": "projects/B13-tinylang/README.md",
+        "anchor": "**给语言加数组与越界检查**，然后写快排"
+      },
+      {
+        "file": "projects/B13-tinylang/README.md",
+        "anchor": "（候选②）**词法漏了逗号**：`fun f(a : int, b : int)`"
+      },
+      {
+        "file": "projects/B13-tinylang/README.md",
+        "anchor": "教训：**期望值必须有出处**，不能靠印象。"
+      }
+    ]
+  },
+  {
+    "id": "B14",
+    "project": "B14-java-paint",
+    "title": "Java 画板（撤销/重做 + 可信存取）",
+    "course": "Java 面向对象程序设计",
+    "oral": [
+      "命令模式：undo/redo 两条栈与\"重做拿到同一个形状实例\"为什么重要？",
+      "观察者只有一个回调（内容变了）的取舍——为什么拆成两个更差？",
+      "工厂：加一种形状只改一处；画布代码里为什么不该出现 `if (tool == RECT)`？",
+      "不信任文件：白名单 + 落点复核 + 原子写 + 不用 ObjectInputStream 各防什么？"
+    ],
+    "modify": "加\"拖右下角手柄缩放\"：把 `translatedBy` 扩成 `scaledBy(...)`，想清楚矩形和线段各怎么缩放，并给撤销/重做补上对应测试（快照模型那条测试可以直接拿来加一步\"缩放\"操作）。",
+    "modify_from": "练习建议 1",
+    "fail": "把 `hashCode` 故意改坏（坑 3 的现场：用数组身份当键），跑 7054 项——哪几条测试先红？这一步确认的是\"测试真的在盯着这件事\"，而不是恰好通过。",
+    "fail_from": "踩坑 3（equals 写对但 hashCode 用数组当键）+ 练习建议 5",
+    "sources": [
+      {
+        "file": "projects/B14-java-paint/README.md",
+        "anchor": "加\"拖右下角手柄缩放\"：把 `translatedBy` 扩成 `scaledBy(...)`"
+      },
+      {
+        "file": "projects/B14-java-paint/README.md",
+        "anchor": "`equals` 写对但 `hashCode` 用数组当键"
+      },
+      {
+        "file": "projects/B14-java-paint/README.md",
+        "anchor": "把 `hashCode` 故意改坏"
+      }
+    ]
+  },
+  {
+    "id": "B15",
+    "project": "dorm-repair",
+    "title": "需求工程：SRS + 可执行需求模型",
+    "course": "软件工程基础 + 软件需求工程",
+    "oral": [
+      "三张规范表（状态转换 / 权限矩阵 / 可见性矩阵）是谁的判据？模型与测试分别怎么用它们？",
+      "\"文档·模型·矩阵\"三方一致的机验链条：`check_docs.py` 逐格比对的是什么？",
+      "11 条假设为什么必须登记为待决问题，而不是悄悄当\"规定\"用？",
+      "AC（验收标准）转成可执行测试意味着什么？哪些 AC 只能留给用户？"
+    ],
+    "modify": "给状态机加\"退回公共池次数上限\"（AQ-10 的裁决），看哪几条测试与文档必须同时改。",
+    "modify_from": "练习建议 1",
+    "fail": "按练习 5 自己做一次验伪：只改 `02-srs.md` 里 HIGH 的时限、不动模型，跑 `checks/check_docs.py`——报不报、报在哪一格？这一步确认核对机制在工作。",
+    "fail_from": "练习建议 5（故意把文档和模型改歪一处）",
+    "sources": [
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "给状态机加\"退回公共池次数上限\""
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "故意把文档和模型改歪一处"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "`checks/check_docs.py` 逐格比对"
+      }
+    ]
+  },
+  {
+    "id": "B16",
+    "project": "dorm-repair",
+    "title": "交互设计：线框 + 四态 + 走查原型",
+    "course": "软件交互设计",
+    "oral": [
+      "四态（正常 / 加载 / 空 / 错误）约定：每个视图为什么\"空\"最容易漏？",
+      "按钮可用性读模型（`spec.attemptable()`）：前端为什么不许自己判断业务规则？",
+      "20 步走查清单的结果列为什么必须留空由人填——机器能替代的只是期望值部分？",
+      "可访问性（键盘 / 读屏）在原型里的最小承诺是什么？"
+    ],
+    "modify": "给\"强制关闭\"加二次确认（或按 AQ-03 加悬挂时长提示），改完跑 `run.bat`：哪几条测试应该红、哪几条根本管不到这件事？说不出来就说明测试有洞。",
+    "modify_from": "练习建议 6",
+    "fail": "按练习 2 的提示做一次\"越界改动\"：在 `app.js` 里直接加一条状态判断（而不走模型），先回去看第 9 条踩坑——说明这样改为什么会和\"前端不复制业务规则\"冲突。",
+    "fail_from": "练习建议 2（维修员自助退回）+ 踩坑 9",
+    "sources": [
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "给\"强制关闭\"加二次确认"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "加一个\"维修员自助退回\"的动作"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "四态（正常/加载/空/错误）约定"
+      }
+    ]
+  },
+  {
+    "id": "B17",
+    "project": "dorm-repair",
+    "title": "体系结构：依赖方向 + ADR + 契约",
+    "course": "软件体系结构",
+    "oral": [
+      "\"依赖图是测出来的\"：`check_arch.py` 用 ast 扫真实 import 与文档双向比对——为什么双向？",
+      "ADR 五节（背景 / 决定 / 备选 / 后果 / 验证方式）各防什么含糊？",
+      "契约 workflow.json 三方一致（文档现算 = 契约 = 模型），谁是唯一判定源？",
+      "三种架构风格对照的指标为什么必须\"实测\"（`arch/style_probe.py`）？"
+    ],
+    "modify": "仿照既有三条 ADR 写第四条（如\"为什么依赖方向表要双向核对\"），五节齐全后跑 `checks/check_arch.py`——check_adrs 要求\"被引用、无孤儿\"，想清楚新 ADR 该被谁引用。",
+    "modify_from": "取材自 README『三条决策记录』五节结构（不新造题）",
+    "fail": "按练习 5 的模式：往 `spec/` 里塞一个 `import netlab` 的文件，跑 `checks/check_arch.py`——核对器必须连报两条；删掉后立刻恢复干净。",
+    "fail_from": "练习建议 5 模式（对照 README 记录的反向测试）",
+    "sources": [
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "每条含背景·决定·备选·后果·验证方式"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "往 `spec/` 塞一个 `import netlab` 的文件"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "五节齐全、被引用、无孤儿"
+      }
+    ]
+  },
+  {
+    "id": "B18",
+    "project": "dorm-repair",
+    "title": "平台层：Java 分层单体 + 跨语言对拍",
+    "course": "软件开发架构平台",
+    "oral": [
+      "六包分层（contract/domain/infra/app/web/config）的依赖方向由谁核对？域层为什么不许碰时钟与传输？",
+      "契约只读不抄：Java 侧为什么在生产里没有状态表副本（构建时从 `../contracts` 复制）？",
+      "乐观锁与事务边界：并发冲突在哪种场景下会真的发生？",
+      "1680 格跨语言判定的对拍：两边各自独立消费契约，为什么比\"共享代码\"强？"
+    ],
+    "modify": "把字段级权限（维修员可否改优先级）建模进第 5 节的表，并想清检查器该怎么核对。",
+    "modify_from": "练习建议 3",
+    "fail": "按练习 5 的模式改歪一处：往 `java/` 某处加一条违反分层的 import，跑 `checks/check_arch.py`——`check_java` 的双向比对必须在原因上红。",
+    "fail_from": "练习建议 5 模式（对照 README 记录的 Java 双向核对）",
+    "sources": [
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "把字段级权限（维修员可否改优先级）建模进第 5 节的表"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "扫真实 `import` 与表**双向**比对"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "H2 + 事务与乐观锁 + 1680 格跨语言对拍"
+      }
+    ]
+  },
+  {
+    "id": "B19",
+    "project": "dorm-repair",
+    "title": "第二种接口形态：SOAP 1.2 端点",
+    "course": "SOA 原理与技术",
+    "oral": [
+      "为什么选 SOAP 而不是 gRPC——这台机器的依赖实测给出了什么事实？",
+      "\"状态字面量白名单\"在防什么：第二份判定源会从哪里悄悄长出来？",
+      "WSDL 由契约生成：手写 WSDL 与生成 WSDL 的差别是什么？",
+      "双接口对拍的牙齿怎么证过：塞一条自造规则会精确分叉吗？"
+    ],
+    "modify": "对照「双接口覆盖范围」把没进 SOAP 的写操作列成一张表；再改「状态字面量白名单」里一个文件名，跑 `checks/check_arch.py`——核对器是不是立刻双向报红？",
+    "modify_from": "取材自 README『双接口覆盖范围 / 状态字面量白名单』（不新造题）",
+    "fail": "按练习 5 的模式：在契约里改一个错误码描述再重新生成 WSDL，跑双接口对拍——REST 与 SOAP 两侧的判定必须在同一处、以同一种方式红。",
+    "fail_from": "练习建议 5 模式（对照 README「WSDL 由契约生成」）",
+    "sources": [
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "双接口覆盖范围、**状态字面量白名单**"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "**状态字面量白名单**"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "WSDL 由契约生成、本轮真缺陷 4 条"
+      }
+    ]
+  },
+  {
+    "id": "B20",
+    "project": "dorm-repair",
+    "title": "测试与验证工程：收缩 / 变异 / 流水线",
+    "course": "软件测试",
+    "oral": [
+      "ddmin 收缩与 BFS 独立算最短互为参照：为什么见证\"单步不可删\"要逐步验证？",
+      "变异自检台：每条变异的判红为什么要\"退出码非 0 **且**输出含预期原因\"？",
+      "\"退出码 0 但读不到数 = 红\"：这条流水线规则在防哪种假绿？",
+      "四件验证产物各自\"能被什么弄红\"——说不出来意味着什么？"
+    ],
+    "modify": "把 `docs/11-testing.md` 的「14 条反向探针清单」挑一条亲手跑一遍，看对应核对器是不是按文档说的方式红；对不上就说明文档或探针该改。",
+    "modify_from": "取材自 README『四件验证产物各自\"能被什么弄红\"』（不新造题）",
+    "fail": "从「12 条变异 + 1 条阴性对照」里挑一条独立复跑：把制造出的红与预期原因逐字对一遍——如果它红在别处（比如副本缺文件），这条变异就不算数。",
+    "fail_from": "练习建议 5 模式（对照 README『变异自检台』）",
+    "sources": [
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "本轮 4 次自欺记录、14 条反向探针清单"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "12 条变异 + 1 条阴性对照，每条都要把对应核对器弄红"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "退出码 0 但读不到数＝红"
+      }
+    ]
+  },
+  {
+    "id": "B21",
+    "project": "dorm-repair",
+    "title": "质量门禁与失败分诊",
+    "course": "软件质量保证",
+    "oral": [
+      "门禁口径表（10 层谁拦谁放）与分诊表（7 类怎么归）各是给谁看的\"规范\"？",
+      "\"口径过期就拒判\"：为什么门禁宁可拒绝给结论，也不许按旧表放行？",
+      "`mutation` 层被降级为什么会被导出器拒绝——它在防\"把牙齿拔了再签字\"吗？",
+      "走查证据列（T: 文件::方法）核实的是什么：引用必须真的存在？"
+    ],
+    "modify": "改 `docs/12-qa.md` 一张表（比如把某层从 blocking 挪到 advisory），重跑 `export_gate.py --write` + `quality_gate.py`——解释为什么 `mutation` 不许被降级。",
+    "modify_from": "取材自 README『两张规范表 + 不许被降级』（不新造题）",
+    "fail": "跑 `tools/triage.py --selftest` 后，把一条规则的特征串改错一位再跑——它必须红；README 记过\"每条规则至少一条真实样本\"是分诊可信的前提。",
+    "fail_from": "练习建议 5 模式（对照 README『每类分诊必须有真实样本』）",
+    "sources": [
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "两张**规范表**（门禁口径：10 层谁拦谁放；分诊：7 类怎么归）"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "门禁执行器：口径过期就**拒判**；blocking 全绿才 PASS"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "`mutation` 不许被降级、每类分诊必须有真实样本"
+      }
+    ]
+  },
+  {
+    "id": "B22",
+    "project": "dorm-repair",
+    "title": "项目管理：事实台账 + 风险/复盘",
+    "course": "软件项目管理",
+    "oral": [
+      "事实台账 27 个键从 6 个事实源现算：为什么\"管理文档里的数字\"不许手写？",
+      "\"每条未裁决 AQ 必须在册\"与\"每条工程风险必须写'怎么知道它发生了'\"各防什么？",
+      "复盘分类必须恰好覆盖全部编号（重号漏号都红）——分类是\"划分\"是什么意思？",
+      "台账键\"每个都被引用一次\"防的是哪种装饰？"
+    ],
+    "modify": "给 `docs/13` 加一句 `L:键=值` 引用一个还没人用的台账键，跑 `checks/check_pm.py`——先想清\"没人读的键就是装饰\"，再决定这个键该不该存在。",
+    "modify_from": "取材自 README『台账 27 个键每个都被引用一次』（不新造题）",
+    "fail": "在 `docs/14` 删掉一条未裁决 AQ（或把已裁决的标成未决），跑 `checks/check_pm.py`——README 说少一条就红、标错也红；对一下它报的是不是你改的这条。",
+    "fail_from": "练习建议 5 模式（对照 README『未裁决 AQ 必须在册』）",
+    "sources": [
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "台账 27 个键每个都被引用一次"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "每条**未裁决** AQ 必须在册（少一条就红）"
+      },
+      {
+        "file": "projects/dorm-repair/README.md",
+        "anchor": "分类必须恰好覆盖全部编号，重号漏号都红"
+      }
+    ]
+  }
+]
