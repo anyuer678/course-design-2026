@@ -13,13 +13,15 @@
 ## 运行
 
 ```
-run.bat                              # 自测（74 + 16 项）+ 全流程演示
-python tests\test_netlab.py          # 只跑主测试
-python tests\test_against_stdlib.py   # 只跑与标准库的对拍
+run.bat                              # 三步：101 项测试（75 + 16 + 10 展示页）→ 全流程演示 → 展示页新鲜度
+python tests\test_netlab.py          # 只跑主测试（75 项）
+python tests\test_against_stdlib.py   # 只跑与标准库的对拍（16 项）
 python demo.py                        # 只看演示（只绑 127.0.0.1，跑完全部关闭）
+python tools\showcase.py --write      # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
-`run.bat` 用 CRLF + `chcp 65001` + `set PYTHONUTF8=1`；`echo` 文案里不出现未转义的 `>`，
+`run.bat` 已按 PLAN §6 重写为**纯 ASCII 正文 + CRLF + `chcp 65001` + `set PYTHONUTF8=1`**
+（原版正文里的中文注释会被 cmd 按字节偏移重读时踩坑）；`echo` 文案里不出现未转义的 `>`，
 否则 cmd 会把它当重定向，既不报错也不改退出码，只在目录里凭空留一个垃圾文件。
 
 ## 目录
@@ -32,6 +34,8 @@ netlab/udp.py              数据报格式（kind/seq/len/crc32）、真回环�
 netlab/gbn.py              Go-Back-N 发送窗 / 按序交付 / 仿真与真套接字两种驱动
 tests/test_netlab.py       解析边界、服务器行为、多路复用与资源回收、UDP 与 GBN
 tests/test_against_stdlib.py  与 http.server / http.client 的解析器对拍 + 分歧表断言
+tests/test_showcase.py     展示页测试（新鲜度/篡改必红/演示解析钉住/规范化规则真生效）
+tools/showcase.py          展示页生成器 → web/showcase.html（旅程/边界/GBN 全部现算）
 demo.py                    五段演示：请求旅程 → CRUD → 复用与拒绝 → UDP → GBN 实验
 ```
 
@@ -138,9 +142,10 @@ demo.py                    五段演示：请求旅程 → CRUD → 复用与拒
 前六行是"我们拒、标准库收"的方向性差异，测试 `TestDocumentedDivergences` 会同时断言两边；
 哪天前面的库改了默认，测试先叫，README 再改。
 
-## 测试策略（75 + 16 = 91 项，另有 62 个 subTest）
+## 测试策略（75 + 16 + 10 = 101 项，另有 62 个 subTest）
 
-（2026-09-30 补 3xx/409/415/429 时新增一条"重定向状态码可构造"的回归，故由 90 变 91。）
+（2026-09-30 补 3xx/409/415/429 时新增一条"重定向状态码可构造"的回归，故由 90 变 91；
+2026-10-03 展示层批次⑤加 10 项展示页测试（只解析 demo 输出与页面自检），故由 91 变 101。）
 
 * **解析层**：合法/半包/畸形/越界逐条断，包括 40 个不同位置的单bit翻体能被 crc 抓到。
 * **服务器行为**：CRUD、204 不带长度、HEAD 与 GET 长度一致、UTF-8 键名、405/501/404、
@@ -155,6 +160,18 @@ demo.py                    五段演示：请求旅程 → CRUD → 复用与拒
 * **对拍**：`http.client` 驱动我们的服务器（keep-alive、HEAD、413、必需头部）；
   同一份响应字节交给两个解析器，结论（状态码 + 排序后的头部 + 体 + 是否刚好吃完）必须相同；
   截断一个字节时两边都判"没读完"。
+
+## 展示页（2026-10-03 展示层工程批次⑤）
+
+`web/showcase.html` 单文件自包含（双击即看、零网络依赖），数据由 `tools/showcase.py` 真跑
+`python demo.py` 后解析：五段演示原文、**一条请求的旅程**（请求字节 → 消耗字节 → 解析结论
+→ 响应字节）、**边界拒绝表**（8 种越界请求 + 3 类解析层错误）、**GBN 丢包实验**
+（0–40% 五档扫描表 + 窗口 1/2/4/8 对照 + 回绕 + 真回环 30000 字节）；HTTP 子集的硬上限与
+状态码表从 `netlab/http1.py` 现场 import 读取。演示里四处随环境波动的数字（临时端口 / Date /
+`open_now` / 回环耗时）按生成器文档串里的可审计规则规范化——页面可逐字重算，`--check` 过期即红。
+展示页测试 10 项（`python tests\test_showcase.py`）。run.bat 三步（101 项测试 → 演示 →
+展示页新鲜度）两跑退出码 0/0、`not recognized` 0、规范化后日志逐字相同（各 107 行，
+规范项=单测计时 + 上述四类现场值）。
 
 ## 已知局限（说清楚，不含糊）
 

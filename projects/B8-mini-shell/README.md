@@ -20,13 +20,15 @@ fork**，所以实际运行在 **WSL2 Ubuntu-24.04**（PLAN §8 的既有环境�
 ## 运行
 
 ```
-run.bat                     # Windows 入口：wsl -d Ubuntu-24.04 执行下面三步
+run.bat                     # Windows 入口：三步——WSL 编译+双入口自测+演示 → 展示页新鲜度 → 展示页测试
 bash run.sh                 # （WSL 里）等价入口
 gcc -std=c11 -O2 -Wall -Wextra -o build/msh src/msh.c
 python3 -m unittest discover -s tests        # 24 项（discover 入口）
 python3 tests/test_msh.py                    # 24 项（直跑入口，与上同数）
 python3 demo.py                              # 六段演示，结果全部实测
 ./build/msh                                  # 交互使用（Ctrl-D 退出）
+python tests\showcase_check.py               # 9 项展示页测试（Windows 侧直跑；命名原因见目录表）
+python tools\showcase.py --write             # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
 ## 目录
@@ -36,8 +38,10 @@ python3 demo.py                              # 六段演示，结果全部实测
 | `src/msh.c` | mini-shell 本体：词法（引号/运算符）→ 管道语法 → fork/exec/dup2/waitpid |
 | `tests/test_msh.py` | 24 项测试：脚本驱动会话，逐条验证行为契约（含 /proc 数僵尸） |
 | `demo.py` | 六段演示：退出码 / 内建 / 管道 / 重定向 / 回收 / 错误路径，全部实测 |
+| `tests/showcase_check.py` | 9 项展示页测试。**命名偏离说明**：本项目主测试在 WSL 里由 `unittest discover` 跑，"双入口同数 = 24" 是 run.sh 的硬口径——`test*.py` 命名的文件会被 WSL 的 discover 抓到（模块级跳过也计入 Ran），所以展示页测试起名 `showcase_check.py`（模式外），只在 Windows 侧直跑 |
+| `tools/showcase.py` | 展示页生成器 → `web/showcase.html`（用**一次** `wsl` 调用完成编译+双入口自测+六段演示+八脚本回放，再解析成结构化数据） |
 | `run.sh` | Linux 侧一键入口：编译 → 双入口自测（计数行去计时）→ 演示 |
-| `run.bat` | Windows 侧薄包装：`wsl -d Ubuntu-24.04 -e bash -c "./run.sh"` |
+| `run.bat` | Windows 侧入口：`wsl -d Ubuntu-24.04 -e bash -c "./run.sh"` → 展示页新鲜度 → 展示页测试 |
 
 ## 知识点 · 实现 · 怎么被验证
 
@@ -56,10 +60,21 @@ python3 demo.py                              # 六段演示，结果全部实测
 ## 实测（2026-10-02，事故后重建；数字均为本轮现算）
 
 - 自测：**24 项测试全过、双入口同数**（`discover` 与直跑都是 `Ran 24 tests`）。
-- `run.bat`（转交 WSL）连跑两次退出码 **0**、`not recognized` **0**、`build/` 之外**无新增**、
-  两次日志**逐字相同**（自测段用 `sed` 去掉 unittest 计时行——确定性是设计出来的）。
+- `run.bat` 连跑两次退出码 **0**、`not recognized` **0**、`build/` 之外**无新增**、
+  两次日志**逐字相同**（自测段用 `sed` 去掉 unittest 计时行——确定性是设计出来的；
+  2026-10-03 展示层批次⑤后按三步重测：各 70 行，原始日志仅展示页测试的 1 行计时不同）。
 - 演示现算读数：`exit 42` → 42；`printf | sort | head -2` → `a b`；`>` 截断 / `>>` 追加
   实测；**3 条命令跑完僵尸 = 0、未回收子进程 = 0**；3 条坏语法全部报错后仍输出 `done`。
+- 展示页（2026-10-03 展示层工程批次⑤）：`web/showcase.html` 单文件自包含——六段演示现场输出、
+  **八脚本会话回放**（管道 / 重定向落盘回读 / 内建 cd / 退出码 0-1-127 / 错误路径）、
+  双入口自测原始计数；路径规范化为 `<项目根>`（页面不绑机器）；与现算**逐字一致**
+  （`--check` 过期即红）。展示页测试 9 项（`python tests\showcase_check.py`）。
+- **2026-10-03 修掉一个真实竞态（被展示页测试逼出来的）**：`test_zombie_reaping` 与 demo
+  第 5 段原先"轮询到空快照就 break"——shell 还没 fork 之前就把"没发生过"当"回收完毕"：
+  假红实测出现两次（展示页测试首跑一次、3 连跑首跑一次），假绿是同一竞态的另一半
+  （demo 可能什么都没做就报"回收 0 个"）。同步点改为：测试用 `echo done > sync.txt`
+  的**文件信号**（且它是最后一条命令——之后的空快照才是稳定结论），demo 用 `sleep 0.2`
+  这个看得见的子进程当同步点。修复后 24 项连跑 6 次全绿、demo 两遍逐字一致（页面哈希不变）。
 
 ## 重建说明（2026-10-02 事故后，非逐字）
 

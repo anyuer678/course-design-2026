@@ -57,7 +57,7 @@
   },
   {
    "id": "b8-shell",
-   "claim": "fork/exec/任意段管道/重定向 shell：24 项测试全过，僵尸进程去 /proc 当面数",
+   "claim": "fork/exec/任意段管道/重定向 shell：24 项测试全过，僵尸进程去 /proc 当面数；展示页（第⑤批）经一次 wsl 调用现算（六段演示 + 八脚本会话回放）",
    "pointers": [
     "projects/B8-mini-shell/README.md"
    ],
@@ -84,11 +84,11 @@
   },
   {
    "id": "b11-net",
-   "claim": "HTTP/1.1 子集 + UDP 可靠传输（GBN）与可复现丢包实验：91 项（75+16）",
+   "claim": "HTTP/1.1 子集 + UDP 可靠传输（GBN）与可复现丢包实验：101 项（75 + 16 + 10 展示页）；展示页（第⑤批）旅程/边界/GBN 现算",
    "pointers": [
     "projects/B11-net-lab/README.md"
    ],
-   "anchor": "75 + 16 = 91 项",
+   "anchor": "75 + 16 + 10 = 101 项",
    "commit": "0f30423"
   },
   {
@@ -210,11 +210,11 @@
   },
   {
    "id": "b32-sec",
-   "claim": "四组漏洞版/修复版（SQL 注入/XSS/口令/路径穿越）+ 静态扫描器：50 项测试",
+   "claim": "四组漏洞版/修复版（SQL 注入/XSS/口令/路径穿越）+ 静态扫描器：60 项（50 核心 + 10 展示页）；展示页（第⑤批）四组对照/扫描器现算",
    "pointers": [
     "projects/B32-sec-lab/README.md"
    ],
-   "anchor": "50 项测试",
+   "anchor": "60 项通过（50 核心 + 10 展示页）",
    "commit": "16d125f"
   },
   {

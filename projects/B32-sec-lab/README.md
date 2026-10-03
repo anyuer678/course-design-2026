@@ -14,10 +14,12 @@
 ## 运行
 
 ```
-run.bat                            # 四步：测试(双入口) → 政策核对 → 六段演示
-python -m unittest discover -s tests   # 50 项
-python tests\test_b32.py               # 双入口同数
+run.bat                            # 五步：测试(discover 60) → 直跑 50 → 政策核对 → 六段演示 → 展示页新鲜度
+python -m unittest discover -s tests   # 60 项（50 核心 + 10 展示页）
+python tests\test_b32.py               # 50 项核心（直跑入口）
+python tests\test_showcase.py          # 10 项展示页（直跑单文件）
 python demo.py                         # 六段演示，数字全部现算
+python tools\showcase.py --write       # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
 纯标准库（`sqlite3` / `hashlib` / `hmac` / `secrets` / `html` / `http.server` / `ast`），**零下载零安装**。
@@ -32,6 +34,8 @@ python demo.py                         # 六段演示，数字全部现算
 | `sec32/traversal.py` | 路径穿越：join 直开 / 黑名单 / 前缀检查 / 解析后归属判定 + 与 stdlib 的分歧表 |
 | `sec32/audit.py` | 静态扫描器：`ast` 扫拼接点 + 人工登记表 + **双向比对** |
 | `tests/test_b32.py` | 50 项测试（含三处"改坏临时副本"的反向证明与沙箱守卫） |
+| `tests/test_showcase.py` | 10 项展示页测试（新鲜度/篡改必红/四组对照解析钉住/计时脱敏真生效） |
+| `tools/showcase.py` | 展示页生成器 → `web/showcase.html`（四组对照/扫描器/演示全部现算；第 3 段计时脱敏成 `[现场]`） |
 | `demo.py` | 六段演示 |
 
 ## 知识点 · 实现 · 怎么被验证（不是"跑过了"，是"能失败"）
@@ -58,11 +62,19 @@ python demo.py                         # 六段演示，数字全部现算
 
 ## 实测（2026-10-02，本轮全部重跑）
 
-- 测试：**50 项通过**，双入口同数；pytest 口径 **50 passed + 41 subtests**；`ruff F,E9` clean。
+- 测试：**60 项通过（50 核心 + 10 展示页）**；discover 60 = 直跑 50 + 展示页 10；
+  pytest 口径 **50 passed + 41 subtests**（核心套件）；`ruff F,E9` clean。
 - 四组读数：SQL 的 4 例登录/2 例查询/4 例排序/二阶/叠句全部按预期分化；
   XSS **6/6** 载荷在漏洞版有信号、修复版 **0** 条、往返一致 **6/6**；
   穿越判定表 15 条（修复版越界 **0**）；口令成本表见上（实时测量）。
-- `run.bat` 连跑两次退出码 **0**、日志 `not recognized` **0**、目录 **无新增文件**。
+- `run.bat` 连跑两次退出码 **0**、日志 `not recognized` **0**、目录 **无新增文件**
+  （2026-10-03 展示层批次⑤后按五步重测：各 196 行，规范化后逐字相同——
+  规范项=单测计时 + 第 3 段实时测量数字）。
+- 展示页（2026-10-03 展示层工程批次⑤）：`web/showcase.html` 单文件自包含——六段演示原文
+  （第 3 段吞吐按规则脱敏成 `[现场]`，页面不冻结会过期的计时数字）、**四组对照速览**
+  （SQL 14 行分化 / XSS 8 行信号计数 / 穿越判定表 15 条 + 标准库参照）、**静态扫描器**
+  （逐文件拼接点 + 八个拼接点名册 + 「摘掉包装函数 8 → 1」的失效证明）；与现算**逐字一致**
+  （`--check` 过期即红）。展示页测试 10 项（`python tests\test_showcase.py`）。
 - demo 六段退出码 0；**第 3 段是实时测量**，两次运行有 ±5% 自然波动，
   其余段落逐字一致（可用 `python demo.py > a.txt` 跑两遍 `diff` 自证）。
 

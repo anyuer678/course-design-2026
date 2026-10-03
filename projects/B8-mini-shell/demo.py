@@ -14,7 +14,6 @@ from __future__ import annotations
 import pathlib
 import shutil
 import subprocess
-import sys
 import time
 
 ROOT = pathlib.Path(__file__).resolve().parent
