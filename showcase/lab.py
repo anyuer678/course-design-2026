@@ -45,7 +45,7 @@ SERVE = {
         "hint": "HTTP/1.1 子集 + 单线程 select；示例是读回演示里 PUT 过的键",
     },
     "B31-shorturl": {
-        "argv": [PY, "-m", "b31.server", "--port", "8312"],
+        "argv": [PY, "-m", "b31.server", "--port", "8312", "--memory"],
         "port": 8312,
         "sample": 'POST /api/links HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nContent-Type: application/json\\r\\n'
                   'Content-Length: 19\\r\\nConnection: close\\r\\n\\r\\n{"url":"http://a/"}',
