@@ -27,13 +27,14 @@ GET  /api/links/1                     →  读命中数与时间戳
 ## 运行
 
 ```
-run.bat                     环境检查 → 测试 → 演示 → 启动服务（第 4 步给人工在浏览器里验证）
-run.bat no-server           只跑到演示，不开服务也不开浏览器
+run.bat                     五步：环境检查 → 测试 → 演示 → 展示页新鲜度 → 启动服务（第 5 步给人工在浏览器里验证）
+run.bat no-server           只跑到展示页新鲜度，不开服务也不开浏览器
 python -m unittest discover -s tests
 python -m pytest tests -q
 python demo.py
 python -m b31.server --port 8000              落盘数据库（data/shorturl.sqlite）
 python -m b31.server --memory                 内存数据库，退出即忘
+python tools/showcase.py --write            重生展示页 web/showcase.html（--check 过期即红）
 ```
 
 `-m b31.server` 用 Ctrl+C 停。浏览器打开 `http://127.0.0.1:8000/`。
@@ -103,7 +104,7 @@ B31 只用 B11 已实现的子集：`GET/HEAD/POST`、只认 `Content-Length`、
 
 ## 验证：自动化做了什么，没做什么
 
-**73 项测试 + 129 个 subTest 全通过**（`unittest` 与 `pytest` 两种入口都实跑），
+**81 项测试 + 129 个 subTest 全通过**（73 核心 + 8 展示页；`unittest` 与 `pytest` 两种入口都实跑），
 `ruff --select F,E9` 干净，`run.bat no-server` 退出码 0 且运行前后目录快照无新增文件。
 
 | 层 | 内容 |
@@ -123,6 +124,12 @@ B31 只用 B11 已实现的子集：`GET/HEAD/POST`、只认 `Content-Length`、
   复制按钮在浏览器权限下的表现、Ctrl+C 能否干净退出。
 * 前端的可访问性只做静态检查（`role="status"`、`aria-live`、`label`），
   键盘走查和读屏器表现需要人来看。
+
+展示页（2026-10-03 展示层批次⑩）：`web/showcase.html` 六段演示现算——端口、Date 头、
+创建响应（201）的 Content-Length 三处易变值按规则规范化为占位（规则写在生成器 docstring）；
+正文里的 URL 展示串把 scheme 冒号写成数字实体（浏览器渲染不变、页内零外链）。
+`run.bat no-server` 两跑退出码 0，规范化日志逐字相同（各 121 行；规范项=单测计时 1 + 第 3 段端口/Date 2；
+创建响应长度规则防御性保留、本轮未触发）。
 
 ## 踩过的坑（本轮真实记录）
 

@@ -15,7 +15,7 @@
 调用约定先写纸上、深度上限 100、双后端对拍含函数、94 项测试双入口（含 9 项展示页））、
 ③ B30 Raft 完整化（`projects/B30-mini-raft/`：快照只压已提交、InstallSnapshot、
 单步成员变更一次一个、28 项测试双入口）、⑤ B23 + sklearn 对拍（`projects/B23-ml-from-scratch/`：
-口径先写纸上、四组模型同参对照 + 四条负面对照、45 项测试双入口，安装双口径 8.7MB/47.0MB）；
+口径先写纸上、四组模型同参对照 + 四条负面对照、54 项测试双入口（含 9 项展示页），安装双口径 8.7MB/47.0MB）；
 `chosen` 里各挂**机验锚点**，同样受现算复核。
 **候选清零是收官状态而不是"没有数据"**：核验器允许"候选空 + chosen 非空"（双空才红），
 负面对照改用**注入式夹具**（`tools/check_seeds.py::synthetic_seed`）继续钉住全部规则；
@@ -25,13 +25,14 @@
 ## 运行
 
 ```
-run.bat                                   # 两步：19 项测试 → demo（四段；唯一实测=fsync 基准两行）
-python -m unittest discover -s tests      # 19 项（双入口同数）
-python tests/test_seeds.py                # 直跑同 19 项
+run.bat                                   # 三步：29 项测试 → demo（四段；唯一实测=fsync 基准两行）→ 展示页新鲜度
+python -m unittest discover -s tests      # 29 项（20 核心 + 9 展示页）
+python tests/test_seeds.py                # 直跑同 20 项（本文件）
 python demo.py                            # 核验 → 负面对照 → 三维比较表 → fsync 基准【实测】
 python tools/check_seeds.py               # 只跑事实核验（行数/探针/锚点，过期即红）
 python tools/report_seeds.py --write      # 比较表写到 build/seeds.md
 python tools/logdiff.py a.log b.log       # 两次日志规范化比对（基准 ms 行 + 单测计时）
+python tools/showcase.py --write          # 重生展示页 web/showcase.html（--check 过期即红）
 ```
 
 零依赖：纯标准库（环境探针 numpy/sklearn 是**被测对象**不是依赖）。
@@ -44,7 +45,8 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（基准
 | `tools/check_seeds.py` | 事实核验器：行数重算逐字比对、`code-count` 缺口探针（含"glob 必须匹配到文件"规则）、`import-check` 实跑、锚点检查；另带注入夹具 `synthetic_seed`（候选清零态的负面对照用） |
 | `tools/report_seeds.py` | 三维比较表生成器（markdown，含风险对照与实测基线；候选清零时渲染收官段落） |
 | `tools/bench_io.py` | 候选① 的资源基准：写盘 vs 写盘+fsync 的每操作中位数（本机实测） |
-| `tests/test_seeds.py` | 19 项：核验器 2 正（含清零态）+ 10 负（含 chosen 记录）、比较表 3、设计钉住 4、基准 1 |
+| `tests/test_seeds.py` | 20 项：核验器 13（1 正 + 12 负：含清零态、chosen 与演示负面对照）、比较表 3、设计钉住 4 |
+| `tools/showcase.py` · `web/showcase.html` · `tests/test_showcase.py` | 展示页生成器 + 页面 + 9 项展示页测试（选定清单/比较表/毫秒规范化/零外链） |
 | `demo.py` · `run.bat` · `tools/logdiff.py` | 演示与交付三件套（本仓库通例） |
 
 ## 知识点 与 实现 与 怎么被验证
@@ -60,15 +62,21 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（基准
 
 ## 实测（2026-10-02 收官；数字均为本轮现算）
 
-- **19 项测试双入口同数**（`discover` 与直跑均 19 OK，含新增的"候选清零态"正/负两条）；
+- **29 项测试**（`discover` 29 = 20 核心 + 9 展示页；两文件直跑 20 / 9 分别 OK）；
   `run.bat` **两次退出码 0**、**无任何新增文件**、两次日志经 `tools/logdiff.py`
-  规范化后**逐字相同**（各 92 行；规范项 = 基准 ms 3 处 + unittest 计时 1 条）。
+  规范化后**逐字相同**（各 95 行；规范项 = 基准 ms 3 处 + unittest 计时 1 条）。
 - 核验：**0 个未选候选、0 处文件行数、0 个探针 + 5 条已选定记录（④ B38 主从复制、
   ① B10 fsync+页式、② B13 调用帧、③ B30 Raft 完整化、⑤ B23 + sklearn 对拍）**
   全部现算通过；负面对照（注入式夹具改错行数/探针/假锚点/chosen 假锚点）全红；
   "候选与已选定同时为空"必须红（专门一条）。
 - 本机基准（60 次中位数，8KB 记录）：**plain ≈ 0.40 ms / +fsync ≈ 0.76 ms**——
   「提交即持久」的边际成本 ≈ 0.36 ms/条（本机介质相关，demo 每次现算）。
+- 展示页（2026-10-03 展示层批次⑩）：`web/showcase.html` = 选定清单 + 三维比较表 + 演示原文
+  （基准 ms 规范化为占位 <当场>），与重算逐字一致（`--check` 过期即红）。
+- **顺带修两处真问题（本批抓出）**：① `chosen/b23-numpy-sklearn` 的机验锚点「45 项双入口同数」
+  随 B23 更新（54 项）过期——核对器与两条测试当场报红，已改「54 项双入口同数」（夹具锚点同步）；
+  ② 演示「改错探针期望值」原写 `expected = 1`，因 `1 == True` 是**空操作**（此前被①的失败遮蔽）——
+  改 `False`，并新增 `test_demo_negative_controls_all_red` 把整段负面对照钉住。
 
 ## 坑（都留了钉子）
 
@@ -78,6 +86,9 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（基准
    修改代码的人会立刻面对"去更新 seeds.json"这一显式动作。
 3. **基准数字不能进核验器**：fsync 时间每次不同，塞进"必须相等"的检查会变成 flaky——
    所以基准放 demo【实测】+ logdiff 规范化，核验器只管确定性事实（行数/计数/import）。
+4. **"故意改坏"本身可能是个空操作**：负面对照把探针期望改成 `1`，而判定是 `ok != expected`——
+   `1 == True`，于是什么都没改，演示还停在"全绿"（被上游锚点失败遮住没看见）。
+   负面对照的输入必须是**合法但错**的值（写 `False`），并补一条"整段负面对照必须全红"的测试钉住。
 
 ## 明确不做（本期范围外）
 

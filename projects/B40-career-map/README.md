@@ -23,11 +23,12 @@
 ```
 
 ```
-run.bat                                   # 两步：20 项测试 → demo（四段；无计时输出）
-python -m unittest discover -s tests      # 20 项（双入口同数）
-python tests/test_career.py               # 直跑同 20 项
+run.bat                                   # 三步：28 项测试 → demo（四段；无计时输出）→ 展示页新鲜度
+python -m unittest discover -s tests      # 28 项（20 核心 + 8 展示页）
+python tests/test_career.py               # 直跑同 20 项（本文件）
 python demo.py                            # 核验 → 负面对照 → 示例 JD 映射 → 使用与边界
 python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则只剩 unittest 计时）
+python tools/showcase.py --write          # 重生展示页 web/showcase.html（--check 过期即红）
 ```
 
 零依赖：纯标准库 + git（核验 `@提交号` 用；缺 git 时核验器明确报"无法核验"）。
@@ -42,6 +43,7 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则
 | `tools/map_jd.py` | 映射器：JD 文本 → 命中 → 已覆盖（证据列表）/ 缺口（练习）→ markdown 矩阵 |
 | `jd/EXAMPLE-合成示例（非真实岗位）.txt` | 合成示例 JD（横幅显式标注；演示工具用法） |
 | `tests/test_career.py` | 20 项：核验器 1 正 + 9 负、映射口径 7、诚实设计钉住 3 |
+| `tools/showcase.py` · `web/showcase.html` · `tests/test_showcase.py` | 展示页生成器 + 页面 + 8 项展示页测试（矩阵表/技能全景/零外链） |
 | `demo.py` · `run.bat` · `tools/logdiff.py` | 演示与交付三件套（本仓库通例） |
 
 ## 知识点 与 实现 与 怎么被验证
@@ -57,14 +59,16 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则
 
 ## 实测（2026-10-02，首次交付；数字均为本轮现算）
 
-- **20 项测试双入口同数**（`discover` 与直跑均 20 OK）；`run.bat` **两次退出码 0**、
+- **28 项测试**（`discover` 28 = 20 核心 + 8 展示页；两文件直跑 20 / 8 分别 OK）；`run.bat` **两次退出码 0**、
   **无任何新增文件**、两次日志经 `tools/logdiff.py` 规范化后**逐字相同**
-  （各 99 行；规范项只有 unittest 计时 1 条）。
+  （各 102 行；规范项只有 unittest 计时 1 条）。
 - 核验器：**31 条证据、15 个技能面**，指针/提交/锚点全部通过；三条负面对照全红。
 - 示例 JD 映射：命中 13/15 个技能面（C++、编译原理未提及，不计入矩阵）、
   **缺口 2 条**（容器与云原生、消息队列与中间件——仓库如实没有证据）。
 - 证据覆盖：B1–B14、dorm-repair（B15–B22）、B23–B35、B37–B39 共 31 条，
   每条都能落到"某文件某句 + 某提交"。
+- 展示页（2026-10-03 展示层批次⑩）：`web/showcase.html` = 示例 JD 差距矩阵成 HTML 表
+  + 15 技能面全景（缺口行红标）+ 演示原文，与重算逐字一致（`--check` 过期即红）。
 
 ## 坑（都留了钉子）
 

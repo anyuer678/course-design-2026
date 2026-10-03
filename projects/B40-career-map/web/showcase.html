@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>B40-career-map · 技能差距矩阵（课设作品集）</title>
+<style>
+body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f6f9;color:#1c2330}
+.sw-top{max-width:1150px;margin:12px 18px 0;padding:10px 14px;background:#fff;border:1px solid #d5d9e0;border-radius:10px}
+.sw-top .sw-link{font-size:13px;color:#1d4ed8;text-decoration:none}
+.sw-top h2{font-size:16px;margin:6px 0 2px}
+.sw-top p{margin:2px 0;color:#5f6773;font-size:13px}
+.sw-cards{max-width:1150px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin:10px 18px 0}
+.sw-card{background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:8px 12px;font-size:13px}
+.sw-card b{display:block;font-size:12px;color:#5f6773;margin-bottom:2px}
+.sw-panel{max-width:1150px;margin:10px 18px 0;background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:10px 14px;font-size:14px}
+.sw-panel h3{margin:4px 0 6px;font-size:15px}
+.sw-panel pre{background:#0f1115;color:#e6e9ef;border-radius:8px;padding:10px 12px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+.sw-panel kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid #d5d9e0;border-radius:4px;padding:0 4px;background:#fff}
+.sw-panel table{border-collapse:collapse;width:100%;font-size:13px}
+.sw-panel th,.sw-panel td{border:1px solid #d5d9e0;padding:4px 8px;text-align:left;vertical-align:top}
+.sw-panel th{background:#eef2f7}
+.sw-gap{color:#a3341f;font-weight:600}
+.sw-footer{max-width:1150px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+</style></head>
+<body data-showcase="B40-career-map">
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a>
+<h2>B40-career-map · 求职证据的可核验化 + JD 差距矩阵</h2>
+<p>每个技能面挂<b>可机验</b>证据：指针路径 + @提交号 + 锚点字符串，<kbd>tools/check_evidence.py</kbd>
+逐条去仓库和 git 里找；改坏一条必须红。JD 映射把岗位关键词对到证据，缺口转成练习清单。
+本页数字全部现算自 <kbd>demo.py</kbd> 与 <kbd>data/*.json</kbd>。</p></div>
+<section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>28 项（20 核心 + 8 展示页自测）</span></div><div class="sw-card"><b>证据索引</b><span>31 条核验 PASS（0 个问题）；指针落到 31 个目标（22 个提交号逐条在 git 里存在）</span></div><div class="sw-card"><b>示例 JD 映射</b><span>命中并已覆盖 11 个技能面；缺口 2 个（容器与云原生、消息队列与中间件）；未提及 2 个</span></div><div class="sw-card"><b>负面对照（核验器有没有牙齿）</b><span>3 条改坏全部报红且红在该原因上（假指针 / 假锚点 / 假提交号）</span></div><div class="sw-card"><b>诚实设计钉住</b><span>示例 JD 显式标注'非真实岗位'；缺口故意留空（测试钉死防'顺手补满'）；工具不替你选岗位（PLAN §5）</span></div><div class="sw-card"><b>怎么产生的</b><span>报告由'JD 文本 × 技能表 × 证据索引'三份数据现算，没有手抄数字</span></div></section>
+<section id="demo" class="sw-panel"><h3>示例 JD 差距矩阵（现算；合成示例，非真实岗位）</h3>
+<table><tr><th>技能面</th><th>命中关键词</th><th>状态</th><th>证据 / 缺口练习</th></tr><tr><td>数据结构与算法</td><td>数据结构、算法</td><td>已覆盖（3 条）</td><td>b2-datastruct、b12-algo、b4-algebra</td></tr><tr><td>操作系统与系统编程</td><td>进程、管道、系统编程</td><td>已覆盖（4 条）</td><td>b8-shell、b5-cpu-sim、b9-os-sim、b7-mini-make</td></tr><tr><td>网络编程与协议</td><td>网络、tcp、http、socket、协议</td><td>已覆盖（4 条）</td><td>b11-net、b31-shorturl、b35-mqtt、b38-redis</td></tr><tr><td>数据库与存储</td><td>数据库、sql</td><td>已覆盖（4 条）</td><td>b10-minidb、b28-bi、b31-shorturl、b38-redis</td></tr><tr><td>Java 企业开发</td><td>java、后端</td><td>已覆盖（2 条）</td><td>b14-paint、dorm-repair</td></tr><tr><td>Web 前端与可视化</td><td>前端、html、javascript、可视化</td><td>已覆盖（5 条）</td><td>b31-shorturl、b33-viz、b34-path、b27-kg、dorm-repair</td></tr><tr><td>Python 工程与工具链</td><td>python</td><td>已覆盖（5 条）</td><td>b4-algebra、b23-ml、b26-mining、b37-ai、b39-radar</td></tr><tr><td>数据与机器学习</td><td>spark、大数据</td><td>已覆盖（7 条）</td><td>b23-ml、b25-nlp、b26-mining、b28-bi、b29-spark、b37-ai、b24-cv</td></tr><tr><td>网络与信息安全</td><td>安全、注入、xss</td><td>已覆盖（1 条）</td><td>b32-sec</td></tr><tr><td>分布式与共识</td><td>分布式、一致性、共识</td><td>已覆盖（4 条）</td><td>b30-raft、b35-mqtt、b38-redis、b37-ai</td></tr><tr><td>测试与质量工程</td><td>测试、质量</td><td>已覆盖（3 条）</td><td>dorm-repair、repo-delivery、b39-radar</td></tr><tr><td>容器与云原生</td><td>docker、kubernetes、容器化、容器</td><td class="sw-gap">**缺口**</td><td>下一步：给任一项目写 Dockerfile 与 compose 脚本（先确认 Docker 安装的体积/替代方案——这属安装决策点，按 PLAN §8 先问）；零依赖替代：把 run.bat 步骤逐条翻译成幂等脚本并写差异说明</td></tr><tr><td>消息队列与中间件</td><td>kafka、消息队列</td><td class="sw-gap">**缺口**</td><td>下一步：基于 B35 的 broker 手写一个最小分区/消费组模型（零依赖），在记录里说清与 Kafka 语义的差距（B39 模板可用）</td></tr></table>
+<details><summary style="cursor:pointer;color:#1d4ed8;margin-top:8px">四段演示原文（含 31 条证据明细）</summary>
+<pre>B40-career-map 演示：求职证据的可核验化 + JD 差距矩阵（专业实习）
+
+==============================================================================
+  1) 证据索引：31 条声明的指针/提交/锚点逐条核验
+==============================================================================
+  核验结果                          PASS（0 个问题）
+  抽样 b1-ministl                 手写 vector/list/string（RAII+迭代器），与 … → projects/B1-cpp-ministl/README.md @a3c9956
+  抽样 dorm-repair                报修系统全生命周期（需求工程→架构→Java 平台→测试→质量门禁→… → projects/dorm-repair/README.md @5826d70
+  抽样 b37-ai                     设备故障预测 + 误报/漏报解剖（复用 B35/B23，边界按实测换… → projects/B37-industry-ai/README.md @b55eb21
+
+==============================================================================
+  2) 负面对照：改坏一处，核验器必须报红（否则它就是装饰）
+==============================================================================
+  指针指向不存在的文件                    RED，首条：b1-ministl：指针路径不存在：projects/NOPE/README.md
+  锚点字符串不在文件里                    RED，首条：b1-ministl：anchor &#x27;这段字符串绝不可能出现在文档里xq9&#x27; 没有出现在任何指针文件里
+  引用一个假提交号                      RED，首条：b1-ministl：commit 在 git 里不存在：deadbeef0
+
+==============================================================================
+  3) 示例 JD 映射：命中→证据 / 缺口→练习（合成示例，非真实岗位）
+==============================================================================
+# JD 映射矩阵：EXAMPLE-合成示例（非真实岗位）.txt
+
+【示例（非真实岗位）】本文件是合成 JD，只演示工具怎么用；把你的真实 JD 存成 jd/岗位名.txt 后重跑，映射结果才是你的。
+
+| 技能面 | 命中关键词 | 状态 | 证据 / 缺口练习 |
+|---|---|---|---|
+| 数据结构与算法 | 数据结构、算法 | 已覆盖（3 条） | b2-datastruct、b12-algo、b4-algebra |
+| 操作系统与系统编程 | 进程、管道、系统编程 | 已覆盖（4 条） | b8-shell、b5-cpu-sim、b9-os-sim、b7-mini-make |
+| 网络编程与协议 | 网络、tcp、http、socket、协议 | 已覆盖（4 条） | b11-net、b31-shorturl、b35-mqtt、b38-redis |
+| 数据库与存储 | 数据库、sql | 已覆盖（4 条） | b10-minidb、b28-bi、b31-shorturl、b38-redis |
+| Java 企业开发 | java、后端 | 已覆盖（2 条） | b14-paint、dorm-repair |
+| Web 前端与可视化 | 前端、html、javascript、可视化 | 已覆盖（5 条） | b31-shorturl、b33-viz、b34-path、b27-kg、dorm-repair |
+| Python 工程与工具链 | python | 已覆盖（5 条） | b4-algebra、b23-ml、b26-mining、b37-ai、b39-radar |
+| 数据与机器学习 | spark、大数据 | 已覆盖（7 条） | b23-ml、b25-nlp、b26-mining、b28-bi、b29-spark、b37-ai、b24-cv |
+| 网络与信息安全 | 安全、注入、xss | 已覆盖（1 条） | b32-sec |
+| 分布式与共识 | 分布式、一致性、共识 | 已覆盖（4 条） | b30-raft、b35-mqtt、b38-redis、b37-ai |
+| 测试与质量工程 | 测试、质量 | 已覆盖（3 条） | dorm-repair、repo-delivery、b39-radar |
+| 容器与云原生 | docker、kubernetes、容器化、容器 | **缺口** | 下一步：给任一项目写 Dockerfile 与 compose 脚本（先确认 Docker 安装的体积/替代方案——这属安装决策点，按 PLAN §8 先问）；零依赖替代：把 run.bat 步骤逐条翻译成幂等脚本并写差异说明 |
+| 消息队列与中间件 | kafka、消息队列 | **缺口** | 下一步：基于 B35 的 broker 手写一个最小分区/消费组模型（零依赖），在记录里说清与 Kafka 语义的差距（B39 模板可用） |
+
+**缺口清单（2 项）**：容器与云原生；消息队列与中间件
+
+证据明细（逐条可在 `tools/check_evidence.py` 复核）：
+
+- `b2-datastruct`：八个 ADT + 与 std/参照实现 141,228 项对拍检查 0 失败（B33 又给堆/图加了只读 trace 观察口）；展示页（第④批）六段演示/菜单/数字现算（指针：projects/B2-datastruct-lab/README.md，提交 `6ce1488`）
+- `b12-algo`：分治/DP/贪心/回溯/图 各一代表算法 + 暴力参照 + 规模计时表：66 项自测（57 核心 + 9 展示页）（指针：projects/B12-algo-arena/README.md，提交 `4ccc788`）
+- `b4-algebra`：数论底座 + 教学 RSA + 群表判定 + 集合论：51 项通过（43 核心 + 8 展示页），egcd 双实现互拍（指针：projects/B4-algebra-rsa/README.md，提交 `4575c8a`）
+- `b8-shell`：fork/exec/任意段管道/重定向 shell：24 项测试全过，僵尸进程去 /proc 当面数；展示页（第⑤批）经一次 wsl 调用现算（六段演示 + 八脚本会话回放）（指针：projects/B8-mini-shell/README.md，提交 `fb5bab5`）
+- `b5-cpu-sim`：单周期 + 五级流水线（前递/load-use 停顿/分支冲刷）：双模型对拍逐字节一致（指针：projects/B5-cpu-sim/README.md，提交 `2ceff9e`）
+- `b9-os-sim`：CPU 模拟 + 五级流水线：183 项断言 0 失败，教科书数字逐个吻合（指针：projects/B9-os-sim/README.md，提交 `16d125f`）
+- `b7-mini-make`：手写 make（依赖图/环检测/增量/-j 对拍/失败传播）：24 项通过（15 核心 + 9 展示页），双入口同数（指针：projects/B7-mini-make/README.md，提交 `b67654f`）
+- `b11-net`：HTTP/1.1 子集 + UDP 可靠传输（GBN）与可复现丢包实验：101 项（75 + 16 + 10 展示页）；展示页（第⑤批）旅程/边界/GBN 现算（指针：projects/B11-net-lab/README.md，提交 `0f30423`）
+- `b31-shorturl`：短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：81 项测试（73 核心 + 8 展示页）+ 129 subTest 全通过（指针：projects/B31-shorturl/README.md，提交 `4ccc788`）
+- `b35-mqtt`：手写 MQTT 子集（字节级报文/selectors broker/断线重连/账本）：32 项全过（23 核心 + 9 展示页）；展示页（第⑧批）协议表 + SVG 内联（指针：projects/B35-iot-mqtt/README.md，提交 `5821891`）
+- `b38-redis`：手写 Redis 子集（RESP2/单线程事件循环/双策略过期/快照）+ 主从复制扩展（B41 候选④）：49 项测试双入口同数（指针：projects/B38-mini-redis/README.md，提交 `f0bb729`）
+- `b10-minidb`：手写 SQL 子集 + WAL/页式快照/事务（B41 候选①：提交即 fsync + 崩溃对账）：53 项自测（36 核心 + 17 持久性）（指针：projects/B10-minidb/README.md，提交 `4ccc788`）
+- `b28-bi`：商务智能看板：口径当一等交付物，SQL 与纯 Python 双路对拍：42 项通过（34 核心 + 8 展示页）；第⑨批看板原位提升 + 血缘来源说明修正（指针：projects/B28-bi-dashboard/README.md，提交 `352c499`）
+- `b14-paint`：Java Swing 图形编辑器（命令/撤销重做、原子存盘）：7054 项检查 0 失败（指针：projects/B14-java-paint/README.md，提交 `16d125f`）
+- `dorm-repair`：报修系统全生命周期（需求工程→架构→Java 平台→测试→质量门禁→PM）：225 项 + 298 subTest 通过（216 核心 + 9 展示页）（Java 37 项；流水线 11 层全绿）（指针：projects/dorm-repair/README.md，提交 `5826d70`）
+- `b33-viz`：从 B2 导出操作记录回放成自包含 HTML 动画：18 项（11 核心 + 7 展示页）；第⑨批动画页原位提升为提交物（指针：projects/B33-viz-algo/README.md，提交 `6ce1488`）
+- `b34-path`：栅格 A*/Dijkstra/BFS 同源对拍 + 不可采纳反例 + 搜索展开动画：28 项（20 核心 + 8 展示页）；第⑨批动画页原位提升为提交物（指针：projects/B34-path-planner/README.md，提交 `5b7e9ac`）
+- `b27-kg`：课程知识图谱（拓扑/闭包/缺先修）+ 自包含交互 HTML：21 项（14 核心 + 7 展示页）；第⑨批交互图原位提升为提交物（指针：projects/B27-course-kg/README.md，提交 `c7648fd`）
+- `b23-ml`：手写五算法（回归/感知机/KNN/决策树/BP）+ 与 scikit-learn 同参对拍台（B41 候选⑤：容差表先行、四条负面对照、规模曲线）+ 自包含展示页：54 项自测（指针：projects/B23-ml-from-scratch/README.md，提交 `d274eb4`）
+- `b26-mining`：Apriori + K-means + 可追溯清洗链：展示页 + 28 项自测，剪枝候选数 ≤ 穷举数被断言（指针：projects/B26-datamining/README.md，提交 `c7648fd`）
+- `b37-ai`：设备故障预测 + 误报/漏报解剖（复用 B35/B23，边界按实测换 OU）：36 项测试（27 核心 + 9 展示页）；展示页（第⑧批）三模型表 + 3 张 SVG 内联（指针：projects/B37-industry-ai/README.md，提交 `b55eb21`）
+- `b39-radar`：技术雷达（模板 + 可机验证据检查器 + 最小复现）：26 项测试（18 核心 + 8 展示页）（指针：projects/B39-tech-radar/README.md，提交 `7b699b8`）
+- `b25-nlp`：中文分词（最大匹配/双向歧义）+ 朴素贝叶斯 + 手写指标：展示页 + 25 项自测（指针：projects/B25-nlp-lab/README.md，提交 `c7648fd`）
+- `b29-spark`：PySpark 日志清洗/聚合/Spark SQL + 倾斜实验（salting 与 groupBy 逐行相等）：25 项（17 核心 + 8 展示页）；第⑨批展示页（stdout 只取 + 四条规范化）（指针：projects/B29-bigdata-spark/README.md，提交 `7eec2e5`）
+- `b24-cv`：文档扫描仪（Canny→四边逼近→透视变换→二值化）：23 项全过（16 核心 + 7 展示页），合成真值像素级对账；展示页（第⑧批）三张产物缩略图内联（指针：projects/B24-cv-scanner/README.md，提交 `5c1d205`）
+- `b32-sec`：四组漏洞版/修复版（SQL 注入/XSS/口令/路径穿越）+ 静态扫描器：60 项（50 核心 + 10 展示页）；展示页（第⑤批）四组对照/扫描器现算（指针：projects/B32-sec-lab/README.md，提交 `16d125f`）
+- `b30-raft`：事件驱动 Raft（逐事件不变式检查）+ 快照/InstallSnapshot + 单步成员变更（B41 候选③）+ 真套接字 mini-RPC：双入口同数 28 项（指针：projects/B30-mini-raft/README.md，提交 `e94f56b`）
+- `repo-delivery`：全仓库交付纪律：run.bat 两跑比对/日志规范化、CRLF+ASCII 的 .bat、双入口测试计数（指针：PLAN.md，提交 `7b699b8`）
+
+JD 未提及（不计入矩阵）：C/C++ 内存与资源管理、编译原理与汇编
+
+---
+本表由工具从「JD 文本 × 技能表 × 证据索引」现算；**不替代真实实习**——
+学习证据解决不了「真实团队协作与业务上下文」这一课，去投、去面、去干。
+
+==============================================================================
+  4) 怎么用：把岗位换成真的，方向仍由你定
+==============================================================================
+  1. 把 1-3 个真实岗位 JD 存成 jd/岗位名.txt（不要改 EXAMPLE 那个文件）；
+  2. 跑 python tools/map_jd.py --write —— 差距矩阵写到 build/jd_matrix.md；
+  3. 缺口逐条对照 skill 的 practice 排期；证据条目随时用
+     python tools/check_evidence.py 复核（改坏一条必须红）。
+  边界：本工具只做映射与核验，**不替你选岗位/方向**（PLAN §5），
+        也不替代真实实习——团队协作与业务上下文只能在实习里学。</pre></details></section>
+<section class="sw-panel"><h3>15 个技能面全景（evidence 空 = 故意留空的缺口）</h3>
+<table><tr><th>技能面（15 个）</th><th>证据</th><th>缺口练习（无证据者的下一步）</th></tr><tr><td>C/C++ 内存与资源管理</td><td>4 条</td><td>把 B1 的 vector 换成带 allocator 的版本，并补与 std 的对拍测试</td></tr><tr><td>数据结构与算法</td><td>3 条</td><td>给 B12 的 A* 补第二个启发式并复跑规模计时表</td></tr><tr><td>操作系统与系统编程</td><td>4 条</td><td>给 B8 的 shell 加后台作业（&amp;）与 jobs 内建，去 /proc 数僵尸复验</td></tr><tr><td>编译原理与汇编</td><td>3 条</td><td>给 B13 加函数调用与错误恢复（B41 候选②同向，先在讲义里写清栈帧设计）</td></tr><tr><td>网络编程与协议</td><td>4 条</td><td>给 B38 加主从复制（B41 候选④同向），先补「复制」语义表再动手</td></tr><tr><td>数据库与存储</td><td>4 条</td><td>给 B10 加 fsync 与页式存储（B41 候选①同向），用掉电注入测试验证持久性</td></tr><tr><td>Java 企业开发</td><td>2 条</td><td>给 dorm-repair 的 Java 平台加一个带乐观锁冲突重试的新用例</td></tr><tr><td>Web 前端与可视化</td><td>5 条</td><td>给 B27 的图谱页加键盘导航与读屏标注（可访问性口径来自 B16）</td></tr><tr><td>Python 工程与工具链</td><td>5 条</td><td>把某个项目的 logdiff 规则扩成可配置项，并补「改坏必须红」的负例</td></tr><tr><td>数据与机器学习</td><td>7 条</td><td>给 B26 的 K-means 补 elbow 法实验，说清「选 k」的口径与局限</td></tr><tr><td>网络与信息安全</td><td>1 条</td><td>给 B32 的静态扫描器加一条新规则，并先写「把这条规则拿掉必须变瞎」的反向证明</td></tr><tr><td>分布式与共识</td><td>4 条</td><td>给 B30 加日志快照与成员变更（B41 候选③同向），保持逐事件不变式检查</td></tr><tr><td>测试与质量工程</td><td>3 条</td><td>把某个项目作为独立层接进 dorm-repair 的本地流水线（blocking 与否先写口径）</td></tr><tr><td>容器与云原生</td><td>0 条</td><td>给任一项目写 Dockerfile 与 compose 脚本（先确认 Docker 安装的体积/替代方案——这属安装决策点，按 PLAN §8 先问）；零依赖替代：把 run.bat 步骤逐条翻译成幂等脚本并写差异说明</td></tr><tr><td>消息队列与中间件</td><td>0 条</td><td>基于 B35 的 broker 手写一个最小分区/消费组模型（零依赖），在记录里说清与 Kafka 语义的差距（B39 模板可用）</td></tr></table></section>
+<section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
+<ul>
+<li>把真实岗位 JD 存成 <kbd>jd\岗位名.txt</kbd>（不要改 EXAMPLE 那个文件），
+跑 <kbd>python tools\map_jd.py --write</kbd> —— 差距矩阵写到 build\jd_matrix.md。</li>
+<li><kbd>python tools\check_evidence.py</kbd>：31 条证据随时复核（改坏一条必须红）。</li>
+<li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+</ul>
+<p>边界：本工具只做映射与核验，不替你选岗位/方向（PLAN §5），也不替代真实实习。</p></section>
+<div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
+仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
+</body></html>

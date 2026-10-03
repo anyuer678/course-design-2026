@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>dorm-repair · 宿舍报修系统（B15–B22 全生命周期，课设作品集）</title>
+<style>
+body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f6f9;color:#1c2330}
+.sw-top{max-width:1200px;margin:12px 18px 0;padding:10px 14px;background:#fff;border:1px solid #d5d9e0;border-radius:10px}
+.sw-top .sw-link{font-size:13px;color:#1d4ed8;text-decoration:none}
+.sw-top h2{font-size:16px;margin:6px 0 2px}
+.sw-top p{margin:2px 0;color:#5f6773;font-size:13px}
+.sw-cards{max-width:1200px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin:10px 18px 0}
+.sw-card{background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:8px 12px;font-size:13px}
+.sw-card b{display:block;font-size:12px;color:#5f6773;margin-bottom:2px}
+.sw-panel{max-width:1200px;margin:10px 18px 0;background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:10px 14px;font-size:14px}
+.sw-panel h3{margin:4px 0 6px;font-size:15px}
+.sw-panel pre{background:#0f1115;color:#e6e9ef;border-radius:8px;padding:10px 12px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+.sw-panel kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid #d5d9e0;border-radius:4px;padding:0 4px;background:#fff}
+.sw-footer{max-width:1200px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+</style></head>
+<body data-showcase="dorm-repair">
+<div class="sw-top"><a class="sw-link" href="../../showcase/index.html">← 作品集总入口</a>
+<h2>dorm-repair · 宿舍报修系统：同一套代码的八轮迭代（B15 → B22）</h2>
+<p>需求工程 → 交互设计 → 体系结构 → Java 平台层 → SOA 第二接口 → 测试工程 → 质量门禁 → 项目管理：
+每一轮的「数字」都能被下一轮的检查器复核——文档与模型说不同话、契约过期、判定漂移、
+核对器失去牙齿，各自有对应的红灯层。本页 13 段现场输出与数字卡全部现算自 <kbd>demo.py</kbd>。</p></div>
+<section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>225 项（216 核心 + 9 展示页自测）</span></div><div class="sw-card"><b>需求 → 测试</b><span>验收标准 40 条全部可执行（待后续轮次 0、需人工 0）；待决问题 12 条如实登记（其中 3 条已裁决为工程默认）</span></div><div class="sw-card"><b>判定表（B18 跨语言）</b><span>1680 格 = 状态 × 动作 × 身份 × 输入齐全/缺失 × 时刻；Java 读同一份契约逐格相同</span></div><div class="sw-card"><b>架构（B17 实测依赖图）</b><span>8 个组件、真实 import 边 22 条（与 docs/08 双向核对）；判定源只有 spec/workorder.py 一份</span></div><div class="sw-card"><b>验证工程（B20）</b><span>收缩器 7 状态 ddmin 与 BFS 独立最短全部相等；AQ-10 循环 6 步闭式；变异登记 17 条 + 1 条阴性对照</span></div><div class="sw-card"><b>质量门禁（B21）</b><span>11 层（blocking 9、advisory 2）、分诊 8 类；mutation 层必须拦（口径过期就拒判）</span></div><div class="sw-card"><b>人工走查（B16/B21）</b><span>20 步 = 纯自动 11 + 仍需眼看 7 + 只能人工 2；结果列留空——检查器拒代填</span></div><div class="sw-card"><b>台账（B22）</b><span>27 个键全部现算（rounds_done 21、pitfalls 53、verdict_cells 1680 …）；管理文档核对通过</span></div></section>
+<section id="demo" class="sw-panel"><h3>13 段 walkthrough 现场输出（现算）</h3>
+<pre>
+==============================================================================
+1) 追踪旅程：FR-03 从文档走到一次真实测试
+==============================================================================
+  需求原文                 系统对必填与格式问题**一次性报出全部错误**，且不改工单状态
+  来源                   B13/B14 的&quot;收集所有错误&quot;教训
+  验证入口                 T:tests/test_workorder_spec.py::test_validation_reports_all_problems_at_once
+  现场执行结果               TestCreateAndValidate.test_validation_reports_all_problems_at_once：ran=1 failures=0 errors=0 was_ok=True
+  覆盖它的用例               [&#x27;UC-01&#x27;]
+  覆盖它的故事               [&#x27;US-01&#x27;]
+  它的验收标准               [&#x27;AC-03&#x27;, &#x27;AC-04&#x27;]
+
+==============================================================================
+2) 状态机走一遍
+==============================================================================
+  建单                   DRAFT（room 已规范化为 C03-305）
+  提交                   SUBMITTED，submitted_at=2000.0，SLA 到期=30800.0（HIGH 8h：2000 + 8×3600）
+  派单                   ASSIGNED → w-7
+  接单                   IN_PROGRESS
+  完工                   RESOLVED（待验收）
+  验收                   CLOSED，assignee 已清空为 &#x27;&#x27;
+
+  留痕（FR-15 / BR-06）：
+    t=2000     DRAFT        → SUBMITTED    submit        STUDENT/stu-9
+    t=2500     SUBMITTED    → ASSIGNED     assign        ADMIN/adm-1
+    t=3000     ASSIGNED     → IN_PROGRESS  accept        WORKER/w-7
+    t=4000     IN_PROGRESS  → RESOLVED     resolve       WORKER/w-7
+    t=5000     RESOLVED     → CLOSED       confirm       STUDENT/stu-9
+
+==============================================================================
+3) 权限矩阵现场核对：同一个动作，三种角色
+==============================================================================
+  STUDENT 发起 assign    拒绝：ROLE_NOT_ALLOWED
+  WORKER 发起 assign     拒绝：ROLE_NOT_ALLOWED
+  ADMIN 发起 assign      允许（进入 ASSIGNED）
+
+==============================================================================
+4) 可见性：三个人三种列表
+==============================================================================
+  STUDENT stu-1         7 单  [&#x27;W01&#x27;, &#x27;W03&#x27;, &#x27;W05&#x27;, &#x27;W07&#x27;, &#x27;W09&#x27;, &#x27;W10&#x27;, &#x27;W12&#x27;]   （含草稿 [&#x27;W01&#x27;]）
+  WORKER w-1            7 单  [&#x27;W03&#x27;, &#x27;W04&#x27;, &#x27;W05&#x27;, &#x27;W07&#x27;, &#x27;W09&#x27;, &#x27;W10&#x27;, &#x27;W12&#x27;]   （一张草稿都看不见）
+  ADMIN adm-1          12 单  [&#x27;W01&#x27;, &#x27;W02&#x27;, &#x27;W03&#x27;, &#x27;W04&#x27;, &#x27;W05&#x27;, &#x27;W06&#x27;, &#x27;W07&#x27;, &#x27;W08&#x27;, &#x27;W09&#x27;, &#x27;W10&#x27;, &#x27;W11&#x27;, &#x27;W12&#x27;]   （含草稿 [&#x27;W01&#x27;, &#x27;W02&#x27;]）
+  管理员只看逾期（t=88000）     [&#x27;W03&#x27;, &#x27;W04&#x27;, &#x27;W05&#x27;, &#x27;W06&#x27;, &#x27;W07&#x27;, &#x27;W08&#x27;]　← RESOLVED 与终态都不算逾期（SRS 第 8 节）
+
+==============================================================================
+5) 检查器有没有牙齿：把模型改坏，看它抓不抓
+==============================================================================
+  把 URGENT 从 2 小时改成 1 小时 SLA URGENT：文档 2 小时，模型 1 小时
+  把 escalate 这条转换删掉    转换 TR-15 只在文档里，模型没有实现
+  恢复之后                 一致性检查通过
+
+==============================================================================
+6) 歧义登记与“跑不了的部分”
+==============================================================================
+  验收标准总数               40 条：已可执行 40、待后续轮次 0、需人工 0
+  待决问题                 12 条（AQ-01, AQ-02, AQ-03, AQ-04, AQ-05, AQ-06, AQ-07, AQ-08, AQ-09, AQ-10, AQ-11, AQ-12）
+
+  这几条我替真实用户做了判断，但只有他们能定：
+    · AQ-02 SLA 时长与是否重置
+    · AQ-03 验收悬挂多久算超时、谁有权关闭
+    · AQ-09 已派单后学生能否自己取消
+    · AQ-10 反复退回公共池要不要设上限
+    · AQ-11 优先级由学生自选会不会通胀
+
+  没把默认值写成“校方规定”，是这份需求文档唯一的诚实底线。
+
+==============================================================================
+7) 原型走查（B16，headless）：四态与按钮都来自模型
+==============================================================================
+  STUDENT/stu-1 看到     3 张  [&#x27;R001&#x27;, &#x27;R002&#x27;, &#x27;R005&#x27;]
+  WORKER/w-1 看到        3 张  [&#x27;R003&#x27;, &#x27;R001&#x27;, &#x27;R002&#x27;]
+  ADMIN/adm-1 看到       6 张  [&#x27;R003&#x27;, &#x27;R001&#x27;, &#x27;R002&#x27;, &#x27;R004&#x27;, &#x27;R005&#x27;, &#x27;R006&#x27;]
+  正常态有结果               1 张（stu-1 的已关闭单）
+  空态                   count=0 empty=True → 界面走空状态分支，不是报错也不是残留上一次的行
+  错误态                  HTTP 400：role 必须是 [&#x27;ADMIN&#x27;, &#x27;STUDENT&#x27;, &#x27;WORKER&#x27;] 之一，收到 &#x27;HACKER&#x27;
+  R001 学生可点            [&#x27;confirm&#x27;, &#x27;reject_check&#x27;]
+    要点的内容              {&#x27;confirm&#x27;: [], &#x27;reject_check&#x27;: [&#x27;reason&#x27;]}
+  R001 管理员可点           [&#x27;force_close&#x27;]
+  已关闭的单可点              []（空数组：BR-02，界面显示解释而不是按钮）
+  自己的草稿可点              [&#x27;submit&#x27;, &#x27;cancel&#x27;]，SLA 未起算：submitted_at=None
+  维修员看这张草稿             HTTP 404　← 第 6 节：草稿不进公共池，也不替他透露有这张单
+  表单一次报全               HTTP 400 [&#x27;room&#x27;, &#x27;category&#x27;, &#x27;description&#x27;, &#x27;contact&#x27;]
+    界面落点               每个字段旁边各一条 + 汇总条数 + 焦点送第一个（V2 约定）
+  原型已停止                数据在内存里，退出即清空；项目目录没有留下文件
+
+  剩下的只能你来：观感、手感、键盘与读屏的真实表现——见 docs/07-walkthrough.md，那张表的每一行我都没替你填。
+
+==============================================================================
+8) 架构核对（B17）：依赖图是测出来的，契约是导出来的
+==============================================================================
+  组件                   8 个，真实 import 边 22 条
+  spec 的出边             实测 [&#x27;（无）&#x27;] / 文档声明 [&#x27;（无）&#x27;]
+  prototype 的出边        实测 [&#x27;netlab&#x27;, &#x27;spec&#x27;] / 文档声明 [&#x27;netlab&#x27;, &#x27;spec&#x27;]
+  arch 的出边             实测 [&#x27;spec&#x27;] / 文档声明 [&#x27;spec&#x27;]
+  判定源份数                {&#x27;spec/workorder.py&#x27;} —— 换风格不等于复制状态机
+  A 分层单体               参与者=1 事务边界=1 消息=0 重复状态点=0
+  B 端口-适配器             参与者=2 事务边界=2 消息=0 重复状态点=0
+  C 两服务+事件总线           参与者=2 事务边界=4 消息=3 重复状态点=1
+  C 为什么多一个重复点          那条 submitted 事件迟到投递一次，副本从 ASSIGNED 被写回 SUBMITTED
+  契约                   15 条转换 · 12 项权限 · 8 个字段错误码（B18/B20 读它，不抄表）
+  架构核对                 通过
+
+==============================================================================
+9) 平台层（B18）：Java 读同一份契约，判定逐格相同
+==============================================================================
+  判定表                  1680 格 = 状态 × 动作 × 身份 × 输入齐全/缺失 × 时刻
+  拒绝码分布                {&#x27;NO_SUCH_TRANSITION&#x27;: 1400, &#x27;ROLE_NOT_ALLOWED&#x27;: 188, &#x27;OWNER&#x27;: 20, &#x27;ASSIGNEE&#x27;: 12, &#x27;REASON_REQUIRED&#x27;: 10, &#x27;ASSIGNEE_REQUIRED&#x27;: 4, &#x27;NOTE_REQUIRED&#x27;: 2, &#x27;ACCEPTANCE_NOT_MATURE&#x27;: 2}
+  宽限期边界（BR-10）         5000.0 → ERR:ACCEPTANCE_NOT_MATURE；608800.0 → OK:CLOSED　（4000 + 168×3600 = 608800，达到即算）
+  Java 分层              8 层，扫出 101 条 import，层间边与文档双向相等
+  领域层依赖                [&#x27;course.dormrepair.contract.WorkflowContract&#x27;, &#x27;java.util.ArrayList&#x27;, &#x27;java.util.List&#x27;, &#x27;java.util.Optional&#x27;, &#x27;java.util.regex.Pattern&#x27;]
+  ↑ domain 只 import java.util 与 contract：没有 Spring、没有 SQL、没有 Jackson。
+  换存储、换框架都不用动判定逻辑——这是 B17 那张图在 Java 里的兑现。
+  怎么自己跑                cd java &amp;&amp; （用本机 Maven 3.9.12）mvn -o -B test　→　23 项，含 1680 格对拍
+  本轮没有下载任何东西           Spring Boot 3.3.5 / H2 2.2.224 / JUnit 5.10.5 / Maven 3.9.12 都在 ~/.m2 里，-o 离线可构建
+
+==============================================================================
+10) 两种接口（B19）：为什么是 SOAP，以及谁被禁止自己判断状态
+==============================================================================
+  本机依赖实测               Spring WS=无 SAAJ=无 JAX-WS=无 gRPC=无 JDK java.xml=有
+  为什么手写 SOAP 信封        gRPC 与 Spring WS 都没缓存 → 需要下载；JDK 自带 java.xml 足够 → 本轮零下载（PLAN 第 8 节）
+  状态字面量白名单             3 个文件被允许；实测 3 个文件真的出现，双向一致=True
+    StateMachine.java  RESOLVED、SUBMITTED
+    WorkOrder.java     DRAFT
+    JdbcWorkOrderRepository.java CANCELLED、CLOSED、RESOLVED、SUBMITTED
+  为什么注释要先剥掉            soap 层的注释里写着 state.equals(&quot;SUBMITTED&quot;) 作为反例；不剥注释就会把它误报成那里长出了一套自己的规则
+  双接口对拍在哪跑             run.bat 第 6 步（Java 侧 SoapInterfaceTest：同一身份的可见集合、按钮、错误码必须逐字相同；往 SOAP 层塞一条自己的规则会立刻分叉）
+
+==============================================================================
+11) 验证工程（B20）：这些核对器自己会不会失效，失效了谁会响
+==============================================================================
+  收缩器：给一个反例序列，缩到最小，再用 BFS 独立算一遍最短——两个必须相等
+  状态             种子  ddmin   BFS       单步不可删      达到最优
+  DRAFT            3      0     0         True       True
+  SUBMITTED        4      1     1         True       True
+  ASSIGNED         5      2     2         True       True
+  IN_PROGRESS      3      3     3         True       True
+  RESOLVED         7      4     4         True       True
+  CLOSED           8      5     5         True       True
+  CANCELLED        5      1     1         True       True
+  为什么先试空序列             DRAFT 空序列就满足谓词，最短见证是 0 步；第一版停在 1 就宣布最小，把这个事实盖住了
+
+  AQ-10 循环             6 步：STUDENT/stu-1/submit → ADMIN/adm-1/assign → WORKER/w-1/accept → ADMIN/adm-1/escalate → ADMIN/adm-1/assign → WORKER/w-1/accept
+  重复 6 遍后              状态 IN_PROGRESS、痕迹 21 条、时限没动过=True
+  为什么这是闭式              它不依赖我拟的参数，是模型性质：循环合法、时限不重算、痕迹只增不减
+  AQ-11 参数             4 档 × 3 种配比；假设来源：AI 拟的假设，非调研（docs/01 来源声明…
+  最难那档                 紧·一周：逾期 101/168 = 60.1%（数字是这次算出来的，不是文档抄的）
+
+  变异登记表                17 条变异（其中 1 条是内联探针，不复制文件树），另有 1 条阴性对照——它要求的是**不**变红；真跑：python tools/mutation_check.py
+  为什么要它                前面每轮我都手写过几条『故意改坏看它抓不抓』；代码继续改，牙齿会掉，掉的时候没东西会响。登记表让这件事变成一条可反复跑的命令
+
+  分层流水线 11 层：docs、contract、verdict、arch、qa、pm、pytests、javatests、shrink、consequences、mutation
+  流水线自带的规则             退出码 0 但读不到数＝这层红（B18 那次 BUILD SUCCESS 但 0 个测试的教训）
+  它不覆盖                 浏览器里的人工走查（docs/07-walkthrough.md 的 20 步）只有你眼睛能验
+
+  以上全部由 `checks/check_arch.py` 与 `checks/check_docs.py` 持续核对：改了代码不改文档、或改了文档不重生成契约，下一步就是红灯。
+
+==============================================================================
+12) 质量门禁（B21）：什么算不合格、红了先做什么、谁必须拦
+==============================================================================
+  口径来源                 docs/12 第 1 节 → gate.json：11 层，blocking 9、advisory 2
+    拦 docs             需求表、可执行模型、追踪矩阵三者说不同的话
+    拦 contract         契约落后于文档与模型，Java 会读旧表
+    拦 verdict          跨语言判定基准过期，对拍失去参照
+    拦 arch             依赖越界、Java 里长出第二份判定、ADR 缺节
+    拦 pm               管理文档里的数字与台账现算不一致、风险登记册漏了未决项、复盘没覆盖全部坑——**本轮交付物就是文档 + 
+    拦 qa               门禁口径过期、走查清单某步的证据是条不存在的测试、结果列被检查器代填
+    拦 pytests          需求模型的行为回归（状态机、权限、可见性、时限）
+    拦 javatests        平台实现与契约/判定表分叉，或构建&quot;0 个测试&quot;假绿
+    拦 mutation         核对器失去牙齿——这轮的绿从此不可信
+    放 shrink           最小反例收缩退化到非最短（调试工具变钝）
+    放 consequences     AQ-10/AQ-11 的量化结果漂移（假设或模型变了）
+  为什么 mutation 必须拦     它管『核对器还有没有牙齿』；这条一松整套门禁就成装饰（登记变异 gate-downgrade 验的就是这个）
+
+  分诊类别                 8 类；规则按顺序取第一条命中，最后一类兜底
+    artifact-stale     真实样本 4 条｜生成物落后，重生成即可
+    architecture-violation 真实样本 3 条｜结构约束被破
+    doc-model-divergence 真实样本 4 条｜文档与模型说不同话
+    harness-broken     真实样本 1 条｜验证工具自己被削弱
+    toolchain          真实样本 1 条｜构建或环境，不代表产品坏了
+    register-incomplete 真实样本 1 条｜该登记的没登记：风险、指标或复盘条目缺项
+    policy-tampering   真实样本 2 条｜门禁口径本身被动过——最危险的一类，因为它让别的层从此没人拦
+    behavior-regression 真实样本 1 条｜真实行为回归
+  现场分诊一条               参数 ACCEPTANCE_GRACE_HOURS：文档 24 小时，模型 168 小时…（这句话由 check_docs 自己打印）
+    归为                 doc-model-divergence（命中特征 &#x27;：文档&#x27;）
+    下一步                用需求来源列判断哪一侧才是新裁决
+    15 条样本全验           python tools/triage.py --selftest（真跑变异自检台，约 10 秒）
+
+  走查清单对齐               20 步＝纯自动 11 + 自动但仍需眼看 7 + 只能人工 2
+  我不代勾                 『你的结果』那一列仍是『未验证』；检查器若把它填成『通过』，qa 层立刻红
+  门禁怎么跑                run.bat gate 或 python tools/quality_gate.py（本地判定，不是服务端分支保护）
+
+==============================================================================
+13) 项目管理（B22）：数字不许手抄，风险与复盘要对得上事实
+==============================================================================
+  台账                   27 个键，全部由事实源现算（docs/13 第 8 节逐条引用）
+    rounds_done        21
+    rounds_dorm        8
+    rounds_dates       3
+    aq_total           12
+    aq_ruled           3
+    aq_open            9
+    pitfalls           53
+    gate_layers        11
+    gate_blocking      9
+    mutations          17
+    verdict_cells      1680
+  为什么不收测试数与耗时          那是某一次跑的结果，归流水线每次重测；抄进台账就再造了一份需要人维护的副本
+  管理文档核对               通过
+    复盘第一类              13 条（1, 8, 11, 12, 19, 20, 23, 24, 25, 28, 30, 44, …）
+    复盘第二类              19 条（2, 4, 5, 7, 9, 13, 15, 17, 21, 22, 26, 27, 32,…）
+    复盘第三类              21 条（3, 6, 10, 14, 16, 18, 29, 31, 33, 34, 35, 36, …）
+  重复模式（复盘最有价值的部分）      A 退出码/假绿、B 数字没重算、C 语法通过≠能跑——同类错误跨轮复发，说明上一轮修的不是根因
+  怎么复核                 python tools/project_ledger.py --dump &amp;&amp; python checks/check_pm.py</pre></section>
+<section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
+<ul>
+<li><kbd>run.bat</kbd>：八步全链路（环境 → 文档一致性 → 架构/契约/走查期望/展示页新鲜度 →
+测试 → 演示 → Java 平台层 → 流水线五层 → 原型）；<kbd>run.bat no-web</kbd> 跳过浏览器原型。</li>
+<li><kbd>run.bat gate</kbd>：质量门禁判定；<kbd>run.bat pipeline</kbd>：一条命令跑完 11 层。</li>
+<li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+</ul>
+<p>浏览器原型的观感、手感、键盘与读屏表现只能你实跑——<kbd>docs\07-walkthrough.md</kbd> 的 20 步
+每行结果都留空等你填，检查器会拒绝任何代填。</p></section>
+<div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
+仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。
+本页只做展示，不进流水线——层数被门禁表锁死，先例见 tools/walkthrough_pack.py docstring。</p></div>
+</body></html>

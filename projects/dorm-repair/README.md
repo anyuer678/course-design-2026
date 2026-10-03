@@ -63,12 +63,13 @@ Java 侧只许**读契约**不许抄表，最后两边逐格对判定——
 | `docs/07-walkthrough.md` | B21 加第 4 列『自动证据』：要么 `T:文件::方法`（会去源码核实），要么明写『只能人工』；**『你的结果』仍归用户填** | `checks/check_qa.py`（本轮就是它抓出我 12 条引用漏了 `test_` 前缀） |
 | `tools/walkthrough_pack.py` | B16 backlog ①：按**规范序列**在真原型上重放 20 步，从 spec + 种子现算每步期望；并核对 docs/07 的关键断言（说法过期即红，红在步号上） | `tests/test_walkthrough_pack.py`（18 项，四种改坏各有负面对照） |
 | `docs/16-walkthrough-pack.md` | B16 backlog ①：走查**现算期望值对照表**（生成物，20 步与 docs/07 逐号对应；『你的实际/一致？』两列留空给你填） | `walkthrough_pack.py --check` + run.bat 第 3 步 |
-| `demo.py` / `say.py` / `run.bat` | 需求 + 原型走查演示（12 段）；中文提示（见『踩过的坑』第 1 条）；一键核对（8 步，另有 `run.bat pipeline` / `run.bat gate`） | 实跑 |
+| `demo.py` / `say.py` / `run.bat` | 需求 + 原型走查演示（13 段）；中文提示（见『踩过的坑』第 1 条）；一键核对（8 步，另有 `run.bat pipeline` / `run.bat gate`） | 实跑 |
+| `tools/showcase.py` · `web/showcase.html` · `tests/test_showcase.py` | 展示层工程批次⑩：13 段 walkthrough 现算成单文件展示页（`--check` 过期即红）；9 项展示页测试 | 实跑（`python tools/showcase.py --check`） |
 
 ## 运行与核对
 
 ```
-run.bat                                  八步：环境 → 文档一致性 → 架构核对 → 测试 → 演示 → Java 构建+双接口对拍 → B20 三层自检 → 起原型
+run.bat                                  八步：环境 → 文档一致性 → 架构核对（含走查期望表与展示页新鲜度） → 测试 → 演示 → Java 构建+双接口对拍 → B20 三层自检 → 起原型
 run.bat no-web                           前七步跑完就停（不开浏览器也能核对全部可自动部分，含 Java）
 run.bat pipeline                         只跑 `tools/pipeline.py`：11 层一条命令，本地离线，约 50 秒
 run.bat gate                             只跑质量门禁：读 contracts/gate.json 判 PASS / BLOCKED 并分诊
@@ -80,8 +81,9 @@ python tools/export_contract.py --write  改完 SRS 的表后重新导出 contra
 python tools/export_verdict_table.py --write   重新生成 1680 格判定表（跨语言对拍基准）
 python tools/walkthrough_pack.py --check      核对 docs/16 没过期、docs/07 每步关键断言与现算一致
 python tools/walkthrough_pack.py --write      改过 spec/种子/原型后，重生成 docs/16 走查期望对照表
+python tools/showcase.py --check              展示页新鲜度（web/showcase.html 与现算逐字一致，过期即红）
 python -m unittest discover -s tests -v
-python demo.py                            十一段演示（9 平台层与对拍、10 两种接口、11 验证工程）
+python demo.py                            十三段演示（9 平台层与对拍、10 两种接口、11 验证工程、12 门禁、13 台账）
 python tools/pipeline.py --list           十层流水线：每层管什么、什么改动会让它红
 python tools/quality_gate.py              门禁判定（blocking 全绿才 PASS；口径过期直接拒判）
 python tools/project_ledger.py --dump     台账：管理文档里每个数字的现算出处
@@ -104,7 +106,8 @@ Java 侧依赖 Spring Boot 3.3.5 + H2 + JUnit 5，**全部已在 `~/.m2` 缓存*
 
 * 文档一致性检查：**通过**，`FR 15 / BR 11 / NFR 7 / IF 4 / UC 6 / US 13 / AC 40 / 转换 15 / 待决 12`。
   （B15 时 BR 9 / AC 39；B18 因 AQ-03、AQ-12 两条裁决各加一条 BR，AC 加一条历史可见性。）
-* 架构核对：**通过**——8 个组件、20 条 Python import 边与 `docs/08` 双向相等；
+* 架构核对：**通过**——8 个组件、22 条 Python import 边与 `docs/08` 双向相等（B16 backlog ① 给
+  `tools` 加 `→prototype/netlab` 两条后这里漏改，展示层批次⑩ 按 `check_arch` 现算补正）；
   判定源只有 `spec/workorder.py` 一份；契约与文档、模型三方一致；
   **Java 6 个包的分层表与真实 import 双向相等**（`docs/09` 第 2 节）。
 * Python 测试：**155 项 + 201 个 subTest 通过**（`unittest` 报 `Ran 155 tests / OK`，`pytest` 同数），`ruff --select F,E9` 干净。
@@ -122,8 +125,11 @@ Java 侧依赖 Spring Boot 3.3.5 + H2 + JUnit 5，**全部已在 `~/.m2` 缓存*
   条真实失败样本落到声明的类别；`contracts/gate.json` = 11 层 / blocking 9 / advisory 2 / 8 类分诊。
 * 项目台账：**27 个键**全部现算、全部被 `docs/13` 第 8 节引用；本轮新增 4 条坑后台账算出 50，
   `--refresh` 自动写回 **4 处** `L:` 标记，`pm` 层随即核对通过——数字不手抄是机制不是口号。
-* Python 测试（**B16 backlog ① 本轮重测**）：**216 项 + 298 个 subTest 通过**（`pytest` 与 `unittest` 同数；
-  198 + 新增 `test_walkthrough_pack.py` 18 项），`ruff --select F,E9` 干净。
+* Python 测试（**展示层批次⑩ 本轮重测**）：**225 项 + 298 个 subTest 通过**（`pytest` 与 `unittest` 同数；
+  216 核心 = 198 + `test_walkthrough_pack.py` 18，另加展示页 `test_showcase.py` 9 项），`ruff --select F,E9` 干净。
+* 展示页（展示层工程批次⑩，2026-10-03）：`web/showcase.html` = 13 段 walkthrough 现场输出 + 数字卡
+  全部现算（台账键数/门禁层配比/走查分解都从演示输出解析），与重算逐字一致；run.bat 两跑退出码 0，
+  规范化日志逐字相同（各 280 行；规范项=单测计时 1 + 流水线各层耗时 6）。
 * 走查期望值生成器（B16 backlog ①）：`walkthrough_pack.py --check` **通过**——docs/16 与现算逐字一致、
   docs/07 的 20 步 41 条窄断言全对上（四种改坏各有负面对照）；**它抓出并修掉了 docs/07 三处过期期望**
   （第 8 步把接单链切断的 `R006`、第 13 步沿用 AQ-03 裁决前的"随时能关"、第 16 步徽章文案），

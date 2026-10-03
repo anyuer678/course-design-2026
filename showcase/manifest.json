@@ -288,9 +288,9 @@
    "course": "Java 面向对象程序设计",
    "title": "画图程序：撤销/重做 + 可信文件存取（Swing）",
    "batch": 10,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B14-java-paint/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": "已有真窗口 GUI；展示页嵌离屏渲染产物"
   },
   {
@@ -298,9 +298,9 @@
    "course": "Web 系统与技术",
    "title": "短链系统：base62 + 跳转统计 + 原生前端",
    "batch": 10,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B31-shorturl/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": "已有浏览器前端（需起服务）"
   },
   {
@@ -308,9 +308,9 @@
    "course": "专业前沿技术讲座",
    "title": "技术雷达：记录模板 + 可机验证据",
    "batch": 10,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B39-tech-radar/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -318,9 +318,9 @@
    "course": "专业实习",
    "title": "专业技能差距矩阵 + JD 映射器",
    "batch": 10,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B40-career-map/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -328,9 +328,9 @@
    "course": "毕业设计（论文）",
    "title": "毕设种子：五候选三维可行性（已清零收官）",
    "batch": 10,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B41-thesis-seeds/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -338,9 +338,9 @@
    "course": "软件工程等（B15–B22 十门合集）",
    "title": "宿舍报修系统：需求→原型→平台→测试→门禁",
    "batch": 10,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/dorm-repair/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": "已有浏览器原型（需起服务）"
   }
  ]

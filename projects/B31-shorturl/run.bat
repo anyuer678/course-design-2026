@@ -10,28 +10,32 @@ set B31_PORT=8000
 
 where python >nul 2>nul || (echo [!] python not found & exit /b 1)
 
-echo [1/4] 环境检查
+echo [1/5] 环境检查
 python --version
 python -c "import b31, netlab, sqlite3, sys; print('      Python', sys.version.split()[0], '| SQLite', sqlite3.sqlite_version); print('      复用 B11 的 netlab：', b31.B11_DIR)" || exit /b 1
 
 echo.
-echo [2/4] 运行测试（unittest，无第三方依赖）
+echo [2/5] 运行测试（unittest，无第三方依赖）
 python -m unittest discover -s tests || exit /b 1
 
 echo.
-echo [3/4] 演示：短码生成、URL 关卡、原始响应字节、状态码、keep-alive、影子模型
+echo [3/5] 演示：短码生成、URL 关卡、原始响应字节、状态码、keep-alive、影子模型
 python demo.py || exit /b 1
+
+echo.
+echo [4/5] 展示页新鲜度（web/showcase.html 与现算逐字比对，过期即红）
+python tools\showcase.py --check || exit /b 1
 
 if /i "%~1"=="no-server" (
     echo.
-    echo [4/4] 已按 no-server 跳过启动服务。要人工验证页面，直接跑：run.bat
+    echo [5/5] 已按 no-server 跳过启动服务。要人工验证页面，直接跑：run.bat
     echo.
     echo 全部完成。测试与演示都在临时目录里建数据库，项目目录没有留下新文件。
     exit /b 0
 )
 
 echo.
-echo [4/4] 启动短链服务：http://127.0.0.1/%B31_PORT%/
+echo [5/5] 启动短链服务：http://127.0.0.1/%B31_PORT%/
 echo       请在浏览器里打开上面这个地址，依次试：
 echo       1 在输入框里贴一个长地址，点“生成短链” —— 页面显示短链与命中数 0
 echo       2 点那条短链 —— 浏览器跳到目标地址，回来刷新列表命中数加一

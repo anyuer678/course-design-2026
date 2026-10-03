@@ -22,14 +22,16 @@
 ## 运行
 
 ```
-run.bat                 # 编译 → 无头自测 → 离屏演示 → 打开窗口（第 4 步会提示人工验证清单）
-run.bat no-gui          # 只跑到离屏那一步（不开窗口，适合远程/CI）
+run.bat                 # 五步：编译 → 无头自测 → 离屏演示 → 展示页新鲜度 → 打开窗口（第 5 步提示人工验证清单）
+run.bat no-gui          # 前四步跑完就停（含展示页新鲜度；不开窗口，适合远程/CI）
 
 javac --release 17 -encoding UTF-8 -d out\classes @out\sources-main.txt   # 手动编译
 java -Djava.awt.headless=true -cp "out\classes;out\test-classes" paint.PaintTests
 java -Djava.awt.headless=true -cp out\classes paint.App --demo            # 离屏演示
 java -cp out\classes paint.App                                            # 打开窗口
 java -Dpaint.data=D:\notes -cp out\classes paint.App                      # 换文档目录
+python tools\showcase.py --write       # 重生展示页 web\showcase.html（--check 过期即红；自包含构建 + 真跑自检/离屏演示）
+python tests\test_showcase.py          # 9 项展示页测试（直跑单文件）
 ```
 
 Windows 上 `-cp` 的分隔符是 `;`，Git Bash 里要整体加引号，否则会被当成命令分隔——这条我踩过。
@@ -121,7 +123,12 @@ ellipse x y w h #RRGGBB
 | 交互语义 | 拖拽过程中不改文档、松手才提交、小于阈值的误点不产生命令、移动只产一条命令、Delete/Ctrl+Z/Ctrl+Shift+Z/Ctrl+Y/Esc、不同工具产出不同形状（工厂生效）、非法参数拒绝 |
 | 随机 vs 快照 | 20 轮 × 300 步随机操作（画/选/拖/删/撤销/重做），另一侧用**整体快照栈**实现撤销——两条完全不同的实现逐步比对形状列表，专治"撤销栈与文档失同步" |
 
-**没有自动化覆盖、必须人工点的部分**（`run.bat` 第 4 步列了清单）：真窗口能否弹出、
+**展示页（2026-10-03 展示层批次⑩）**：`web/showcase.html` 由 `tools/showcase.py` 现算——
+按 run.bat 同命令行自包含构建（`build/` 已 gitignore）再真跑 `PaintTests` 与 `App --demo`，
+页内嵌**当场画出来的 PNG**（3404 字节；sha1 确定性：多次运行逐字节相同，测试钉住）与 8 组自检结论；
+9 项展示页测试直跑通过。`run.bat no-gui` 两跑退出码 0，规范化日志逐字相同（各 29 行；规范项=PNG 临时文件名 1 处）。
+
+**没有自动化覆盖、必须人工点的部分**（`run.bat` 第 5 步列了清单）：真窗口能否弹出、
 工具栏按钮观感与顺序、颜色选择器/对话框、未保存时的关闭确认、拖拽手感、PNG 导出图片是否合眼缘、
 鼠标真实事件与键盘焦点（`requestFocusInWindow` 是否真生效）。
 我不会替这些打勾：**屏幕级验证在这台机器上不允许自动执行**（我试过用 `Robot` 抓屏，被安全策略拦下，
@@ -170,6 +177,8 @@ ellipse x y w h #RRGGBB
 * PNG 导出是"当前画布内容 + 画布尺寸"，无 DPI/裁剪/透明背景；`ImageIO` 之外没做图像优化。
 * 对话框全部走 `JOptionPane`，没有快捷键帮助、没有最近文件列表、没有撤销历史可视化面板。
 * **GUI 的"能开、好用"这一层由人工确认**（见上一节），我只承诺离屏与逻辑层是自动验证过的。
+* **展示页生成器用到 Python**（仅标准库）：编译/自检/离屏演示三步仍是纯 javac/java；
+  生成器在 `build/`（已 gitignore）缓存编译产物，并依赖本机 PATH 上有 javac/java。
 
 ## 练习建议（G2，自己动手）
 

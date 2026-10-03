@@ -17,7 +17,7 @@ if errorlevel 1 exit /b 1
 if exist "%BUILD%" rmdir /s /q "%BUILD%"
 mkdir "%BUILD%\classes" "%BUILD%\test-classes"
 
-echo [1/4] compile (release 17, UTF-8 sources)
+echo [1/5] compile (release 17, UTF-8 sources)
 javac -version 2>&1
 dir /s /b src\main\java\*.java > "%BUILD%\sources-main.txt"
 javac --release 17 -encoding UTF-8 -d "%BUILD%\classes" @"%BUILD%\sources-main.txt"
@@ -28,18 +28,23 @@ if errorlevel 1 exit /b 1
 echo       compiled into %BUILD%
 
 echo.
-echo [2/4] headless self-test (no window, java.awt.headless=true)
+echo [2/5] headless self-test (no window, java.awt.headless=true)
 java -Djava.awt.headless=true %JAVA_FLAGS% -cp "%BUILD%\classes;%BUILD%\test-classes" paint.PaintTests
 if errorlevel 1 exit /b 1
 
 echo.
-echo [3/4] offscreen demo: draw three shapes, undo, redo, count pixels, write PNG to temp
+echo [3/5] offscreen demo: draw three shapes, undo, redo, count pixels, write PNG to temp
 java -Djava.awt.headless=true %JAVA_FLAGS% -cp "%BUILD%\classes" paint.App --demo
+if errorlevel 1 exit /b 1
+
+echo.
+echo [4/5] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 if /i "%~1"=="no-gui" goto :skip_gui
 echo.
-echo [4/4] opening the paint window. Manual checklist is in README (section: walkthrough).
+echo [5/5] opening the paint window. Manual checklist is in README (section: walkthrough).
 echo       Close the window when done; unsaved changes trigger a confirmation dialog.
 start /wait "" java %JAVA_FLAGS% -cp "%BUILD%\classes" paint.App
 echo.
@@ -49,7 +54,7 @@ exit /b 0
 
 :skip_gui
 echo.
-echo [4/4] skipped on purpose (no-gui). Run "run.bat" to open the window.
+echo [5/5] skipped on purpose (no-gui). Run "run.bat" to open the window.
 echo Done. Nothing was written into this folder; the build lives in %BUILD%.
 endlocal
 exit /b 0

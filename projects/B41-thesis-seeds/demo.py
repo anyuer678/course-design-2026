@@ -73,7 +73,7 @@ def main() -> int:
     section(2, "负面对照：改坏一处，核验器必须报红（否则数字就是装饰）")
     cases = [("改错一行行数", lambda s: s[0]["files"][0].__setitem__(
                   "lines", s[0]["files"][0]["lines"] + 1)),
-             ("改错探针期望值", lambda s: s[0]["probes"][0].__setitem__("expected", 1)),
+             ("改错探针期望值", lambda s: s[0]["probes"][0].__setitem__("expected", False)),
              ("锚点指向不存在的短语", lambda s: s[0]["evidence"].__setitem__(
                   "anchor", "这段字符串绝不可能出现xq9"))]
     for label, mutate in cases:

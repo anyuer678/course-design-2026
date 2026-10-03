@@ -46,10 +46,10 @@
    "id": "b23-numpy-sklearn",
    "title": "B23 + NumPy/scikit-learn 对拍扩展到更大网络",
    "date": "2026-10-02",
-   "note": "用户选定并实施（候选表上最后一个）：见 projects/B23-ml-from-scratch/——口径先写纸上（docs/sklearn-compare-spec.md：四组模型同参口径/容差表/不可比项/陷阱参数/负面对照设计），核心五模块保持纯标准库，对拍台 ml/compare_sklearn.py 是唯一 import sklearn 的地方；安装登记双口径（下载 8.7MB / 安装 47.0MB；numpy 2.4.6 与 scipy 1.17.1 本已在位、安装未动任何已有包）；原缺口探针「sklearn 缺失」随安装获批转为在位。45 项测试双入口（33 核心 + 12 对拍）、run.bat 两次退出码 0、规范化日志逐字相同（各 166 行）；负面对照四条（LR 乱标签/树 depth=1/KNN k=1 平票/MLP 单隐元+lr0.001）全部红在该原因上；规模曲线 n=200→2000（n=2000 时树约 500 倍、KNN 约 70 倍、BP 约 18 倍差距，闭式回归同量级）。实施中把 sklearn 默认早停截胡、'坏参要实测选'等坑当场抓出——详见 B23 README 坑 7-11。",
+   "note": "用户选定并实施（候选表上最后一个）：见 projects/B23-ml-from-scratch/——口径先写纸上（docs/sklearn-compare-spec.md：四组模型同参口径/容差表/不可比项/陷阱参数/负面对照设计），核心五模块保持纯标准库，对拍台 ml/compare_sklearn.py 是唯一 import sklearn 的地方；安装登记双口径（下载 8.7MB / 安装 47.0MB；numpy 2.4.6 与 scipy 1.17.1 本已在位、安装未动任何已有包）；原缺口探针「sklearn 缺失」随安装获批转为在位。45 项测试双入口（33 核心 + 12 对拍；2026-10-03 展示层工程接入后为 54 项 = 45 + 9 展示页）、run.bat 两次退出码 0、规范化日志逐字相同（各 166 行）；负面对照四条（LR 乱标签/树 depth=1/KNN k=1 平票/MLP 单隐元+lr0.001）全部红在该原因上；规模曲线 n=200→2000（n=2000 时树约 500 倍、KNN 约 70 倍、BP 约 18 倍差距，闭式回归同量级）。实施中把 sklearn 默认早停截胡、'坏参要实测选'等坑当场抓出——详见 B23 README 坑 7-11。",
    "evidence": {
     "path": "projects/B23-ml-from-scratch/README.md",
-    "anchor": "45 项双入口同数"
+    "anchor": "54 项双入口同数"
    }
   }
  ]

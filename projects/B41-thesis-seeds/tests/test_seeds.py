@@ -92,6 +92,29 @@ class TestSeedsChecker(unittest.TestCase):
         problems = self.problems(mutate)
         self.assertTrue(any("没匹配到任何文件" in p for p in problems), problems)
 
+    def test_demo_negative_controls_all_red(self):
+        """演示第 2 段的负面对照必须三条各自变红，且不许出现『没有报红——BUG』。
+
+        2026-10-03 展示层批次⑩ 现场抓出的正缺陷：『改错探针期望值』原写成
+        `expected = 1`——1 == True，于是这条"改坏"是个**空操作**（此前被另一条
+        过期锚点的失败遮蔽得看不见）。改成 False 后，本测试把演示的负面对照
+        整体钉住（import-check 规则本身的含义由既有
+        `test_import_expectation_mismatch_turns_red` 覆盖）。"""
+        import io as _io
+        from contextlib import redirect_stdout as _redirect
+        sys.path.insert(0, str(ROOT))
+        import demo as demo_mod
+        buf = _io.StringIO()
+        with _redirect(buf):
+            rc = demo_mod.main()
+        out = buf.getvalue()
+        self.assertEqual(rc, 0)
+        self.assertEqual(out.count("RED，首条："), 3, out)
+        self.assertNotIn("没有报红——BUG", out)
+        self.assertIn("行数对不上", out)
+        self.assertIn("记录要求不可导入", out)
+        self.assertIn("锚点", out)
+
     def test_missing_anchor_turns_red(self):
         problems = self.problems(lambda s: s[0]["evidence"].__setitem__(
             "anchor", "这段字符串绝不可能出现xq9"))

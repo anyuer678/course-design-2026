@@ -52,7 +52,7 @@ def synthetic_seed() -> dict:
         "id": "synthetic-fixture", "title": "合成夹具（注入用）",
         "question": "夹具问题？",
         "evidence": {"path": "projects/B23-ml-from-scratch/README.md",
-                     "anchor": "45 项双入口同数"},
+                     "anchor": "54 项双入口同数"},
         "files": [{"path": "projects/B23-ml-from-scratch/data/iris.csv", "lines": 151}],
         "probes": [{"name": "夹具探针", "kind": "import-check",
                     "module": "numpy", "expected": True}],

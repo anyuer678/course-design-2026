@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>B39-tech-radar · 技术雷达（课设作品集）</title>
+<style>
+body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f6f9;color:#1c2330}
+.sw-top{max-width:1100px;margin:12px 18px 0;padding:10px 14px;background:#fff;border:1px solid #d5d9e0;border-radius:10px}
+.sw-top .sw-link{font-size:13px;color:#1d4ed8;text-decoration:none}
+.sw-top h2{font-size:16px;margin:6px 0 2px}
+.sw-top p{margin:2px 0;color:#5f6773;font-size:13px}
+.sw-cards{max-width:1100px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin:10px 18px 0}
+.sw-card{background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:8px 12px;font-size:13px}
+.sw-card b{display:block;font-size:12px;color:#5f6773;margin-bottom:2px}
+.sw-panel{max-width:1100px;margin:10px 18px 0;background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:10px 14px;font-size:14px}
+.sw-panel h3{margin:4px 0 6px;font-size:15px}
+.sw-panel pre{background:#0f1115;color:#e6e9ef;border-radius:8px;padding:10px 12px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+.sw-panel kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid #d5d9e0;border-radius:4px;padding:0 4px;background:#fff}
+.sw-panel table{border-collapse:collapse;width:100%;font-size:13px}
+.sw-panel th,.sw-panel td{border:1px solid #d5d9e0;padding:4px 8px;text-align:left;vertical-align:top}
+.sw-panel th{background:#eef2f7}
+.sw-footer{max-width:1100px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+</style></head>
+<body data-showcase="B39-tech-radar">
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a>
+<h2>B39-tech-radar · 技术雷达：记录模板 + 可机验证据 + 一次最小复现</h2>
+<p>把"讲座笔记"变成<b>可核验</b>的资产：证据节里的每条指针（仓库路径 / @提交号）都会被
+<kbd>tools/check_record.py</kbd> 真的去仓库和 git 里找一遍——找不到就红。本页数字全部现算自
+<kbd>demo.py</kbd>（种子化、无计时输出）与示例记录本体。</p></div>
+<section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>26 项（18 核心 + 8 展示页自测）</span></div><div class="sw-card"><b>示例记录检查</b><span>PASS（0 个问题）；路径 4 条 + 提交 1 个（全部在仓库/git 里真实存在）</span></div><div class="sw-card"><b>负面对照（检查器有没有牙齿）</b><span>3 条改坏全部报红且红在该原因上（删必需小节 / 指针指向不存在文件 / 假提交号）</span></div><div class="sw-card"><b>CRDT 收敛复现</b><span>100 组置换（全部一致 = True）；并列计数器的赢家 'b'（时间戳 (1, 'b') 战胜 (1, 'a')）→ 值 'y'</span></div><div class="sw-card"><b>性质抽查</b><span>交换 50/50；结合 50/50；幂等 1/1</span></div><div class="sw-card"><b>记录五节结构</b><span>问题 / 原理 / 证据（可核验指针）/ 局限与适用边界 / 复现——缺节即红</span></div></section>
+<section id="demo" class="sw-panel"><h3>四段演示原文（现算）</h3>
+<pre>B39-tech-radar 演示：讲座记录模板 + 可机验证据 + 一次最小复现（技术雷达）
+
+==============================================================================
+  1) 模板与检查器：示例记录的每一条证据都要真实存在
+==============================================================================
+  检查示例记录                          PASS（0 个问题）
+  核验的指针                           路径 4 条 + 提交 1 个（全部在仓库/git 里真实存在）
+
+==============================================================================
+  2) 负面对照：改坏一处，检查器必须报红（否则它就是装饰）
+==============================================================================
+  删掉「局限与适用边界」节                    RED，首条：缺少必需小节：局限与适用边界
+  证据指向不存在的文件                      RED，首条：证据路径在仓库里不存在：projects/B39-tech-radar/repro/NOPE.py
+  引用一个假提交号                        RED，首条：证据提交在 git 里不存在：@deadbeef0
+
+==============================================================================
+  3) 最小复现：LWW-Register 的收敛性（交换/结合/幂等 + 置换不变）
+==============================================================================
+  收敛性（100 组置换）                    全部一致 = True
+  并列计数器的赢家                        &#x27;b&#x27;（时间戳 (1, &#x27;b&#x27;) 战胜 (1, &#x27;a&#x27;)）→ 值 &#x27;y&#x27;
+  性质抽查（50 组随机）                    交换 50/50；结合 50/50；幂等 1/1
+  向量时钟（因果进度）                      {&#x27;a&#x27;: 1, &#x27;b&#x27;: 1}
+
+==============================================================================
+  4) 怎么用它：写你自己的讲座记录
+==============================================================================
+  1. 复制 docs/record-template.md 到 docs/records/&lt;主题&gt;.md，逐节填写；
+  2. 「证据」节每条写成可核验指针：`仓库内路径` 与/或 `@提交号`；
+  3. 跑检查：python tools/check_record.py docs/records/&lt;主题&gt;.md
+     红了就改——不是形式主义：指针不存在意味着这条&#x27;证据&#x27;其实没人验证过。
+  示例记录的来源栏明确写着「示例（非真实讲座）」——真讲座记录请照实填。</pre></section>
+<section class="sw-panel"><h3>示例记录原文 · docs/records/example-crdt.md（交付物本体）</h3>
+<details><summary style="cursor:pointer;color:#1d4ed8">展开示例记录（来源栏明确写着"示例（非真实讲座）"）</summary>
+<pre># 记录：无协调多副本如何收敛——LWW-Register 与「(计数器, 副本)」全序
+
+- 来源：示例（非真实讲座）——按 `docs/record-template.md` 写的一次完整示范，演示模板怎么用
+- 日期：2026-10-02
+- 记录人：课程设计仓库（B39 示例）
+
+## 问题
+
+多个副本各自接受写入、平时互不协调（网络分区、离线编辑、多端同步都会遇到），
+**最终如何保证大家看到同一个值**？如果做不到&quot;收敛&quot;，用户就会遇到&quot;我刚写的东西没了&quot;
+——这不是体验问题，是数据正确性问题。
+
+## 原理
+
+把&quot;合并&quot;设计成一个**join（取上确界）**而不是&quot;最后一次写入赢&quot;的任意约定：
+
+1. 每个写操作带时间戳 `(计数器, 副本号)`——计数器在本副本内单调递增，
+   副本号做破平（total order）。没有全序就没有确定的赢家，收敛无从谈起；
+2. 合并函数 `merge(a, b) = 取 timestamps 较大的那个 (值, 时间戳)`；
+   满足三条性质 → 收敛（不管操作以什么顺序、分几批到达）：
+   - **交换律**：merge(a,b) 与 merge(b,a) 结果相同；
+   - **结合律**：先合哪两个不影响最终结果；
+   - **幂等性**：重复合并同一份状态不变（重传/回声不会翻车）。
+   这三条性质合起来就是 join 半格——交换/结合/幂等正是&quot;最终一致&quot;的充分条件；
+3. 向量时钟在这里的角色：给&quot;因果&quot;留位置（本最小复现只用它记录每副本进度，
+   真正的多值语义需要 OR-Set 等更强的结构）。
+
+**如果我错了会先错在哪里**：如果 merge 用了墙钟时间当时间戳，时钟偏斜会让
+&quot;较晚的写&quot;在另一台机器上判定为较早——性质测试里的&quot;置换不变性&quot;就会红。
+
+## 证据（如何核验）
+
+- `projects/B39-tech-radar/repro/crdt_lww.py`，性质测试跑法：`python -m unittest discover -s tests`，
+  共 18 项断言三性质 + 收敛（随机置换 100 组、种子固定）；`run.bat` 复跑两次退出码 0；
+- `projects/B39-tech-radar/tests/test_radar.py` 里 `test_tie_break_by_replica`：
+  两副本计数器并列时，按副本号字典序取大——手算场景逐值钉住；
+- 同类问题在本仓库的两处落点（技术雷达要能挂到自己的系统里）：
+  `projects/B30-mini-raft/README.md`（§5.4.2 只提交本任期条目——串行共识下的冲突处理）、
+  `projects/B38-mini-redis/README.md` 与 `@f0bb729`（单机串行化=另一种&quot;避免冲突&quot;的路线）。
+
+## 局限与适用边界
+
+- 只有 LWW-Register：**丢失并发写**（两个副本同时写不同值，合并后必有一方被覆盖）。
+  要保留并发值得换 OR-Set / MV-Register：代价是读到的可能是&quot;多个值需要应用层合并&quot;；
+- `(计数器, 副本号)` 全序要求副本号**可判定且全局唯一**；跨组织系统里这一步往往
+  比算法本身难（命名空间/证书）；
+- 计数器是逻辑计数、不是墙钟——无法回答&quot;最后写发生在几点&quot;；
+- 没有因果投递保证：任意乱序最终都会收敛，但**中间状态**可能违反直觉；
+- 本复现是单进程模拟（消息投递顺序由测试编排），不是真实网络。
+
+## 最小复现
+
+```
+python -m unittest discover -s tests     # 18 项：性质 + 收敛 + 检查器正负例
+python demo.py                           # 分区→愈合演示：3 副本不同合并顺序收敛到同一值
+```
+
+预期关键输出：`收敛性（100 组置换）` 行显示 `全部一致 = True`；
+`并列计数器的赢家` 行显示 `&#x27;b&#x27;（时间戳 (1, &#x27;b&#x27;) 战胜 (1, &#x27;a&#x27;)）→ 值 &#x27;y&#x27;`。</pre></details></section>
+<section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
+<ul>
+<li><kbd>run.bat</kbd>：三步（测试 → demo → 展示页新鲜度）；<kbd>python demo.py</kbd> 只看演示。</li>
+<li>把你自己的讲座记录放进 <kbd>docs\records\</kbd>，跑 <kbd>python tools\check_record.py docs\records\你的.md</kbd>；
+红了就改——指针不存在意味着这条"证据"其实没人验证过。</li>
+<li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+</ul></section>
+<div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
+仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
+</body></html>

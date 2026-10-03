@@ -17,12 +17,13 @@
 ## 运行
 
 ```
-run.bat                                   # 两步：18 项测试 → demo（四段；无计时输出）
-python -m unittest discover -s tests      # 18 项（双入口同数）
-python tests/test_radar.py                # 直跑同 18 项
+run.bat                                   # 三步：26 项测试 → demo（四段；无计时输出）→ 展示页新鲜度
+python -m unittest discover -s tests      # 26 项（18 核心 + 8 展示页）
+python tests/test_radar.py                # 直跑同 18 项（本文件）
 python demo.py                            # 模板/检查器 → 负面对照 → CRDT 复现 → 使用指引
 python tools/check_record.py docs/records/example-crdt.md    # 单检一条记录
 python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则只剩 unittest 计时）
+python tools/showcase.py --write          # 重生展示页 web/showcase.html（--check 过期即红）
 ```
 
 零依赖：纯标准库 + git（校验提交号证据用；缺 git 时检查器明确报"无法核验"）。
@@ -36,9 +37,10 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则
 | `tools/check_record.py` | 检查器：结构齐不齐 + 证据指针是不是真的（路径存在、提交在 git 里） |
 | `repro/crdt_lww.py` | 最小复现：LWW-Register（(计数器, 副本) 全序）+ 向量时钟，<150 行 |
 | `tests/test_radar.py` | 18 项：检查器 8（1 正 + 7 条"改坏必须红"）+ CRDT 10（性质/收敛/违规守卫） |
+| `tools/showcase.py` · `web/showcase.html` · `tests/test_showcase.py` | 展示页生成器 + 页面 + 8 项展示页测试（新鲜度/改坏必红/真数据钉住/零外链） |
 | `demo.py` · `run.bat` · `tools/logdiff.py` | 演示与交付三件套（本仓库通例） |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -52,13 +54,15 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则
 
 ## 实测（2026-10-02，首次交付；数字均为本轮现算）
 
-- **18 项测试双入口同数**（`discover` 与直跑均 18 OK）；`run.bat` **两次退出码 0**、
+- **26 项测试**（`discover` 26 = 18 核心 + 8 展示页；两文件直跑 18 / 8 分别 OK）；`run.bat` **两次退出码 0**、
   **无任何新增文件**、两次日志经 `tools/logdiff.py` 规范化后**逐字相同**
-  （各 41 行；规范项只有 unittest 计时 1 条——demo 无任何计时输出）。
+  （各 44 行；规范项只有 unittest 计时 1 条——demo 无任何计时输出）。
 - demo 关键读数：示例记录检查 **PASS（0 问题）**、核验指针 4 路径 + 1 提交；
   三条负面对照（删节/坏路径/假提交）**全部 RED**；
   **收敛性（100 组置换）= True**；性质抽查 交换 50/50、结合 50/50、幂等 1/1；
   并列计数器的赢家 `'b'`（时间戳 (1,'b') 战胜 (1,'a')）。
+- 展示页（2026-10-03 展示层批次⑩）：`web/showcase.html` = 四段演示现算 + 示例记录原文内嵌
+  （含「非真实讲座」标注），与重算逐字一致（`--check` 过期即红）；8 项展示页测试。
 
 ## 坑（都留了钉子）
 
@@ -68,7 +72,7 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则
    实际 0 问题——因为示例里的 `@f0bb729` 当时是**裸写**的，而检查器只认**反引号内**的指针，
    两处都没错、是"契约没写清"。修正：示例补上反引号 + 模板里把指针写法写成显式规则；
    教训与前几轮同源：**规则的可信度取决于"触发条件"是否写得没有歧义**。
-3. **GBK 扫净第三次复发**：`⇒`（U+21D2）又出现在新写的文件里（B37/B38 已各修过一次）——
+3. **GBK 扫净第三次复发**：双线箭头推导符号（U+21D2）又出现在新写的文件里（B37/B38 已各修过一次）——
    全源码扫查已变成每轮收尾的固定动作，这次它当场抓住两处。
 
 ## 明确不做（本期范围外）

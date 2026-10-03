@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<title>B31-shorturl · 短链服务（课设作品集）</title>
+<style>
+body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f6f9;color:#1c2330}
+.sw-top{max-width:1150px;margin:12px 18px 0;padding:10px 14px;background:#fff;border:1px solid #d5d9e0;border-radius:10px}
+.sw-top .sw-link{font-size:13px;color:#1d4ed8;text-decoration:none}
+.sw-top h2{font-size:16px;margin:6px 0 2px}
+.sw-top p{margin:2px 0;color:#5f6773;font-size:13px}
+.sw-cards{max-width:1150px;display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin:10px 18px 0}
+.sw-card{background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:8px 12px;font-size:13px}
+.sw-card b{display:block;font-size:12px;color:#5f6773;margin-bottom:2px}
+.sw-panel{max-width:1150px;margin:10px 18px 0;background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:10px 14px;font-size:14px}
+.sw-panel h3{margin:4px 0 6px;font-size:15px}
+.sw-panel pre{background:#0f1115;color:#e6e9ef;border-radius:8px;padding:10px 12px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+.sw-panel kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid #d5d9e0;border-radius:4px;padding:0 4px;background:#fff}
+.sw-footer{max-width:1150px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+</style></head>
+<body data-showcase="B31-shorturl">
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a>
+<h2>B31-shorturl · 短链服务：从"一个字符串"到"浏览器被领到另一个站点"</h2>
+<p>复用 B11 的 HTTP/1.1 子集（没有第二套解析器）：base62 短码 + 目标地址关卡 +
+SQLite 仓储 + 原生前端。本页数字全部现算自 <kbd>demo.py</kbd>（六段）——监听端口、Date 头、
+创建响应长度三处易变值已按规则规范化为占位（页面干净、规则可审计）。</p></div>
+<section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>81 项（73 核心 + 8 展示页自测）</span></div><div class="sw-card"><b>短码从哪来</b><span>自增 id → base62 竖式长除法对拍；id=372642325 → 'PDZI5'；MAX_ID 4611686018427387903 → '5UfZOVH2ZO3'（11 位）；前导零 / 字母表外字符 / 超长 三类形态拒收</span></div><div class="sw-card"><b>目标地址关卡</b><span>收下并规范化 6 条（大小写、默认端口、IDNA、%2F）；拒收 10 条 + 自指环 1 条（协议白名单 / CR-LF / 凭据 / 百分号主机 / 端口越界）</span></div><div class="sw-card"><b>状态码语义</b><span>12 条全对（201、400、400、400、415、201、409、302、404、400、405、404）</span></div><div class="sw-card"><b>keep-alive 与管线化</b><span>一条连接 30 次跳转命中 30；管线化 GET+HEAD 都是 302；HEAD 不计数</span></div><div class="sw-card"><b>统计与影子模型</b><span>120 步随机操作，SQLite（SQL 语句）与纯 Python 字典模型逐步一致；影子模型累计命中 75 == 数据库累计命中</span></div><div class="sw-card"><b>浏览器交互</b><span>页面观感与点击交互**待你实跑**（run.bat 第 5 步，我不代勾）——本页把服务器侧证据（字节/状态码/统计）摆全</span></div></section>
+<section id="demo" class="sw-panel"><h3>六段演示原文（现算）</h3>
+<pre>
+==============================================================================
+1) 短码从哪来：自增 id → base62
+==============================================================================
+  id=1                   &#x27;1&#x27;  （1 位，解回 1）
+  id=9                   &#x27;9&#x27;  （1 位，解回 9）
+  id=10                  &#x27;A&#x27;  （1 位，解回 10）
+  id=61                  &#x27;z&#x27;  （1 位，解回 61）
+  id=62                  &#x27;10&#x27;  （2 位，解回 62）
+  id=372642325           &#x27;PDZI5&#x27;  （5 位，解回 372642325）
+  id=4611686018427387903 &#x27;5UfZOVH2ZO3&#x27;  （11 位，解回 4611686018427387903）
+  字母表                    0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz
+  为什么不用 base64           `+` 在查询串里等于空格，`/` 撞路径分隔符
+  拒绝 &#x27;00&#x27;                短码 &#x27;00&#x27; 有多余的前导零：不是规范形式
+  拒绝 &#x27;a-b&#x27;               短码含字母表外的字符 &#x27;-&#x27;
+  拒绝 &#x27;zzzzzzzzzzzz&#x27;      短码长度应在 1..11，收到 12
+
+==============================================================================
+2) 目标地址的关卡
+==============================================================================
+  收下并规范化                 https&#58;//Example.COM/Path  →  https&#58;//example.com/Path
+  收下并规范化                 http&#58;//a:80/x  →  http&#58;//a/x
+  收下并规范化                 http&#58;//a/中文  →  http&#58;//a/%E4%B8%AD%E6%96%87
+  收下并规范化                 http&#58;//例え.テスト/x  →  http&#58;//xn--r8jz45g.xn--zckzah/x
+  收下并规范化                 http&#58;//[::1]:8080/p?q=1#f  →  http&#58;//[::1]:8080/p?q=1#f
+  收下并规范化                 http&#58;//a/b%2fc  →  http&#58;//a/b%2Fc
+  拒收                     &#x27;javascript:alert(1)&#x27;        协议 &#x27;javascript&#x27; 不在白名单 (&#x27;http&#x27;, &#x27;ht
+  拒收                     &#x27;data:text/html,x&#x27;           协议 &#x27;data&#x27; 不在白名单 (&#x27;http&#x27;, &#x27;https&#x27;) 
+  拒收                     &#x27;file:///c:/win.ini&#x27;         协议 &#x27;file&#x27; 不在白名单 (&#x27;http&#x27;, &#x27;https&#x27;) 
+  拒收                     &#x27;http&#58;//user@a/&#x27;             目标不能带 user:pass@：把凭据藏进短链是钓鱼的常见做法
+  拒收                     &#x27;http&#58;//a/ b&#x27;                第 10 个字符是空白：URL 里空格要写成 %20
+  拒收                     &#x27;http&#58;//a/\r\nSet-Cookie: x&#x27; 第 10 个字符是 CR/LF：会被拼进响应头，拒收
+  拒收                     &#x27;http&#58;//a/&lt;b&gt;&#x27;               路径/查询里第 2 个字符 &#x27;&lt;&#x27; 是 RFC 3986 排除字符，
+  拒收                     &#x27;http&#58;//a%2eb/&#x27;              主机名 &#x27;a%2eb&#x27; 含 %：主机段不做百分号解码。在这里解一次，
+  拒收                     &#x27;http&#58;//a:99999/&#x27;            主机/端口无法解析：Port out of range 0-6553
+  拒收                     &#x27;http&#58;//[::1/x&#x27;              无法拆分：Invalid IPv6 URL
+  自指环也拒                  UrlError：目标指向本站 /l/ 路径
+    现场示范                 目标指向本站自己的 /l/ 路径，会形成跳转环
+
+==============================================================================
+3) 一次真实请求的字节
+==============================================================================
+  发出去的请求：
+    | POST /api/links HTTP/1.1
+    | Content-Type: application/json
+    | Host: 127.0.0.1
+    | Content-Length: 35
+    | Connection: close
+    | &lt;空白行=头部结束&gt;
+    | &lt;空白行=头部结束&gt;
+  收到的响应头：
+    | HTTP/1.1 201 Created
+    | Content-Type: application/json; charset=utf-8
+    | Location: /api/links/1
+    | Cache-Control: no-store
+    | Content-Length: &lt;随 created_at 位数&gt;
+    | Date: &lt;当场&gt; GMT
+    | Server: netlab/1.0
+    | Connection: close
+  解析出的短码                 1  绝对地址 http&#58;//127.0.0.1:&lt;端口&gt;/l/1
+  GET /l/1               302 Found
+  Location               http&#58;//example.com/a?x=1
+  Cache-Control          no-store
+  Content-Length         139
+
+==============================================================================
+4) 状态码语义
+==============================================================================
+  POST /api/links        201 (对)
+  POST /api/links        400 (对)
+  POST /api/links        400 (对)
+  POST /api/links        400 (对)
+  POST /api/links        415 (对)
+  POST /api/links        201 (对)
+  POST /api/links        409 (对)
+  GET /l/1               302 (对)
+  GET /l/zzzzzzzzz       404 (对)
+  GET /l/qqqqqqqqqqqq    400 (对)
+  DELETE /l/1            405 (对)  Allow=GET, HEAD
+  GET /api/nothing       404 (对)
+
+==============================================================================
+5) keep-alive 与管线化
+==============================================================================
+  一条连接 30 次跳转            命中 30（应为 30）
+  服务端累计连接数               4
+  管线化两个请求                302 与 302，都是 302
+  HEAD 的体长度              0（声明的 Content-Length 是 137）
+  HEAD 不计数               31（30 次 GET + 1 次管线 GET，HEAD 没加分）
+
+==============================================================================
+6) 统计与影子模型
+==============================================================================
+  影子模型累计命中               75
+  数据库累计命中                75
+  最近 3 条（新→旧）            [(&#x27;B&#x27;, 2), (&#x27;C&#x27;, 2), (&#x27;W&#x27;, 0)]
+  命中榜前 3                 [(&#x27;4&#x27;, 9), (&#x27;2&#x27;, 7), (&#x27;1&#x27;, 4)]
+  两条完全不同的实现（SQL 语句 vs 字典累加）在这 120 步上逐步一致
+
+  服务已关闭                  统计 {&#x27;requests&#x27;: 49, &#x27;connections&#x27;: 4, &#x27;peak_open&#x27;: 1, &#x27;open_now&#x27;: 0, &#x27;timed_out&#x27;: 0, &#x27;refused&#x27;: 0, &#x27;errors&#x27;: 9}</pre></section>
+<section id="repro" class="sw-panel"><h3>怎么自己跑</h3>
+<ul>
+<li><kbd>run.bat</kbd>：五步（环境 → 测试 → demo → 展示页新鲜度 → 启动服务）；
+<kbd>run.bat no-server</kbd> 跳过最后一步。</li>
+<li><kbd>python demo.py</kbd>：只看六段演示（临时目录建库，项目目录不留文件）。</li>
+<li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+</ul>
+<p>服务默认起在 <kbd>127.0.0.1:8000</kbd>（页面零外链，此地址只是运行说明）；页面样式、
+手感与点击交互请自己起服务看。</p></section>
+<div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；
+仓库级校验 python showcase/check.py）。页面数据全部现算，无外部请求。</p></div>
+</body></html>

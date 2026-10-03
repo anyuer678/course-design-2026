@@ -42,6 +42,7 @@ python say.py step3
 python tools/export_contract.py --check || exit /b 1
 python tools/export_verdict_table.py --check || exit /b 1
 python tools/walkthrough_pack.py --check || exit /b 1
+python tools/showcase.py --check || exit /b 1
 python checks/check_arch.py || exit /b 1
 
 echo.

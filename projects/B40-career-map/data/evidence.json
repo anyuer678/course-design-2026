@@ -120,11 +120,11 @@
   },
   {
    "id": "dorm-repair",
-   "claim": "报修系统全生命周期（需求工程→架构→Java 平台→测试→质量门禁→PM）：216 项 + 298 subTest 通过（Java 37 项；流水线 11 层全绿）",
+   "claim": "报修系统全生命周期（需求工程→架构→Java 平台→测试→质量门禁→PM）：225 项 + 298 subTest 通过（216 核心 + 9 展示页）（Java 37 项；流水线 11 层全绿）",
    "pointers": [
     "projects/dorm-repair/README.md"
    ],
-   "anchor": "216 项 + 298 个 subTest 通过",
+   "anchor": "225 项 + 298 个 subTest 通过",
    "commit": "5826d70"
   },
   {
@@ -201,11 +201,11 @@
   },
   {
    "id": "b31-shorturl",
-   "claim": "短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：73 项测试 + 129 subTest 全通过",
+   "claim": "短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：81 项测试（73 核心 + 8 展示页）+ 129 subTest 全通过",
    "pointers": [
     "projects/B31-shorturl/README.md"
    ],
-   "anchor": "73 项测试 + 129 个 subTest 全通过",
+   "anchor": "81 项测试 + 129 个 subTest 全通过",
    "commit": "4ccc788"
   },
   {
@@ -264,11 +264,11 @@
   },
   {
    "id": "b39-radar",
-   "claim": "技术雷达（模板 + 可机验证据检查器 + 最小复现）：18 项测试双入口同数",
+   "claim": "技术雷达（模板 + 可机验证据检查器 + 最小复现）：26 项测试（18 核心 + 8 展示页）",
    "pointers": [
     "projects/B39-tech-radar/README.md"
    ],
-   "anchor": "18 项测试双入口同数",
+   "anchor": "26 项（18 核心 + 8 展示页）",
    "commit": "7b699b8"
   },
   {
