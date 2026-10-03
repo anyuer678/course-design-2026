@@ -58,9 +58,9 @@
    "course": "数字设计与计算机原理",
    "title": "单周期 CPU + 五级流水线 + 时空图",
    "batch": 3,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B5-cpu-sim/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -68,9 +68,9 @@
    "course": "汇编语言",
    "title": "x86-64 汇编四函数 + ABI 探针 + 反汇编对照",
    "batch": 3,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B6-asm-lab/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -78,9 +78,9 @@
    "course": "操作系统原理",
    "title": "操作系统模拟器：调度/内存/文件系统",
    "batch": 3,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B9-os-sim/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {

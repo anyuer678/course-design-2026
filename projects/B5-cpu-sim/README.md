@@ -12,12 +12,13 @@
 ## 运行
 
 ```
-run.bat                                              # 三步：自测 → 双模型演示 → 时空图
+run.bat                                              # 四步：自测 → 双模型演示 → 时空图 → 展示页新鲜度
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude tests\test_cpu.cpp -o build\tests.exe && build\tests.exe
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude src\main.cpp -o build\cpu-sim.exe
 build\cpu-sim.exe programs\bubble.asm                # 冒泡排序：单周期 vs 流水线
 build\cpu-sim.exe --chart programs\bubble.asm        # 流水线时空图（S=停顿，F=冲刷）
 build\cpu-sim.exe --chart programs\loop.asm          # 最小循环：看分支冲刷
+python tools\showcase.py --write                     # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
 只用 g++ 与标准库，**零下载零安装**。
@@ -34,7 +35,7 @@ build\cpu-sim.exe --chart programs\loop.asm          # 最小循环：看分支�
 | `programs/bubble.asm` / `loop.asm` | 冒泡排序（用到全部指令类）与最小循环 |
 | `tests/test_cpu.cpp` | **42 项断言**（四组：ISA 语义 / 汇编器 / 单周期性质 / 流水线与单周期对拍） |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -52,7 +53,10 @@ build\cpu-sim.exe --chart programs\loop.asm          # 最小循环：看分支�
 
 - 自测：**42 项断言，0 项失败**（原记录是 39 项；重建的实现与测试不是逐字同一份，数字如实更新）。
 - `run.bat` 连跑两次退出码 **0**、`not recognized` **0**、目录**无新增文件**（`build/` 之外），
-  两次日志**逐字相同**（`diff` 0 行）。
+  两次日志**逐字相同**（各 249 行，`diff` 0 行）。
+- 展示页（2026-10-03 展示层工程批次③）：`web/showcase.html` 单文件自包含——双模型对拍 +
+  两张**时空图**（bubble 219 周期 / loop 16 周期，S/F 逐周期着色表格；解析器对超宽单元格的
+  列漂移做了全量验证 0 误判）；与现算**逐字一致**（`--check` 过期即红）。
 - 双模型读数（现算）：冒泡排序（输入 `5 1 4 2 3`）单周期 **159 周期**、流水线 **219 周期**
   （停顿 10、冲刷 23；`--chart` 里数组未预置时冲刷 29、分支 29 跳 15），排序结果 `1 2 3 4 5`，
   **两模型寄存器完全一致**。

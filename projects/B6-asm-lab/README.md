@@ -15,12 +15,13 @@ C++ `long` 是 32 位——这是重建时踩出的最大一坑，见下）。**
 ## 运行
 
 ```
-run.bat                                        # 三步：汇编+自测 → 演示 → 反汇编结构对照
+run.bat                                        # 四步：汇编+自测 → 演示 → 反汇编结构对照 → 展示页新鲜度
 gcc -c asm\reverse.s -o build\asm\reverse.o    # （run.bat 里把四个 .s 和探针都汇编了）
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude tests\test_asm.cpp build\asm\*.o -o build\tests.exe
 build\tests.exe                                # 自测：373 项断言
 build\asm-lab.exe                              # 演示：五段
 python tools\disasm_check.py                   # 反汇编结构对照：23 项检查
+python tools\showcase.py --write               # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
 只用 MinGW 工具链（gcc/g++/as/objdump）与标准库，**零下载零安装**。
@@ -38,7 +39,7 @@ python tools\disasm_check.py                   # 反汇编结构对照：23 项�
 | `tools/disasm_check.py` | 反汇编结构对照（对着 objdump 输出逐条断言，含 C++ 调用点证据） |
 | `src/main.cpp` | 五段演示 + `include/check.hpp` 断言计数器 |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -49,7 +50,7 @@ python tools\disasm_check.py                   # 反汇编结构对照：23 项�
 | 完整栈帧 | `asm_sum_positive` | 手算 4 例 + 60 组参照对拍；**反汇编 6 项结构断言**（push rbp / mov rbp,rsp / leave / ret / push rbx / pop rbx） |
 | 叶函数 vs 栈帧函数 | `fib/reverse/sort` vs `sum_positive` | 结构检查同时验两端：前者**没有任何 push/pop**，后者序言收尾齐全——"要不要建帧"是能被反汇编证实的取舍 |
 | **调用约定（callee-saved）** | `abi_probe.s` | 8 个 callee-saved 寄存器填哨兵 → 调用目标 → 逐位比较：**四个函数全 0**；反面教材**必须**亮 bit0（探针自证） |
-| C++ ↔ 汇编互调 | `extern "C"` + Windows x64 寄存器约定 | demo 反汇编里能读到 4 个符号上的 `call` 调用点（工具第 6 组检查） |
+| C++ · 汇编互调 | `extern "C"` + Windows x64 寄存器约定 | demo 反汇编里能读到 4 个符号上的 `call` 调用点（工具第 6 组检查） |
 | 反汇编对照 | `tools/disasm_check.py` | 23 项结构断言对接 objdump 真实输出；序言/收尾现场截取打印 |
 
 ## 实测（2026-10-02，事故后重建；数字均为本轮现算）
@@ -58,7 +59,10 @@ python tools\disasm_check.py                   # 反汇编结构对照：23 项�
 - ABI 探针掩码（0 = 一个 bit 都没动）：`reverse=0 fib=0 sort=0 sum=0`；
   反面教材 `abi_bad_clobber` = **1**（bit0=rbx，探针确实会亮灯）。
 - `run.bat` 连跑两次退出码 **0**、`not recognized` **0**、`build/` 之外**无新增文件**、
-  两次日志**逐字相同**（干净重跑：先删 `build/` 再全程重建）。
+  两次日志**逐字相同**（各 93 行；干净重跑：先删 `build/` 再全程重建）。
+- 展示页（2026-10-03 展示层工程批次③）：`web/showcase.html` 单文件自包含——五段演示现场输出、
+  ABI 探针掩码表（四函数全 0 + 反面教材 bit0 亮）、23 项反汇编对照与序言/收尾截取；
+  与现算**逐字一致**（`--check` 过期即红）。
 - 反汇编结构对照：**23 项通过 0 失败**，含 `sum_positive` 的序言收尾现场截取。
 - 演示现算读数：`"Hello, asm-lab!"` → `"!bal-msa ,olleH"`；fib(0..10) 表 + fib(93)；
   12 元素排序与 `std::sort` 逐元素一致；负数数组正数和 = 29。

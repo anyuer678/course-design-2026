@@ -10,12 +10,17 @@
 ## 运行
 
 ```
-run.bat                       # 自测 + 全模块演示
+run.bat                       # 四步：构建 → 183 项断言 → 全模块演示 → 展示页新鲜度
 build\os-sim.exe sched        # 单独看某个模块
 mingw32-make test             # 183 项断言（MinGW 下 make 命令名是 mingw32-make）
+python tools\showcase.py --write  # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
-## 课程知识点 ↔ 代码模块映射
+交付核对（2026-10-03 展示层工程批次③现测）：四步 run.bat 连跑两次退出码 **0/0**、
+`not recognized` **0**、两次日志**逐字相同**（各 53 行）；`web/showcase.html` 与现算逐字一致——
+调度甘特图=五个算法画在同一条时间轴上、置换表含 Belady 异常、银行家/FAT/生产者-消费者现场读数。
+
+## 课程知识点 · 代码模块映射
 
 | 课程知识点 | 代码 | 说明 |
 |---|---|---|

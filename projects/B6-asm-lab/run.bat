@@ -15,7 +15,7 @@ if errorlevel 1 exit /b 1
 if not exist build mkdir build
 if not exist build\asm mkdir build\asm
 
-echo [1/3] assemble the four .s files + ABI probe, build and run the self-test
+echo [1/4] assemble the four .s files + ABI probe, build and run the self-test
 gcc -c asm\reverse.s -o build\asm\reverse.o
 if errorlevel 1 exit /b 1
 gcc -c asm\fib.s -o build\asm\fib.o
@@ -32,15 +32,20 @@ build\tests.exe
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/3] build and run the demo (five sections, numbers computed live)
+echo [2/4] build and run the demo (five sections, numbers computed live)
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude src\main.cpp build\asm\reverse.o build\asm\fib.o build\asm\sort.o build\asm\stackframe.o build\asm\abi_probe.o -o build\asm-lab.exe
 if errorlevel 1 exit /b 1
 build\asm-lab.exe
 if errorlevel 1 exit /b 1
 
 echo.
-echo [3/3] disassembly structure check (registers and stack frames, via objdump)
+echo [3/4] disassembly structure check (registers and stack frames, via objdump)
 python tools\disasm_check.py
+if errorlevel 1 exit /b 1
+
+echo.
+echo [4/4] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 echo.

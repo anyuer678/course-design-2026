@@ -12,22 +12,27 @@ if errorlevel 1 exit /b 1
 
 if not exist build mkdir build
 
-echo [1/3] build and run the self-test (ISA / assembler / single-cycle / pipeline vs single-cycle)
+echo [1/4] build and run the self-test (ISA / assembler / single-cycle / pipeline vs single-cycle)
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude tests\test_cpu.cpp -o build\tests.exe
 if errorlevel 1 exit /b 1
 build\tests.exe
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/3] build the simulator and run the bubble-sort demo on both models
+echo [2/4] build the simulator and run the bubble-sort demo on both models
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude src\main.cpp -o build\cpu-sim.exe
 if errorlevel 1 exit /b 1
 build\cpu-sim.exe programs\bubble.asm
 if errorlevel 1 exit /b 1
 
 echo.
-echo [3/3] pipeline space-time chart (S = stall, F = flush)
+echo [3/4] pipeline space-time chart (S = stall, F = flush)
 build\cpu-sim.exe --chart programs\bubble.asm
+if errorlevel 1 exit /b 1
+
+echo.
+echo [4/4] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 echo.
