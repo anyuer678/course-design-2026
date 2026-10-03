@@ -1,22 +1,32 @@
 @echo off
-rem 源码是 UTF-8，中文 Windows 默认代码页 936 会把提示解析成乱码
+rem B11-net-lab one-click entry. Body is pure ASCII on purpose (PLAN section 6):
+rem cmd re-reads this file by byte offset, so multi-byte text here can make it
+rem resume in the middle of a line. Chinese output comes from the Python files.
+rem Null device is >nul - the bash-style >/dev/null would create C:\dev\null here.
 chcp 65001 >nul
-rem B11-net-lab 一键脚本：自测（含与标准库对拍）+ 全流程演示
 setlocal
 cd /d %~dp0
-rem Python 默认按本地代码页写标准输出，重定向时中文演示会崩
 set PYTHONUTF8=1
-where python >nul 2>nul || (echo [!] 找不到 python，请先安装 Python 3.10+ & exit /b 1)
 
-echo [1/2] 自测：HTTP 解析边界、服务器与多路复用、资源回收、UDP 与 GBN、stdlib 对拍...
-python tests\test_netlab.py || exit /b 1
-python tests\test_against_stdlib.py || exit /b 1
+python -c "import shutil,sys; sys.exit(0 if shutil.which('python') else 1)"
+if errorlevel 1 echo [!] python not found in PATH. Install Python 3.10+ first.
+if errorlevel 1 exit /b 1
 
-echo.
-echo [2/2] 演示：一条请求的旅程 → CRUD → keep-alive 与并发 → 越界拒绝 → UDP → GBN 丢包实验
-echo.
-python demo.py || exit /b 1
+echo [1/3] unit tests (101: 75 netlab + 16 stdlib comparison + 10 showcase page)
+python -m unittest discover -s tests
+if errorlevel 1 exit /b 1
 
 echo.
-echo 全部完成。想单独看某个模块：python -m unittest tests.test_netlab -v
+echo [2/3] demo: request journey / CRUD / keep-alive / boundary rejections / UDP / GBN sweep
+python demo.py
+if errorlevel 1 exit /b 1
+
+echo.
+echo [3/3] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
+if errorlevel 1 exit /b 1
+
+echo.
+echo Done. Run one module alone: python -m unittest tests.test_netlab -v
 endlocal
+exit /b 0

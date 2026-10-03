@@ -11,23 +11,28 @@ python -c "import shutil,sys; sys.exit(0 if shutil.which('python') else 1)"
 if errorlevel 1 echo [!] python not found in PATH. Install Python 3.10+ first.
 if errorlevel 1 exit /b 1
 
-echo [1/4] unit tests (50 assertions over four labs plus the static scanner)
+echo [1/5] unit tests (60: 50 core + 10 showcase page tests)
 python -m unittest discover -s tests
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/4] same suite through the direct file entry (dual entry, same count expected)
+echo [2/5] core suite through the direct file entry (50; discover above = 50 + 10)
 python tests\test_b32.py
 if errorlevel 1 exit /b 1
 
 echo.
-echo [3/4] policy checks: SQL concat sites, registry both ways, scanner visibility
+echo [3/5] policy checks: SQL concat sites, registry both ways, scanner visibility
 python -c "from sec32 import audit as A; s = A.summary(); print('      unregistered / stale registry entries:', s['audit_problems'] or 'none'); print('      concat sites found:', s['sql_sites']); print('      xss:', s['xss']); print('      traversal guarded escapes:', s['traversal']['by_handler']['guarded']['escaped'])"
 if errorlevel 1 exit /b 1
 
 echo.
-echo [4/4] demo: six sections, numbers computed live
+echo [4/5] demo: six sections, numbers computed live
 python demo.py
+if errorlevel 1 exit /b 1
+
+echo.
+echo [5/5] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 echo.

@@ -34,7 +34,7 @@ python demo.py                         # 六段演示，数字全部现算
 | `tests/test_b32.py` | 50 项测试（含三处"改坏临时副本"的反向证明与沙箱守卫） |
 | `demo.py` | 六段演示 |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证（不是"跑过了"，是"能失败"）
+## 知识点 · 实现 · 怎么被验证（不是"跑过了"，是"能失败"）
 
 | 课程概念 | 落在哪里 | 怎么被验证 |
 |---|---|---|
@@ -45,9 +45,9 @@ python demo.py                         # 六段演示，数字全部现算
 | 二阶注入：危险的 sink 不是 source | `note_report_*` | 安全写入 + 拼接读取 → 泄漏散列；同一数据绑定读取 → 只剩正文 |
 | 危害取决于执行接口 | `stacked_outcome` | 同一叠句载荷：`execute()` → `ProgrammingError`（表还在），`executescript()` → 表数 3→2 |
 | 按上下文转义 | `escape_text` / `escape_script` / `safe_href` | 6 载荷在漏洞版全部有信号、修复版 0 条；修复版逐字等于 `html.escape(quote=True)` 且往返无损 |
-| 二次解码 | `&` 未转义的后果 | `&lt;script&gt;` 解一次就变回标记 ⇒ 单列一条断言 |
+| 二次解码 | `&` 未转义的后果 | `&lt;script&gt;` 解一次就变回标记 => 单列一条断言 |
 | 脚本块 / JS 字面量边界 | `</script` 计数、词法还原 | 数据提前闭合脚本块被抓；反斜杠吞掉 JS 右定界符被抓 |
-| 口令派生要"贵" | `creds.cost_table` | 现算吞吐：MD5 ≈1.4M/s、PBKDF2-120k ≈19/s ⇒ **慢 7 万倍**；100 万词字典 0.7 秒 vs 15 小时 |
+| 口令派生要"贵" | `creds.cost_table` | 现算吞吐：MD5 ≈1.4M/s、PBKDF2-120k ≈19/s => **慢 7 万倍**；100 万词字典 0.7 秒 vs 15 小时 |
 | 盐与常量时间比较 | `store_pbkdf2` / `verify_pbkdf2` | 同口令加盐后摘要不同、两边都能验；改迭代次数验不过 |
 | 令牌不可预测 | `token_with_random` / `token_with_secrets` | 已知种子能复现 `random` 令牌（断言 True）而 `secrets` 不能 |
 | 路径穿越的四种写法 | `serve_join/blacklist/prefix/guarded` | 15 条载荷判定表：join 越界 6 条、黑名单 3 条、**前缀检查在兄弟目录上被骗**、修复版 0 条 |

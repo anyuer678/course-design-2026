@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B11-net-lab · HTTP 子集 + 多路复用 + UDP GBN（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+pre.code{margin:.6rem 0 0;padding:.8rem .9rem;background:#0f1115;color:#e6e9ef;border-radius:8px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+pre.code.wrap{white-space:pre-wrap;word-break:break-word}
+table.plain{border-collapse:collapse;font-size:.9rem;margin:.5rem 0;width:100%}
+table.plain th,table.plain td{border:1px solid var(--line);padding:.3rem .7rem;text-align:left;vertical-align:top}
+table.plain td.num,table.plain th.num{text-align:right;font-variant-numeric:tabular-nums}
+.flow{display:grid;gap:.5rem;margin:.5rem 0}
+.flow .step{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:8px;padding:.5rem .8rem}
+.flow .step b{font-size:.85rem;color:var(--muted);display:block}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+</style>
+</head>
+<body data-showcase="B11-net-lab">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B11-net-lab · HTTP/1.1 子集 + select 多路复用 + UDP 可靠传输</h1>
+<p class="note">计算机网络 · 应用层解析、传输层之上的单线程多路复用、传输层的 Go-Back-N 放同一份工程里：
+每个协议边界都按 RFC 讲得清道理，压轴是**与标准库解析器对拍**。下面全部来自刚跑完的现场输出
+（演示里四处随环境波动的数字按可审计规则规范化，见页脚）。</p>
+
+<h2>实测数字（本页现算）</h2>
+<section id="facts" class="cards"><div class="card"><b>测试</b><span>91 项（tests/ 两个核心文件的 def test_ 现数；run.bat 一趟是权威）</span></div><div class="card"><b>HTTP 子集</b><span>状态码表 23 条；硬上限：目标 2048 字节 / 单行 8192 字节 / 头 100 条·32KiB / 体 1024KiB</span></div><div class="card"><b>边界拒绝</b><span>越界请求 8 种现场回放（414/431/400/501/413/505…），解析层错误 3 类同规则两侧一致</span></div><div class="card"><b>GBN 实验</b><span>丢包 0%→40% 五档扫描、窗口 1/2/4/8 对照、回绕 space=8 逐字节一致（种子固定，可复跑）</span></div><div class="card"><b>真回环</b><span>同一套代码跑真 127.0.0.1 UDP：30000 字节发送完成 / 收完 / 字节一致 全为 True</span></div></section>
+
+<h2>展示区</h2>
+<section id="demo" class="panel">
+  <div class="chips" data-tabs="panels">
+    <button class="chip" data-tab="raw">演示 · 五段原文</button>
+    <button class="chip" data-tab="journey">一条请求的旅程</button>
+    <button class="chip" data-tab="bounds">边界拒绝表</button>
+    <button class="chip" data-tab="gbn">GBN 丢包实验</button>
+  </div>
+  <div data-pane="panels">
+    <div data-pane-id="raw">
+      <p class="note">`python demo.py` 的完整现场输出（临时端口 / Date / open_now / 回环耗时已规范化）。</p>
+      <pre class="code wrap">netlab 演示：服务器已在 127.0.0.1:&lt;临时端口&gt; 启动（单线程 + select）
+
+========================================================================
+[1/5] 一条请求的完整旅程：字节 → 解析 → 路由 → 响应字节
+========================================================================
+  客户端发出的请求字节:
+    | PUT /kv/repair HTTP/1.1
+    | Host: 127.0.0.1
+    | Content-Length: 12
+    | Connection: keep-alive
+    |
+    | 水管漏水
+  消耗字节: 100
+  解析结论: PUT &#x27;/kv/repair&#x27; 版本=1.1 keep-alive=True 体=12 字节
+  头部: [(&#x27;host&#x27;, &#x27;127.0.0.1&#x27;), (&#x27;content-length&#x27;, &#x27;12&#x27;), (&#x27;connection&#x27;, &#x27;keep-alive&#x27;)]
+  查询: []
+  响应: HTTP/1.1 201 Created 体=b&#x27;ok\n&#x27;
+  同一请求的原始响应字节:
+    | HTTP/1.1 200 OK
+    | Content-Type: application/octet-stream
+    | Content-Length: 12
+    | Date: &lt;当场时间&gt;
+    | Server: netlab/1.0
+    | Connection: close
+    |
+    | 水管漏水
+
+========================================================================
+[2/5] 应用路由：键值表的增删改查 + 查询串
+========================================================================
+  GET    /                          -&gt; 200 &#x27;netlab 迷你 HTTP 服务器 / GET  /               本帮助 / GET  /kv…&#x27;
+  PUT    /kv/name                   -&gt; 201 &#x27;ok&#x27;
+  PUT    /kv/city                   -&gt; 201 &#x27;ok&#x27;
+  GET    /kv                        -&gt; 200 &#x27;city / name / repair&#x27;
+  GET    /kv/name                   -&gt; 200 &#x27;anyuer&#x27;
+  POST   /kv/name                   -&gt; 200 &#x27;updated&#x27;
+  GET    /sum?a=1.5&amp;b=27            -&gt; 200 &#x27;28.5&#x27;
+  GET    /echo?text=hello+world%21  -&gt; 200 &#x27;hello world!&#x27;
+  DELETE /kv/city                   -&gt; 204 &#x27;&#x27;
+  GET    /kv/city                   -&gt; 404 &#x27;no such key&#x27;
+  说明：204 没体所以不带 Content-Length；HEAD 带长度但不带体；405 会附 Allow；`..` 上跳在解析层就被拒。
+
+========================================================================
+[3/5] keep-alive、多路复用，以及每一种越界被拒的样子
+========================================================================
+  响应: HTTP/1.1 200 OK 体=b&#x27;netlab \xe8\xbf\xb7\xe4\xbd\xa0 HTTP \xe6\x9c\x8d\xe5\x8a\xa1\xe5\x99\xa8\r\nGET  /               \xe6\x9c\xac\xe5\xb8\xae\xe5\x8a\xa9&#x27;
+  响应: HTTP/1.1 200 OK 体=b&#x27;name\nrepair\n&#x27;
+  响应: HTTP/1.1 200 OK 体=b&#x27;{&quot;requests&quot;: 15, &quot;connections&quot;: 13, &quot;peak_open&quot;: 1, &quot;open_no&#x27;
+  一条连接上跑了 3 个请求：连接数=13 请求数=15
+  8 个客户端同时挂着时服务端同时持有 8 条连接，历史峰值 8（始终只有一条线程）
+
+  越界请求的响应码：
+    请求目标超长                       -&gt; HTTP/1.1 414 URI Too Long
+    头部条数超限                       -&gt; HTTP/1.1 431 Request Header Fields Too Large
+    裸 LF 换行                      -&gt; HTTP/1.1 400 Bad Request
+    chunked（不支持也不忽略）             -&gt; HTTP/1.1 501 Not Implemented
+    两个不一致的 Content-Length        -&gt; HTTP/1.1 400 Bad Request
+    声明巨体                         -&gt; HTTP/1.1 413 Content Too Large
+    不认识的版本                       -&gt; HTTP/1.1 505 HTTP Version Not Supported
+    路径上跳                         -&gt; HTTP/1.1 400 Bad Request
+
+  解析层直接抛出的错误（同一条规则在客户端也能挡住）：
+    b&#x27;GET / HTTP/1.1\n\n&#x27;… -&gt; 400 Bad Request: 请求头里出现裸 LF（必须用 CRLF 换行）
+    b&#x27;POST / HTTP/1.1\r\nContent-Length: 1\r\nCo&#x27;… -&gt; 400 Bad Request: 多个 Content-Length 取值不一致：[&#x27;1&#x27;, &#x27;2&#x27;]
+    b&#x27;GET /a/%2e%2e/b HTTP/1.1\r\n\r\n&#x27;… -&gt; 400 Bad Request: 路径不允许 `..` 上跳
+  目前统计：{&#x27;requests&#x27;: 31, &#x27;connections&#x27;: 29, &#x27;peak_open&#x27;: 8, &#x27;open_now&#x27;: &lt;当场&gt;, &#x27;timed_out&#x27;: 0, &#x27;refused&#x27;: 0, &#x27;errors&#x27;: 9}
+
+========================================================================
+[4/5] UDP：有边界、没顺序、没可靠性
+========================================================================
+  发两次、收两次，边界原样保留：b&#x27;first-datagram&#x27; + b&#x27;second-datagram&#x27;
+  没人发的时候 recv 只能等到超时返回 None：None  ← 包丢了还是对方根本没说？UDP 不区分，也不告诉你
+
+========================================================================
+[5/5] GBN 滑动窗口：把上面那个不可靠的通道变成按序字节流
+========================================================================
+  丢包率扫描（窗口=8，seed=7，同一段 4096 字节随机数据）：
+    丢包率  时隙  发送包数  重传  超时  有效载荷比
+       0%      5       16      0     0      100.0%
+      10%     17       30     14     2       53.3%
+      20%     33       56     40     5       28.6%
+      30%     75      100     84    12       16.0%
+      40%    165      189    173    27        8.5%
+  可复现：同 seed 两次轨迹 75==75 且 发送数 100==100 → True
+  窗口大小的意义（丢包 20%，同 seed）：
+    window=1: 时隙=87 发送=25
+    window=2: 时隙=45 发送=26
+    window=4: 时隙=29 发送=32
+    window=8: 时隙=15 发送=30
+  序号回绕：space=8、25 个包绕 3 圈，结果仍逐字节一致 → True
+  同一套代码跑在真 127.0.0.1 UDP 上：
+    30000 字节：发送完成=True 收完=True 字节一致=True 耗时=&lt;当场&gt;s 发送包数=30
+
+服务器与所有连接已关闭。</pre>
+    </div>
+    <div data-pane-id="journey" hidden>
+      <p class="note">第 1 段的结构化拆解：同一份字节从"写出去"到"解析 → 路由 → 响应"，中间产物逐项可查。</p>
+      <div class="flow"><div class="step"><b>① 客户端字节（真发出去的那一份）</b><pre class="code wrap">PUT /kv/repair HTTP/1.1
+Host: 127.0.0.1
+Content-Length: 12
+Connection: keep-alive
+水管漏水</pre></div><div class="step"><b>② 解析器吃掉多少</b><span>100 字节　·　PUT &#x27;/kv/repair&#x27; 版本=1.1 keep-alive=True 体=12 字节</span></div><div class="step"><b>③ 路由结论</b><span>HTTP/1.1 201 Created 体=b&#x27;ok\n&#x27;</span></div><div class="step"><b>④ 响应字节（含逐字头部）</b><pre class="code wrap">HTTP/1.1 200 OK
+Content-Type: application/octet-stream
+Content-Length: 12
+Date: &lt;当场时间&gt;
+Server: netlab/1.0
+Connection: close
+水管漏水</pre></div></div>
+    </div>
+    <div data-pane-id="bounds" hidden>
+      <p class="note">第 3 段：8 种越界请求各自的响应码（服务端真的拒了），以及解析层直接抛出的错误——
+      同一条规则在"服务端拒绝"与"客户端抛错"两侧给出同一个结论。</p>
+      <table class="plain"><tr><th>越界形状</th><th>响应</th></tr><tr><td>请求目标超长</td><td>HTTP/1.1 414 URI Too Long</td></tr><tr><td>头部条数超限</td><td>HTTP/1.1 431 Request Header Fields Too Large</td></tr><tr><td>裸 LF 换行</td><td>HTTP/1.1 400 Bad Request</td></tr><tr><td>chunked（不支持也不忽略）</td><td>HTTP/1.1 501 Not Implemented</td></tr><tr><td>两个不一致的 Content-Length</td><td>HTTP/1.1 400 Bad Request</td></tr><tr><td>声明巨体</td><td>HTTP/1.1 413 Content Too Large</td></tr><tr><td>不认识的版本</td><td>HTTP/1.1 505 HTTP Version Not Supported</td></tr><tr><td>路径上跳</td><td>HTTP/1.1 400 Bad Request</td></tr></table>
+      <table class="plain"><tr><th>请求字节（截断）</th><th>解析器结论</th></tr><tr><td>b&#x27;GET / HTTP/1.1\n\n&#x27;…</td><td>400 Bad Request: 请求头里出现裸 LF（必须用 CRLF 换行）</td></tr><tr><td>b&#x27;POST / HTTP/1.1\r\nContent-Length: 1\r\nCo&#x27;…</td><td>400 Bad Request: 多个 Content-Length 取值不一致：[&#x27;1&#x27;, &#x27;2&#x27;]</td></tr><tr><td>b&#x27;GET /a/%2e%2e/b HTTP/1.1\r\n\r\n&#x27;…</td><td>400 Bad Request: 路径不允许 `..` 上跳</td></tr></table>
+    </div>
+    <div data-pane-id="gbn" hidden>
+      <p class="note">丢包率扫描（窗口=8，seed=7，同一段 4096 字节随机数据）：</p>
+      <table class="plain"><tr><th class="num">丢包率</th><th class="num">时隙</th><th class="num">发送包数</th>
+      <th class="num">重传</th><th class="num">超时</th><th class="num">有效载荷比</th></tr><tr><td class="num">0%</td><td class="num">5</td><td class="num">16</td><td class="num">0</td><td class="num">0</td><td class="num">100.0%</td></tr><tr><td class="num">10%</td><td class="num">17</td><td class="num">30</td><td class="num">14</td><td class="num">2</td><td class="num">53.3%</td></tr><tr><td class="num">20%</td><td class="num">33</td><td class="num">56</td><td class="num">40</td><td class="num">5</td><td class="num">28.6%</td></tr><tr><td class="num">30%</td><td class="num">75</td><td class="num">100</td><td class="num">84</td><td class="num">12</td><td class="num">16.0%</td></tr><tr><td class="num">40%</td><td class="num">165</td><td class="num">189</td><td class="num">173</td><td class="num">27</td><td class="num">8.5%</td></tr></table>
+      <p class="note">可复现：同 seed 两次轨迹 75==75 且 发送数 100==100 → True</p>
+      <p class="note">窗口大小的意义（丢包 20%，同 seed）：</p>
+      <table class="plain"><tr><th class="num">窗口</th><th class="num">时隙</th><th class="num">发送</th></tr><tr><td class="num">1</td><td class="num">87</td><td class="num">25</td></tr><tr><td class="num">2</td><td class="num">45</td><td class="num">26</td></tr><tr><td class="num">4</td><td class="num">29</td><td class="num">32</td></tr><tr><td class="num">8</td><td class="num">15</td><td class="num">30</td></tr></table>
+      <p class="note">序号回绕：space=8、25 个包绕 3 圈，结果仍逐字节一致 → True</p>
+      <p class="note">30000 字节：发送完成=True 收完=True 字节一致=True 耗时=&lt;当场&gt;s 发送包数=30</p>
+    </div>
+  </div>
+</section>
+
+<h2>怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：三步（测试 → 演示 → 展示页新鲜度）。</li>
+    <li><kbd>python demo.py</kbd>：五段演示；<kbd>python -m unittest discover -s tests -v</kbd>：全量测试。</li>
+    <li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令真跑 demo.py 现算（测试数按 tests/ 静态现数；
+  页面不含计时数字——四处会波动的现场值已按规范化规则替换，规则写在生成器文档串里）。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  function activate(group, id){
+    var chips = document.querySelectorAll('[data-tabs="' + group + '"] [data-tab]');
+    for (var i = 0; i < chips.length; i++){
+      var on = chips[i].getAttribute("data-tab") === id;
+      chips[i].className = on ? "chip active" : "chip";
+    }
+    var panes = document.querySelectorAll('[data-pane="' + group + '"] [data-pane-id]');
+    for (var j = 0; j < panes.length; j++){
+      panes[j].hidden = panes[j].getAttribute("data-pane-id") !== id;
+    }
+  }
+  var lines = document.querySelectorAll("[data-tabs]");
+  for (var k = 0; k < lines.length; k++){
+    (function(line){
+      var group = line.getAttribute("data-tabs");
+      var chips = line.querySelectorAll("[data-tab]");
+      for (var c = 0; c < chips.length; c++){
+        chips[c].addEventListener("click", function(){
+          activate(group, this.getAttribute("data-tab"));
+        });
+      }
+      if (chips.length) activate(group, chips[0].getAttribute("data-tab"));
+    })(lines[k]);
+  }
+})();
+</script>
+</body>
+</html>

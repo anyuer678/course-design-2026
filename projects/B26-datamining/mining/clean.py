@@ -49,7 +49,10 @@ def make_dirty_ledger(n_orders: int = 40, seed: int = 7):
                 [(rng.choice(list(PRODUCTS)),) for _ in range(rng.randint(0, 1))]
         else:
             items = [(rng.choice(list(PRODUCTS)),) for _ in range(rng.randint(1, 2))]
-        for (code,) in set(items):
+        # 去重保序（不能用 set 迭代：字符串哈希加盐会让每次进程的
+        # 迭代序不同，qty 分配跟着漂移，页面数据就不可复现了）
+        dedup_items = list(dict.fromkeys(items))
+        for (code,) in dedup_items:
             qty = rng.randint(1, 3)
             rows.append({"order_id": oid, "product": code, "qty": qty,
                          "amount": round(qty * PRODUCTS[code][1], 2)})

@@ -178,9 +178,9 @@
    "course": "人工智能导论",
    "title": "手写机器学习五算法 + sklearn 同参对拍",
    "batch": 7,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B23-ml-from-scratch/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -188,9 +188,9 @@
    "course": "自然语言处理",
    "title": "中文分词 + 朴素贝叶斯文本分类",
    "batch": 7,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B25-nlp-lab/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -198,9 +198,9 @@
    "course": "数据挖掘与实践",
    "title": "Apriori + K-means + 可追溯清洗链",
    "batch": 7,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B26-datamining/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {

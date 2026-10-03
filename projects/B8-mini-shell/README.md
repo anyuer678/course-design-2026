@@ -4,7 +4,7 @@
 
 一句话：**shell 是进程课的总复习**——一行命令背后是 fork、exec、pipe、dup2、waitpid 的
 完整链条；"内建命令为什么必须存在"（cd 改的是 shell 自己的进程状态）与"管道为什么需要
-N−1 根管子"都在实现里给出答案，而**僵尸进程是去 /proc 里当面数的**，不是嘴上说不漏。
+N-1 根管子"都在实现里给出答案，而**僵尸进程是去 /proc 里当面数的**，不是嘴上说不漏。
 
 **平台声明**：本 shell 用 POSIX API（`fork/execvp/pipe/dup2/waitpid`），**Windows 原生没有
 fork**，所以实际运行在 **WSL2 Ubuntu-24.04**（PLAN §8 的既有环境，未安装/未下载任何新东西）。
@@ -39,12 +39,12 @@ python3 demo.py                              # 六段演示，结果全部实测
 | `run.sh` | Linux 侧一键入口：编译 → 双入口自测（计数行去计时）→ 演示 |
 | `run.bat` | Windows 侧薄包装：`wsl -d Ubuntu-24.04 -e bash -c "./run.sh"` |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
 | fork + execvp | `run_pipeline` 子进程分支 | `true/false/sh -c 'exit 42'` 的退出码实测；找不到命令 → stderr + 127 且 shell 继续 |
-| 管道 = N 进程 + N−1 根 pipe | `pipe()`/`dup2`/端点关闭 | 两段/三段管道现场（`printf \| sort \| head`）；父进程**关掉多余端点**（不关会挂死） |
+| 管道 = N 进程 + N-1 根 pipe | `pipe()`/`dup2`/端点关闭 | 两段/三段管道现场（`printf \| sort \| head`）；父进程**关掉多余端点**（不关会挂死） |
 | 重定向是 dup2 的艺术 | 子进程 `open`+`dup2` | `>` 截断、`>>` 追加、`<` 读入、管道+落盘组合；坏路径报错但 shell 继续 |
 | 内建命令（改自己） | 单命令时 shell 本体执行 `cd/exit/pwd` | `cd /tmp` 后 `pwd` 变、跨行保持；**管道里的 cd 按外部命令处理**（找不到 → 127）有专项用例 |
 | 退出码口径 | `waitpid` + `WIFEXITED/WIFSIGNALED` | `$?`=最后一段（`true \| false` → 1）；信号死亡 = 128+15=143；`exit N` 显式码 |

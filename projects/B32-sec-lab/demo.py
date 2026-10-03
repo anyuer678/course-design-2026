@@ -78,7 +78,7 @@ def main() -> int:
     show("SHA-256 单核吞吐", f"{cost['sha256_per_sec']:,.0f} 次/秒（比 MD5 还快，因为 CPU 有 SHA 指令）")
     for iters, rate in sorted(cost["pbkdf2_ladder"].items()):
         print(f"  PBKDF2 迭代 {iters:>7,}            {rate:>8.1f} 次/秒")
-    show("默认 120k 迭代", f"{cost['pbkdf2_default_per_sec']:.1f} 次/秒 ⇒ 比 MD5 慢 "
+    show("默认 120k 迭代", f"{cost['pbkdf2_default_per_sec']:.1f} 次/秒 => 比 MD5 慢 "
                            f"{cost['slowdown_vs_md5']:,.0f} 倍")
     show("100 万词字典（MD5）", f"{C.dictionary_hours(10**6, cost['md5_per_sec'])*3600:.1f} 秒跑完")
     show("100 万词字典（PBKDF2）", f"{C.dictionary_hours(10**6, cost['pbkdf2_default_per_sec']):.1f} 小时")

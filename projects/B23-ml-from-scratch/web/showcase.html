@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B23-ml-from-scratch · 手写机器学习五算法（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.card span{font-size:.95rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+table.grid{border-collapse:collapse;margin:.4rem 0;font-size:.92rem}
+table.grid td,table.grid th{border:1px solid var(--line);padding:.3rem .6rem;text-align:left}
+svg.plot{background:#fff;border:1px solid var(--line);border-radius:8px}
+.badge{display:inline-block;font-size:.8rem;padding:.08rem .55rem;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+ol,ul{padding-left:1.3rem}
+</style>
+</head>
+<body data-showcase="B23-ml-from-scratch">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B23 · 纯标准库手写机器学习：五个算法与它们的参照答案</h1>
+<p class="note">人工智能导论 · 无 NumPy/scikit-learn：线性回归（正规方程 + 梯度下降）、
+感知机、KNN、决策树、BP 网络全手写。参照答案三路对拍：数值梯度 vs 手写反传、
+测试内独立参照实现、Fisher 公开统计锚点。</p>
+
+<h2 id="facts-title">实测数字（本页现算，固定种子可复现）</h2>
+<section id="facts" class="cards"><div class="card"><b>数据</b><span>Iris 150 行三类均衡；切分 120/30（seed=42）</span></div><div class="card"><b>KNN(k=3) 测试精度</b><span>0.97（标准化后，实测阈值 ≥0.9）</span></div><div class="card"><b>决策树(熵,深度4)</b><span>0.90；根分裂 petal_length ≤ -0.77</span></div><div class="card"><b>BP 网络(4-8-3)</b><span>0.97；损失 0.78 → 0.04</span></div><div class="card"><b>感知机(setosa二分)</b><span>1.00（花瓣特征线性可分）</span></div><div class="card"><b>线性回归 R²</b><span>0.852（闭式解 vs GD 差 1.2e-12）</span></div><div class="card"><b>梯度检查</b><span>最大相对误差 2.6e-09（数值 vs 手写反传）</span></div><div class="card"><b>XOR 对照</b><span>感知机 0.50 vs BP 1.00</span></div><div class="card"><b>月牙对照</b><span>感知机 0.84 vs BP 1.00</span></div><div class="card"><b>测试方法</b><span>54 个（tests/ 里 def test_ 现数）</span></div></section>
+
+<h2 id="demo-title">展示区：点一个模型看它的实测细节</h2>
+<section id="demo" class="panel">
+  <div class="chips" id="chips"></div>
+  <div id="panel"></div>
+  <p class="note">损失曲线（BP，Iris 训练前 120 轮）：</p>
+  <svg id="loss-curve" class="plot" width="560" height="120" viewBox="0 0 560 120"></svg>
+</section>
+
+<h2 id="repro-title">怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：自测 + 五段演示（Windows 批处理，纯 ASCII）。</li>
+    <li><kbd>python demo.py</kbd>：五段演示（数据/线性回归/感知机/KNN+树/BP）。</li>
+    <li><kbd>python tests	est_ml.py</kbd>：33 项测试（unittest 与 pytest 同数）。</li>
+    <li><kbd>python tools/showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令从真实模型输出现算；别手改本页。
+  观感与顺手程度归你实跑验收。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>const DATA = {"facts":[["数据","Iris 150 行三类均衡；切分 120/30（seed=42）"],["KNN(k=3) 测试精度","0.97（标准化后，实测阈值 ≥0.9）"],["决策树(熵,深度4)","0.90；根分裂 petal_length ≤ -0.77"],["BP 网络(4-8-3)","0.97；损失 0.78 → 0.04"],["感知机(setosa二分)","1.00（花瓣特征线性可分）"],["线性回归 R²","0.852（闭式解 vs GD 差 1.2e-12）"],["梯度检查","最大相对误差 2.6e-09（数值 vs 手写反传）"],["XOR 对照","感知机 0.50 vs BP 1.00"],["月牙对照","感知机 0.84 vs BP 1.00"],["测试方法","54 个（tests/ 里 def test_ 现数）"]],"models":[{"name":"knn","label":"KNN(k=3) 0.97","rows":[["测试精度","0.967"],["k","3"],["预处理","z-score（只用训练集统计量）"],["说明","惰性学习：预测 O(n·d) 扫全库"]]},{"name":"tree","label":"决策树 0.90","rows":[["测试精度","0.900"],["根分裂","petal_length ≤ -0.767"],["准则","熵（信息增益），贪心含零增益分裂"],["说明","XOR 零增益悖论：不纯即分裂才学得会"]]},{"name":"bp","label":"BP 0.97","rows":[["测试精度","0.967"],["结构","4-8-3 softmax"],["梯度检查","最差 2.6e-09"],["损失","0.78 → 0.04"]]},{"name":"perc","label":"感知机 1.00","rows":[["setosa 二分测试精度","1.000"],["XOR 上限","0.50（≤75% 是线性判别的天花板）"],["月牙","0.84（不可分探测器）"]]},{"name":"lin","label":"线性回归 R²=0.85","rows":[["R²(测试)","0.852"],["闭式解 vs GD","最大差 1.2e-12"],["说明","标准化决定 GD 收敛速度"]]},{"name":"xor","label":"XOR 对照","rows":[["感知机","0.50"],["BP 网络","1.00"],["结论","非线性激活是多层网络的全部意义"]]}],"loss":[0.7795422207694315,0.631070595250589,0.5402753308188704,0.48713687705967357,0.4500318789872176,0.42150110431916626,0.39891202159834105,0.3800940154455056,0.3644475116632728,0.34985529104402957,0.3364672207738255,0.32465864919012916,0.3122341853169036,0.3006437584631605,0.2890405572927447,0.2779252126318272,0.26710269796394676,0.256543685222369,0.24694407046248226,0.23612035589613117,0.22641885285527552,0.21723332833077608,0.20859558728377964,0.1998123232933168,0.1919647160619982,0.18462722285273578,0.1776412501507876,0.17086978425157656,0.1648967208663315,0.1585434759851,0.1533996053840502,0.14775692865380552,0.143209642022139,0.13878456922158208,0.13417246548460257,0.13040650944458454,0.12747245010818622,0.12284413891999593,0.11951701493005243,0.11688115899658301,0.11331191186876197,0.11135365208566475,0.10810099275610327,0.10587514458745861,0.10352580661437757,0.10090470509118717,0.09890185968615708,0.09711447773993105,0.09531984017909177,0.09368210853526979,0.0928773340432519,0.09041347124263405,0.08934322006046237,0.08771859514108389,0.08623253330862256,0.08491720935092181,0.0833471488660765,0.08325752683798178,0.08103253706014925,0.07993934328636011,0.07891583009516576,0.07803544538704063,0.07829101731458117,0.0760325329590539,0.07520856956790574,0.07439866016929579,0.07396528075659195,0.07285607009659673,0.07218269528890611,0.07147193260374407,0.07231863832161595,0.07139812076784981,0.0703604273002252,0.06889159588738693,0.06844023420935977,0.06784939496415496,0.06720403346762188,0.06687993460868745,0.0662491807769177,0.06578990314402793,0.06607805793564454,0.06515220201269165,0.06446006753520021,0.06447443432939187,0.0636339048442063,0.06309199682217072,0.06266601126135725,0.0623586717301273,0.06397877226424686,0.06200010135782763,0.06196711577682431,0.06083552029941826,0.060835697449338595,0.06038411314226067,0.05985926173804154,0.0596801870213964,0.060525480291741415,0.059566797894510456,0.058994333812731774,0.05927500066666124,0.05843258421727473,0.057943223714555965,0.05760654705255374,0.05740720831282785,0.057635083996376145,0.056874574748315615,0.058503843813344066,0.05739956685623151,0.05932392703972104,0.05748246821610949,0.058349302152192896,0.055664091901654805,0.05627183216143145,0.055487849394806645,0.054976187549700434,0.05477665110842062,0.05470241881142673,0.05436388197042389,0.05416763897584775,0.053977314236251316],"meta":{"acc_knn":0.9666666666666667,"acc_tree":0.9,"acc_bp":0.9666666666666667}};</script>
+<script>
+(function(){
+  "use strict";
+  var state = {name: DATA.models[0].name};
+  var chipBox = document.getElementById("chips");
+  var panel = document.getElementById("panel");
+
+  function el(tag, cls, text){
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function showModel(name){
+    state.name = name;
+    var chips = chipBox.children;
+    for (var i = 0; i < chips.length; ++i)
+      chips[i].className = "chip" + (chips[i].dataset.name === name ? " active" : "");
+    var model = null;
+    for (var k = 0; k < DATA.models.length; ++k)
+      if (DATA.models[k].name === name) model = DATA.models[k];
+    panel.textContent = "";
+    var table = el("table", "grid");
+    model.rows.forEach(function(row){
+      var tr = el("tr");
+      tr.appendChild(el("td", "", row[0]));
+      tr.appendChild(el("td", "", row[1]));
+      table.appendChild(tr);
+    });
+    panel.appendChild(table);
+  }
+
+  DATA.models.forEach(function(m){
+    var chip = el("button", "chip", m.label);
+    chip.dataset.name = m.name;
+    chip.addEventListener("click", function(){ showModel(m.name); });
+    chipBox.appendChild(chip);
+  });
+  showModel(state.name);
+
+  // 损失曲线（纯渲染：数据是训练时记录的 history）
+  var svg = document.getElementById("loss-curve");
+  var hist = DATA.loss;
+  if (svg && hist.length > 1) {
+    var w = 560, h = 120, pad = 8;
+    var maxL = Math.max.apply(null, hist), minL = Math.min.apply(null, hist);
+    var pts = hist.map(function(v, i){
+      var x = pad + i * (w - 2 * pad) / (hist.length - 1);
+      var y = h - pad - (v - minL) * (h - 2 * pad) / (maxL - minL || 1);
+      return x.toFixed(1) + "," + y.toFixed(1);
+    }).join(" ");
+    var poly = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+    poly.setAttribute("points", pts);
+    poly.setAttribute("fill", "none");
+    poly.setAttribute("stroke", "#1d4ed8");
+    poly.setAttribute("stroke-width", "1.5");
+    svg.appendChild(poly);
+  }
+})();
+</script>
+</body>
+</html>

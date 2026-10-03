@@ -129,11 +129,11 @@
   },
   {
    "id": "b23-ml",
-   "claim": "手写五算法（回归/感知机/KNN/决策树/BP）+ 与 scikit-learn 同参对拍台（B41 候选⑤：容差表先行、四条负面对照、规模曲线）：45 项自测（33 核心 + 12 对拍）",
+   "claim": "手写五算法（回归/感知机/KNN/决策树/BP）+ 与 scikit-learn 同参对拍台（B41 候选⑤：容差表先行、四条负面对照、规模曲线）+ 自包含展示页：54 项自测",
    "pointers": [
     "projects/B23-ml-from-scratch/README.md"
    ],
-   "anchor": "45 项双入口同数",
+   "anchor": "54 项双入口同数",
    "commit": "d274eb4"
   },
   {
@@ -147,20 +147,20 @@
   },
   {
    "id": "b25-nlp",
-   "claim": "中文分词（最大匹配/双向歧义）+ 朴素贝叶斯 + 手写指标：16 项自测",
+   "claim": "中文分词（最大匹配/双向歧义）+ 朴素贝叶斯 + 手写指标：展示页 + 25 项自测",
    "pointers": [
     "projects/B25-nlp-lab/README.md"
    ],
-   "anchor": "自测（16 项）",
+   "anchor": "25 项测试双入口同数",
    "commit": "c7648fd"
   },
   {
    "id": "b26-mining",
-   "claim": "Apriori + K-means + 可追溯清洗链：19 项自测，剪枝候选数 ≤ 穷举数被断言",
+   "claim": "Apriori + K-means + 可追溯清洗链：展示页 + 28 项自测，剪枝候选数 ≤ 穷举数被断言",
    "pointers": [
     "projects/B26-datamining/README.md"
    ],
-   "anchor": "自测（19 项）",
+   "anchor": "28 项测试双入口同数",
    "commit": "c7648fd"
   },
   {

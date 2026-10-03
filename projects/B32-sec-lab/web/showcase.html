@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B32-sec-lab · 四组漏洞版/修复版对照（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+pre.code{margin:.6rem 0 0;padding:.8rem .9rem;background:#0f1115;color:#e6e9ef;border-radius:8px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+pre.code.wrap{white-space:pre-wrap;word-break:break-word}
+table.plain{border-collapse:collapse;font-size:.88rem;margin:.5rem 0;width:100%}
+table.plain th,table.plain td{border:1px solid var(--line);padding:.3rem .7rem;text-align:left;vertical-align:top}
+table.plain td.num,table.plain th.num{text-align:right;font-variant-numeric:tabular-nums}
+td.bad{color:var(--bad)}td.ok{color:var(--ok)}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+</style>
+</head>
+<body data-showcase="B32-sec-lab">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B32-sec-lab · 信息安全导论：同一个错误模型，四个解析器</h1>
+<p class="note">SQL 引擎、HTML 词法器、口令比较、路径解析——数据一旦在这些位置获得"语法身份"，
+注入就发生。四组**并排的漏洞版与修复版**用同一份输入量差距；每条判定都要能被改动弄红。
+全部只在本机内存库与临时目录里活动，靶件是教科书级最小样本。</p>
+
+<h2>实测数字（本页现算）</h2>
+<section id="facts" class="cards"><div class="card"><b>测试</b><span>60 项（50 核心 + 10 展示页自测；tests/ def test_ 现数，run.bat 一趟是权威）</span></div><div class="card"><b>四组对照</b><span>SQL 14 行分化、XSS 6 载荷漏洞版共 11 条信号（修复版 0 条）、穿越判定表 15 条载荷</span></div><div class="card"><b>静态扫描器</b><span>sqli.py 8 处拼接点全在册；双向比对无（扫到没登记 / 登记了扫不到 都会红）；摘掉包装函数后 8 → 1</span></div><div class="card"><b>口令成本</b><span>第 3 段是实时测量：迭代 1k→10k→100k 吞吐线性下降、PBKDF2-120k 比裸 MD5 慢四个数量级以上（本页不冻结计时数字，见 [现场] 占位）</span></div><div class="card"><b>边界声明</b><span>只在本机内存库与临时目录里活动；靶件是教学样本，结论不外推、不构成攻击能力</span></div></section>
+
+<h2>展示区</h2>
+<section id="demo" class="panel">
+  <div class="chips" data-tabs="panels">
+    <button class="chip" data-tab="raw">演示 · 六段原文</button>
+    <button class="chip" data-tab="labs">四组对照速览</button>
+    <button class="chip" data-tab="scanner">静态扫描器</button>
+  </div>
+  <div data-pane="panels">
+    <div data-pane-id="raw">
+      <p class="note">`python demo.py` 的完整现场输出；第 3 段（口令成本）是实时测量，
+      吞吐数字已按生成器文档串里的规则脱敏成 <b>[现场]</b>（页面不冻结会过期的计时数字）。</p>
+      <pre class="code wrap">B32 信息安全导论实验 —— 四组漏洞版/修复版对照 + 一个静态扫描器
+所有数字运行时现算；靶件只在本机内存库与临时目录里活动。
+
+==============================================================================
+  1) SQL 注入：同一份输入，拼接与绑定的后果差多少
+==============================================================================
+  登录·正常口令         漏洞版登入 admin            修复版：登入 admin
+  登录·注释截断         漏洞版登入 admin            修复版：被拒
+  登录·恒真+注释        漏洞版登入 student          修复版：被拒
+  登录·课本载荷（优先级坑）   漏洞版被拒                  修复版：被拒
+  查询·UNION 取凭据    泄漏 2 行                         修复版：0 行
+  查询·UNION 列数不对   没拿到（OperationalError: SELECTs to the left and right of UNION do not have the same number of result columns） 修复版：0 行
+  排序·合法输入（两侧必须一致）   漏洞版 [2, 3, 1]              修复版 [2, 3, 1]
+  排序·推断通道（前提真）      漏洞版 [2, 3, 1]              修复版 COLUMN_NOT_ALLOWED
+  排序·推断通道（前提假）      漏洞版 [1, 2, 3]              修复版 COLUMN_NOT_ALLOWED
+  排序·绑参当列名（静默无效）    漏洞版 [2, 3, 1]              修复版 [1, 2, 3]
+  叠句载荷 execute()                ProgrammingError
+  叠句载荷 executescript()          no-error，表 3 → 2
+  二阶注入（读库拼串）                    泄漏 [[(&#x27;sha256$TOP_SECRET&#x27;,)]]
+  二阶注入（读库绑定）                    [[(&#x27;note-body&#x27;,)]]
+
+==============================================================================
+  2) HTML 注入：数据有没有拿到“语法身份”
+==============================================================================
+  脚本标签             漏洞版信号 2 条（文本节点未被转义，数据里的标记原样在场…）  修复版 0 条  往返一致
+  属性逃逸             漏洞版信号 4 条（文本节点未被转义，数据里的标记原样在场…）  修复版 0 条  往返一致
+  假转义（二次解码）        漏洞版信号 1 条（文本节点里的实体解一次就变成标记（&amp; 未转义的直接后果）…）  修复版 0 条  往返一致
+  吞定界符的反斜杠         漏洞版信号 1 条（JS 字面量被数据改写（按词法还原失败）…）  修复版 0 条  往返一致
+  提前闭合脚本块          漏洞版信号 2 条（文本节点未被转义，数据里的标记原样在场…）  修复版 0 条  往返一致
+  javascript 协议    漏洞版信号 1 条（href 协议位接受了 javascript:…）  修复版 0 条  往返一致
+  真起服务真发请求（漏洞版）                 HTTP 200 ｜ text/html; charset=utf-8 ｜ 信号 2 条
+  真起服务真发请求（修复版）                 HTTP 200 ｜ 信号 0 条 ｜ 响应字节里含 &amp;lt;script&amp;gt;：True
+
+==============================================================================
+  3) 口令存储：把“慢”算成攻击者的字典成本（本段是实时测量，两次运行会有 ±5% 波动）
+==============================================================================
+  MD5 单核吞吐                      [现场] 次/秒
+  SHA-256 单核吞吐                  [现场] 次/秒（比 MD5 还快，因为 CPU 有 SHA 指令）
+  PBKDF2 迭代   1,000              [现场] 次/秒
+  PBKDF2 迭代  10,000               [现场] 次/秒
+  PBKDF2 迭代 100,000                [现场] 次/秒
+  默认 120k 迭代                    [现场] 次/秒 =&gt; 比 MD5 慢 [现场] 倍
+  100 万词字典（MD5）                 [现场] 秒跑完
+  100 万词字典（PBKDF2）              [现场] 小时
+  无盐同口令                         摘要相同=True（彩虹表与横向比较的前提）
+  加盐同口令                         摘要相同=False，盐不同=True
+  random 令牌可复现                  True（已知种子就能重放）
+  secrets 令牌                    可复现=False，唯一=True，256 bit/枚
+
+==============================================================================
+  4) 路径穿越：四种写法的判定表
+==============================================================================
+  载荷                        join      黑名单       前缀检查      修复版       
+  正常文件                      SERVED_INSIDESERVED_INSIDESERVED_INSIDESERVED_INSIDE
+  正常子目录                     SERVED_INSIDESERVED_INSIDESERVED_INSIDESERVED_INSIDE
+  相对穿越                      ESCAPED   REJECTED  REJECTED  REJECTED  
+  反斜杠穿越                     ESCAPED   REJECTED  REJECTED  REJECTED  
+  多级穿越                      ESCAPED   REJECTED  REJECTED  REJECTED  
+  百分号编码的点                   ERROR     ERROR     ERROR     REJECTED  
+  百分号编码的斜杠                  ERROR     REJECTED  ERROR     REJECTED  
+  双重编码                      ERROR     ERROR     ERROR     REJECTED  
+  绝对路径（指向 root 外）           ESCAPED   ESCAPED   REJECTED  REJECTED  
+  兄弟目录绝对路径（前缀检查的靶）          ESCAPED   ESCAPED   ESCAPED   REJECTED  
+  NUL 截断                    ERROR     ERROR     ERROR     REJECTED  
+  尾点（Windows 会忽略）           SERVED_INSIDESERVED_INSIDESERVED_INSIDEREJECTED  
+  大小写变形                     SERVED_INSIDESERVED_INSIDESERVED_INSIDESERVED_INSIDE
+  软链越界                      ESCAPED   ESCAPED   REJECTED  REJECTED  
+  URL 编码的空格名                ERROR     ERROR     ERROR     NOT_FOUND 
+  标准库参照（解一次）                    %2e%2e%2f → &#x27;../&#x27;
+  标准库参照（解两次）                    %252e%252e%252f → &#x27;../&#x27;
+  本机大小写语义                       is_relative_to 大小写无关=True
+
+==============================================================================
+  5) 静态扫描器：这个包还有几处拼接点
+==============================================================================
+  __init__.py   0 处
+  creds.py      0 处
+  sqli.py       8 处 → [&#x27;login_concat&#x27;, &#x27;login_quote_doubled&#x27;, &#x27;search_concat&#x27;, &#x27;order_concat&#x27;, &#x27;order_whitelist&#x27;, &#x27;note_report_concat&#x27;, &#x27;stacked_outcome&#x27;, &#x27;stacked_outcome&#x27;]
+  traversal.py  0 处
+  xss.py        0 处
+  登记表双向比对                       无（扫到没登记 / 登记了扫不到 都会红）
+  把包装函数从 sink 摘掉                扫出 1 处（原 8 处）——静态检查最典型的失效方式
+
+==============================================================================
+  6) 汇总
+==============================================================================
+  SQL 对照结论                      漏洞版登入 3 例，修复版 1 例（只有正常口令那一条应当成功）
+  XSS 对照结论                      6/6 载荷在漏洞版有信号，修复版 0 条，往返一致 6 条
+  穿越对照结论                        修复版越界 0 次（join 版 6 次）
+  审计结论                          无未登记拼接点
+
+==============================================================================
+本轮没做的（别把它当安全产品）：不做真实系统渗透、不做免杀/绕过 WAF、不做缓冲区溢出（PLAN 的选做项）；不声称“转义一次就安全”“绑定能救标识符”“MD5 换个盐就行”。
+浏览器会不会真的执行脚本属于浏览器行为，本实验只证明到响应字节层（未验证）。
+第 3 段的吞吐是**实时测量**，两次运行会有 ±5% 的自然波动（其余段落逐字一致，可用 `python demo.py &gt; a.txt` 跑两遍 diff 自证）。</pre>
+    </div>
+    <div data-pane-id="labs" hidden>
+      <p class="note">SQL 组：同一份输入喂给拼接版与绑定版（或白名单版），后果逐行对照。</p>
+      <table class="plain"><tr><th>用例</th><th>漏洞版</th><th>修复版</th></tr><tr><td>登录·正常口令</td><td class="bad">漏洞版登入 admin</td><td class="ok">修复版：登入 admin</td></tr><tr><td>登录·注释截断</td><td class="bad">漏洞版登入 admin</td><td class="ok">修复版：被拒</td></tr><tr><td>登录·恒真+注释</td><td class="bad">漏洞版登入 student</td><td class="ok">修复版：被拒</td></tr><tr><td>登录·课本载荷（优先级坑）</td><td class="bad">漏洞版被拒</td><td class="ok">修复版：被拒</td></tr><tr><td>查询·UNION 取凭据</td><td class="bad">泄漏 2 行</td><td class="ok">修复版：0 行</td></tr><tr><td>查询·UNION 列数不对</td><td class="bad">没拿到（OperationalError: SELECTs to the left and right of UNION do not have the same number of result columns） 修复版：0 行</td><td class="ok"></td></tr><tr><td>排序·合法输入（两侧必须一致）</td><td class="bad">漏洞版 [2, 3, 1]</td><td class="ok">修复版 [2, 3, 1]</td></tr><tr><td>排序·推断通道（前提真）</td><td class="bad">漏洞版 [2, 3, 1]</td><td class="ok">修复版 COLUMN_NOT_ALLOWED</td></tr><tr><td>排序·推断通道（前提假）</td><td class="bad">漏洞版 [1, 2, 3]</td><td class="ok">修复版 COLUMN_NOT_ALLOWED</td></tr><tr><td>排序·绑参当列名（静默无效）</td><td class="bad">漏洞版 [2, 3, 1]</td><td class="ok">修复版 [1, 2, 3]</td></tr><tr><td>叠句载荷 execute()</td><td class="bad">ProgrammingError</td><td class="ok"></td></tr><tr><td>叠句载荷 executescript()</td><td class="bad">no-error，表 3 → 2</td><td class="ok"></td></tr><tr><td>二阶注入（读库拼串）</td><td class="bad">泄漏 [[(&#x27;sha256$TOP_SECRET&#x27;,)]]</td><td class="ok"></td></tr><tr><td>二阶注入（读库绑定）</td><td class="bad">[[(&#x27;note-body&#x27;,)]]</td><td class="ok"></td></tr></table>
+      <p class="note">HTML 组：6 个载荷在漏洞版的信号条数（修复版为 0 才是目标），外加"真起服务真发请求"
+      的两行端到端取证。</p>
+      <table class="plain"><tr><th>载荷 / 场景</th><th class="num">漏洞版信号</th><th class="num">修复版信号</th></tr><tr><td>脚本标签</td><td class="num bad">2 条</td><td class="num ok">0 条</td></tr><tr><td>属性逃逸</td><td class="num bad">4 条</td><td class="num ok">0 条</td></tr><tr><td>假转义（二次解码）</td><td class="num bad">1 条</td><td class="num ok">0 条</td></tr><tr><td>吞定界符的反斜杠</td><td class="num bad">1 条</td><td class="num ok">0 条</td></tr><tr><td>提前闭合脚本块</td><td class="num bad">2 条</td><td class="num ok">0 条</td></tr><tr><td>javascript 协议</td><td class="num bad">1 条</td><td class="num ok">0 条</td></tr><tr><td>真起服务真发请求（漏洞版）</td><td class="num bad">2 条</td><td class="num ok">—</td></tr><tr><td>真起服务真发请求（修复版）</td><td class="num bad">—</td><td class="num ok">0 条</td></tr></table>
+      <p class="note">穿越组：15 条载荷 × 四种写法（判定表原文如下；修复版越界 0 是底线），
+      最后两行是标准库参照与本机大小写语义的实测登记。</p>
+      <pre class="code wrap">正常文件                      SERVED_INSIDESERVED_INSIDESERVED_INSIDESERVED_INSIDE
+正常子目录                     SERVED_INSIDESERVED_INSIDESERVED_INSIDESERVED_INSIDE
+相对穿越                      ESCAPED   REJECTED  REJECTED  REJECTED
+反斜杠穿越                     ESCAPED   REJECTED  REJECTED  REJECTED
+多级穿越                      ESCAPED   REJECTED  REJECTED  REJECTED
+百分号编码的点                   ERROR     ERROR     ERROR     REJECTED
+百分号编码的斜杠                  ERROR     REJECTED  ERROR     REJECTED
+双重编码                      ERROR     ERROR     ERROR     REJECTED
+绝对路径（指向 root 外）           ESCAPED   ESCAPED   REJECTED  REJECTED
+兄弟目录绝对路径（前缀检查的靶）          ESCAPED   ESCAPED   ESCAPED   REJECTED
+NUL 截断                    ERROR     ERROR     ERROR     REJECTED
+尾点（Windows 会忽略）           SERVED_INSIDESERVED_INSIDESERVED_INSIDEREJECTED
+大小写变形                     SERVED_INSIDESERVED_INSIDESERVED_INSIDESERVED_INSIDE
+软链越界                      ESCAPED   ESCAPED   REJECTED  REJECTED
+URL 编码的空格名                ERROR     ERROR     ERROR     NOT_FOUND
+标准库参照（解一次）                    %2e%2e%2f → &#x27;../&#x27;
+标准库参照（解两次）                    %252e%252e%252f → &#x27;../&#x27;
+本机大小写语义                       is_relative_to 大小写无关=True</pre>
+    </div>
+    <div data-pane-id="scanner" hidden>
+      <p class="note">`sec32/audit.py` 用 ast 扫出的拼接点（逐文件）：</p>
+      <table class="plain"><tr><th>文件</th><th class="num">拼接点</th></tr><tr><td>__init__.py</td><td class="num">0</td></tr><tr><td>creds.py</td><td class="num">0</td></tr><tr><td>sqli.py</td><td class="num">8</td></tr><tr><td>traversal.py</td><td class="num">0</td></tr><tr><td>xss.py</td><td class="num">0</td></tr></table>
+      <p class="note">sqli.py 的八个拼接点（人工登记表与之双向比对：扫到没登记红、登记了扫不到红）：</p>
+      <ul><li><code>login_concat</code></li><li><code>login_quote_doubled</code></li><li><code>search_concat</code></li><li><code>order_concat</code></li><li><code>order_whitelist</code></li><li><code>note_report_concat</code></li><li><code>stacked_outcome</code></li><li><code>stacked_outcome</code></li></ul>
+      <p class="note">现场结论与"扫描器会瞎"的证明：</p>
+      <ul><li>登记表双向比对                       无（扫到没登记 / 登记了扫不到 都会红）</li><li>把包装函数从 sink 摘掉                扫出 1 处（原 8 处）——静态检查最典型的失效方式</li></ul>
+    </div>
+  </div>
+</section>
+
+<h2>汇总（演示第 6 段）</h2>
+<section class="panel"><table class="plain"><tr><td>SQL 对照结论</td><td>漏洞版登入 3 例，修复版 1 例（只有正常口令那一条应当成功）</td></tr><tr><td>XSS 对照结论</td><td>6/6 载荷在漏洞版有信号，修复版 0 条，往返一致 6 条</td></tr><tr><td>穿越对照结论</td><td>修复版越界 0 次（join 版 6 次）</td></tr><tr><td>审计结论</td><td>无未登记拼接点</td></tr></table></section>
+
+<h2>怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：四步（测试双入口 → 政策核对 → 演示 → 展示页新鲜度）。</li>
+    <li><kbd>python -m unittest discover -s tests</kbd>：全量；<kbd>python demo.py</kbd>：六段演示。</li>
+    <li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令真跑 demo.py 现算并解析（第 3 段计时脱敏；
+  测试数按 tests/ def test_ 静态现数）。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  function activate(group, id){
+    var chips = document.querySelectorAll('[data-tabs="' + group + '"] [data-tab]');
+    for (var i = 0; i < chips.length; i++){
+      var on = chips[i].getAttribute("data-tab") === id;
+      chips[i].className = on ? "chip active" : "chip";
+    }
+    var panes = document.querySelectorAll('[data-pane="' + group + '"] [data-pane-id]');
+    for (var j = 0; j < panes.length; j++){
+      panes[j].hidden = panes[j].getAttribute("data-pane-id") !== id;
+    }
+  }
+  var lines = document.querySelectorAll("[data-tabs]");
+  for (var k = 0; k < lines.length; k++){
+    (function(line){
+      var group = line.getAttribute("data-tabs");
+      var chips = line.querySelectorAll("[data-tab]");
+      for (var c = 0; c < chips.length; c++){
+        chips[c].addEventListener("click", function(){
+          activate(group, this.getAttribute("data-tab"));
+        });
+      }
+      if (chips.length) activate(group, chips[0].getAttribute("data-tab"));
+    })(lines[k]);
+  }
+})();
+</script>
+</body>
+</html>

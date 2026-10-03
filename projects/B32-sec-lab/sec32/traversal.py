@@ -7,21 +7,21 @@
     如果决定权在程序（先解析、再判定、后打开），越界就发生在打开之前，可以拦住。
 
 三种写法，全部实测（判定列是**执行出来的**，不是我猜的）：
-    `serve_join`      最原始的 `root / user` 直接读 ⇒ 越界。
-    `serve_blacklist` 只拦 `".." in user` 字符串 ⇒ 漏掉百分号编码、绝对路径、
+    `serve_join`      最原始的 `root / user` 直接读 => 越界。
+    `serve_blacklist` 只拦 `".." in user` 字符串 => 漏掉百分号编码、绝对路径、
                       Windows 反斜杠分隔符——黑名单的经典失败方式。
-    `serve_prefix`    解析之后用 `str(p).startswith(str(root))` 比前缀 ⇒
+    `serve_prefix`    解析之后用 `str(p).startswith(str(root))` 比前缀 =>
                       **兄弟目录** `static_evil` 的绝对路径以 `static` 开头，
                       前缀检查通过，文件在 root 之外。这一条是真实代码里最常见的错法。
-    `serve_guarded`   修复版：解码一次并拒绝残留编码 ⇒ 拒绝 NUL/控制字符 ⇒
-                      拒绝绝对形式（前导分隔符、盘符、UNC）⇒ 按两种分隔符切段并拒绝
-                      `..` ⇒ `resolve()` 之后要求 `is_relative_to(root)`。
+    `serve_guarded`   修复版：解码一次并拒绝残留编码 => 拒绝 NUL/控制字符 =>
+                      拒绝绝对形式（前导分隔符、盘符、UNC）=> 按两种分隔符切段并拒绝
+                      `..` => `resolve()` 之后要求 `is_relative_to(root)`。
 
 Windows 特有的坑（本机实测，写在 CASES 表里，不靠 Linux 教程的结论）：
     尾点/尾空格会被 OS **忽略**（`ok.txt.` 打开的是 `ok.txt`），所以"字符串不同就是不同文件"
     在 Windows 上不成立；`is_relative_to` 在 Windows 上**大小写无关**，所以大小写变换
     打不穿它；`os.symlink` 在本机不需要管理员权限就能建，软链指向 root 外时
-    `resolve()` 会把链跟出去 ⇒ 判定失败 ⇒ 被拦（代价：不能用软链把 root 外的资源发布出来）。
+    `resolve()` 会把链跟出去 => 判定失败 => 被拦（代价：不能用软链把 root 外的资源发布出来）。
 """
 from __future__ import annotations
 

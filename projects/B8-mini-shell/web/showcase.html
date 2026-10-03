@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B8-mini-shell · fork/exec + 管道 + 重定向（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+pre.code{margin:.6rem 0 0;padding:.8rem .9rem;background:#0f1115;color:#e6e9ef;border-radius:8px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+pre.code.wrap{white-space:pre-wrap;word-break:break-word}
+table.plain{border-collapse:collapse;font-size:.9rem;margin:.5rem 0;width:100%}
+table.plain th,table.plain td{border:1px solid var(--line);padding:.3rem .7rem;text-align:left}
+table.plain td.num,table.plain th.num{text-align:right;font-variant-numeric:tabular-nums}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+</style>
+</head>
+<body data-showcase="B8-mini-shell">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B8-mini-shell · mini-shell：进程课的总复习</h1>
+<p class="note">开源操作系统 · 一行命令背后是 fork、exec、pipe、dup2、waitpid 的完整链条；
+"内建命令为什么必须存在"（cd 改的是 shell 自己的状态）与"管道为什么需要 N-1 根管子"
+都在实现里给出答案。**僵尸进程是去 /proc 里当面数的**。下面全部来自刚在
+WSL2 Ubuntu-24.04 里跑完的现场输出（生成器用一次 wsl 调用完成编译+双入口自测+演示+回放）。</p>
+
+<h2>实测数字（本页现算）</h2>
+<section id="facts" class="cards"><div class="card"><b>自测</b><span>24 项双入口同数（discover 24 / 直跑 24；不同数生成器直接拒绝）</span></div><div class="card"><b>演示</b><span>六段实测：退出码 true/false/exit42 = 0/1/42；僵尸当面数 = 0；3 条坏语法报错后仍继续</span></div><div class="card"><b>会话回放</b><span>八个脚本喂 stdin 现场重放（管道/重定向/内建/错误路径），退出码实测 ['0', '1', '127']</span></div><div class="card"><b>平台</b><span>WSL2 Ubuntu-24.04 + gcc（Windows 原生没有 fork；run.bat 是薄包装）</span></div></section>
+
+<h2>展示区</h2>
+<section id="demo" class="panel">
+  <div class="chips" data-tabs="panels">
+    <button class="chip" data-tab="demo6">演示 · 六段</button>
+    <button class="chip" data-tab="replay">会话回放（脚本喂 stdin）</button>
+    <button class="chip" data-tab="dual">双入口自测</button>
+  </div>
+  <div data-pane="panels">
+    <div data-pane-id="demo6">
+      <p class="note">`python3 demo.py` 的完整现场输出（在 WSL 里跑；项目绝对路径已规范化为 &lt;项目根&gt;）。</p>
+      <pre class="code wrap">B8-mini-shell 演示：fork/exec、管道、重定向、内建命令与子进程回收
+
+==============================================================================
+  1) 命令执行与退出状态
+==============================================================================
+  `true` 退出码                0
+  `false` 退出码               1
+  `exit 42` 退出码             42
+  echo 输出                   &#x27;hello from msh\n&#x27;
+
+==============================================================================
+  2) 内建命令 cd/pwd：改的是 shell 自己的进程状态
+==============================================================================
+  pwd → cd /tmp → pwd       &lt;项目根&gt;/build/demo_tmp → /tmp
+  说明                        cd 若走 fork+exec，改的是子进程的 cwd，shell 自己不动——所以必须内建
+
+==============================================================================
+  3) 管道：N 个进程 + N-1 根管子
+==============================================================================
+  printf | sort | head -2   &#x27;a\nb\n&#x27;
+  管道 $? = 最后一段              1
+  反过来                       0
+
+==============================================================================
+  4) 重定向：&gt; 截断 / &gt;&gt; 追加 / &lt; 读入 / 管道落盘
+==============================================================================
+  echo first &gt; out.txt 后    &#x27;first\n&#x27;
+  再 echo second &gt;&gt; 后        &#x27;first\nsecond\n&#x27;
+  sort &lt; in.txt             &#x27;x\ny\nz\n&#x27;
+  printf | sort &gt; sorted.txt&#x27;a\nb\n&#x27;
+
+==============================================================================
+  5) 子进程回收：0 僵尸（/proc 当面数）
+==============================================================================
+  3 条命令跑完后，僵尸子进程            0 个
+  未回收的直接子进程                 0 个
+
+==============================================================================
+  6) 错误路径：报错、退出码、继续执行
+==============================================================================
+  找不到命令 → stderr            &#x27;msh: no_such_command_xyz: No such file or directory&#x27;
+  随后 echo 仍执行               &#x27;still alive\n&#x27;
+  3 条坏语法的 stderr 条数         3
+  最后仍输出                     &#x27;done\n&#x27;
+
+==============================================================================
+完成：6 段演示全部跑通（工作目录 build/demo_tmp 已清理）。</pre>
+    </div>
+    <div data-pane-id="replay" hidden>
+      <p class="note">八个命令脚本逐个喂给 <kbd>./build/msh</kbd>（stdin 重定向，非交互），
+      每步打印输出与 msh 自身的退出码——管道口径、重定向落盘、内建 cd、错误路径都在这一段里现场发生。</p>
+      <pre class="code wrap">--- 1) 三段管道：printf c/b/a | sort | head -2 ---
+    | a
+    | b
+    -&gt; msh 退出码 0
+
+--- 2) 退出码口径：管道 $? = 最后一段 ---
+    -&gt; msh 退出码 1
+    -&gt; msh 退出码 0
+
+--- 3) 重定向：&gt; 截断、&gt;&gt; 追加，再 cat 回读 ---
+    -&gt; msh 退出码 0
+    | first
+    | second
+    -&gt; msh 退出码 0
+
+--- 4) 内建 cd 改的是 shell 自己的 cwd（同一会话里跨行保持）---
+    | &lt;项目根&gt;/build/showcase_tmp
+    -&gt; msh 退出码 0
+
+--- 5) 错误路径：找不到命令 -&gt; 127；报错后继续执行 ---
+    | msh: no_such_command_xyz: No such file or directory
+    -&gt; msh 退出码 127
+    | msh: no_such_command_xyz: No such file or directory
+    | still alive
+    -&gt; msh 退出码 0</pre>
+    </div>
+    <div data-pane-id="dual" hidden>
+      <p class="note">双入口同数是本项目的硬口径：discover 与直跑必须报同一个数（生成器在采集时
+      对此做断言，不同数直接拒绝出页）。原始采集输出：</p>
+      <table class="plain"><tr><th>入口</th><th class="num">测试数</th></tr><tr><td>discover 入口</td><td class="num">24 项</td></tr><tr><td>直跑入口</td><td class="num">24 项</td></tr></table>
+      <pre class="code wrap">discover-rc=0
+discover-Ran 24 tests
+direct-rc=0
+direct-Ran 24 tests</pre>
+    </div>
+  </div>
+</section>
+
+<h2>怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>（Windows 侧）：WSL 里跑编译+自测+演示 → 展示页新鲜度 → 展示页测试。</li>
+    <li><kbd>bash run.sh</kbd>（WSL 里）：等价入口；交互用 <kbd>./build/msh</kbd>（Ctrl-D 退出）。</li>
+    <li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令经 WSL 真跑（编译+24 项双入口自测+六段演示+八脚本回放）
+  现算；页面不含计时数字，两遍采集逐字相同（唯一规范化项：项目路径 → &lt;项目根&gt;）。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  function activate(group, id){
+    var chips = document.querySelectorAll('[data-tabs="' + group + '"] [data-tab]');
+    for (var i = 0; i < chips.length; i++){
+      var on = chips[i].getAttribute("data-tab") === id;
+      chips[i].className = on ? "chip active" : "chip";
+    }
+    var panes = document.querySelectorAll('[data-pane="' + group + '"] [data-pane-id]');
+    for (var j = 0; j < panes.length; j++){
+      panes[j].hidden = panes[j].getAttribute("data-pane-id") !== id;
+    }
+  }
+  var lines = document.querySelectorAll("[data-tabs]");
+  for (var k = 0; k < lines.length; k++){
+    (function(line){
+      var group = line.getAttribute("data-tabs");
+      var chips = line.querySelectorAll("[data-tab]");
+      for (var c = 0; c < chips.length; c++){
+        chips[c].addEventListener("click", function(){
+          activate(group, this.getAttribute("data-tab"));
+        });
+      }
+      if (chips.length) activate(group, chips[0].getAttribute("data-tab"));
+    })(lines[k]);
+  }
+})();
+</script>
+</body>
+</html>

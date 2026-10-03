@@ -184,7 +184,7 @@ def order_concat(conn: sqlite3.Connection, column: str) -> dict:
 def order_bound(conn: sqlite3.Connection, column: str) -> dict:
     """反面教材的"看起来安全"：用占位符绑列名。
 
-    实测：SQLite 把绑进来的值当**常量**，排序变成按常量排 ⇒ 结果等于不排序，
+    实测：SQLite 把绑进来的值当**常量**，排序变成按常量排 => 结果等于不排序，
     而且**不报错**。与 `order_concat(..., "phone")` 的真实排序一比就看出来了。
     """
     return _outcome(conn, "SELECT id, name, phone FROM students ORDER BY ?",
@@ -208,14 +208,14 @@ def order_whitelist(conn: sqlite3.Connection, column: str,
 
 # ---------------------------------------------------------------- 4 二阶注入
 def note_add(conn: sqlite3.Connection, author: str, body: str) -> dict:
-    """写入是安全绑定的 ⇒ 载荷**原样进了库**。它的杀伤要等读取那一次。"""
+    """写入是安全绑定的 => 载荷**原样进了库**。它的杀伤要等读取那一次。"""
     out = _outcome(conn, "INSERT INTO notes VALUES (?, ?)", (author, body))
     conn.commit()
     return out
 
 
 def note_report_concat(conn: sqlite3.Connection, author: str) -> dict:
-    """漏洞版报表：把**库里的值**拼进语句 ⇒ 二阶注入。
+    """漏洞版报表：把**库里的值**拼进语句 => 二阶注入。
 
     要点：入参绑定过一次，不构成下游的安全保证。危险的是 sink，不是 source。
     """

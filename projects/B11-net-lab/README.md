@@ -35,7 +35,7 @@ tests/test_against_stdlib.py  与 http.server / http.client 的解析器对拍 +
 demo.py                    五段演示：请求旅程 → CRUD → 复用与拒绝 → UDP → GBN 实验
 ```
 
-## 课程知识点 ↔ 代码模块映射
+## 课程知识点 · 代码模块映射
 
 | 知识点 | 在哪实现 | 用哪个测试/实验验证 | 取舍 |
 |---|---|---|---|

@@ -214,20 +214,28 @@ class TestMsh(unittest.TestCase):
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                                 text=True, cwd=str(self.tmp))
         try:
-            proc.stdin.write("true\ntrue\nfalse\n")
+            # 同步点用**文件**而不是"轮询到空快照"：echo 落盘意味着前面所有命令
+            # （含 sleep 0.3 这个看得见的子进程）都已经处理完，且它是最后一条——
+            # 之后不会再有新 fork，"空"才是稳定结论。
+            # 原版对三条瞬时命令直接轮询空快照就 break：shell 还没 fork 之前
+            # 就会把"没发生过"记成"回收完毕"（2026-10-03 实测到的竞态）。
+            sync = self.tmp / "sync.txt"
+            proc.stdin.write("true\nfalse\nsleep 0.3\necho done > sync.txt\n")
             proc.stdin.flush()
             deadline = time.time() + 5.0
-            zombies: list[int] = []
+            while time.time() < deadline and not sync.exists():
+                time.sleep(0.05)
+            self.assertTrue(sync.exists(), "同步文件未出现——结论不可信")
+            deadline = time.time() + 5.0
             while time.time() < deadline:
-                zombies = zombie_children_of(proc.pid)
-                if not children_of(proc.pid) and not zombies:
+                if not children_of(proc.pid) and not zombie_children_of(proc.pid):
                     break
                 time.sleep(0.05)
             self.assertEqual(zombie_children_of(proc.pid), [])
             self.assertEqual(children_of(proc.pid), [])   # 全部回收，一个不留
-            proc.stdin.write("exit\n")
+            proc.stdin.write("false\nexit\n")
             proc.stdin.flush()
-            # exit 无参数 = 取最后一条命令的状态——脚本里最后一条是 false，所以是 1
+            # exit 无参数 = 取最后一条命令的状态——退出前最后一条是 false，所以是 1
             self.assertEqual(proc.wait(timeout=5), 1)
         finally:
             if proc.poll() is None:

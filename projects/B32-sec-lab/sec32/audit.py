@@ -5,12 +5,12 @@
 在三个月后新加一个查询时顺手用了 f-string。所以这里做两件互补的事：
 
 1. `sql_sites()`：用 `ast`（不是正则）扫源码，找出"SQL 字符串是被拼出来的"的位置。
-   做法是一条极小的污点链：函数里 `sql = <拼接表达式>` ⇒ 该变量带污点 ⇒
+   做法是一条极小的污点链：函数里 `sql = <拼接表达式>` => 该变量带污点 =>
    凡 `execute/executemany/executescript(污点变量 或 内联 f-string)` 都记为一个 sink。
    **它只报告形态，不判断后果**：先转义再拼（`login_quote_doubled`）在它眼里同样是拼接点，
    这正好——静态检查的职责是"把所有可疑点摊开"，定性由登记表完成。
 2. `JUDGED`：人工登记表，逐个 sink 写明**结论与理由**（危险/已缓解/形态像但安全）。
-   `problems()` 做**双向比对**：扫出来但没登记 ⇒ 红；登记了但扫不到 ⇒ 红。
+   `problems()` 做**双向比对**：扫出来但没登记 => 红；登记了但扫不到 => 红。
    这条规矩是从 B17/B18 的"依赖表双向核对"搬来的。
 
 第二件事让第 1 件有了牙齿：扫描器只会报形态，登记表会把"这条形态到底危不危险"
@@ -100,7 +100,7 @@ JUDGED = {
     ("sqli.py", "order_concat"): ("危险", "ORDER BY 是表达式位置，可造推断通道"),
     ("sqli.py", "order_whitelist"): ("形态像但安全", "拼进语句的只有白名单里程序自有的字符串，"
                                                      "用户输入从不进入语句文本"),
-    ("sqli.py", "note_report_concat"): ("危险", "读取库里的值再拼一次 ⇒ 二阶注入"),
+    ("sqli.py", "note_report_concat"): ("危险", "读取库里的值再拼一次 => 二阶注入"),
     ("sqli.py", "stacked_outcome"): ("危险", "载荷进入 SELECT 文本；本表用它比较两个执行接口的能力"),
 }
 
@@ -112,7 +112,7 @@ def scan_package() -> dict[str, list[dict]]:
 
 
 def problems() -> list[str]:
-    """双向比对：扫出来没登记 ⇒ 红；登记了扫不到 ⇒ 红。"""
+    """双向比对：扫出来没登记 => 红；登记了扫不到 => 红。"""
     found = {(module, site["func"])
              for module, sites in scan_package().items() for site in sites}
     judged = {(module, func) for (module, func) in JUDGED}

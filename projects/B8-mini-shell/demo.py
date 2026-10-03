@@ -83,7 +83,7 @@ def main() -> int:
     show("说明", "cd 若走 fork+exec，改的是子进程的 cwd，shell 自己不动——所以必须内建")
 
     # ------------------------------------------------------------------ 3
-    section(3, "管道：N 个进程 + N−1 根管子")
+    section(3, "管道：N 个进程 + N-1 根管子")
     r = session("printf 'c\\nb\\na\\n' | sort | head -2\n")
     show("printf | sort | head -2", repr(r.stdout))
     show("管道 $? = 最后一段", session("true | false\n").returncode)
@@ -105,10 +105,17 @@ def main() -> int:
     proc = subprocess.Popen([str(MSH)], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, text=True, cwd=str(WORK))
     try:
-        proc.stdin.write("true\ntrue\ntrue\n")
+        # sleep 0.2 是同步点：先"确实见过子进程"，再等它被回收——
+        # 否则快速命令可能在 shell fork 之前就轮询到空快照，把"没发生过"记成"回收了 0 个"。
+        proc.stdin.write("true\ntrue\nsleep 0.2\n")
         proc.stdin.flush()
         deadline = time.time() + 5
-        while time.time() < deadline and (children_of(proc.pid) or zombie_children_of(proc.pid)):
+        seen_child = False
+        while time.time() < deadline:
+            if children_of(proc.pid):
+                seen_child = True
+            if seen_child and not children_of(proc.pid) and not zombie_children_of(proc.pid):
+                break
             time.sleep(0.05)
         show("3 条命令跑完后，僵尸子进程", f"{len(zombie_children_of(proc.pid))} 个")
         show("未回收的直接子进程", f"{len(children_of(proc.pid))} 个")

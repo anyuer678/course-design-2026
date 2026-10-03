@@ -100,7 +100,7 @@ class TestSqlInjection(unittest.TestCase):
         vuln, safe = Q.login_concat(self.conn, payload, pwd), \
             Q.login_bound(self.conn, payload, pwd)
         self.assertTrue(vuln["logged_in"], vuln["sql"])
-        self.assertEqual(vuln["role"], "admin", "注释截断了密码检查 ⇒ 不需要口令")
+        self.assertEqual(vuln["role"], "admin", "注释截断了密码检查 => 不需要口令")
         self.assertFalse(safe["logged_in"])
         self.assertEqual(safe["rows"], [])
 
@@ -128,7 +128,7 @@ class TestSqlInjection(unittest.TestCase):
         self.assertEqual(safe["rows"], [])
 
     def test_union_requires_matching_column_count(self):
-        """列数不对就报 OperationalError ⇒ 载荷能否成立取决于语法，不是"危险字符"。"""
+        """列数不对就报 OperationalError => 载荷能否成立取决于语法，不是"危险字符"。"""
         out = Q.search_concat(self.conn, Q.PAYLOAD_UNION_BAD_ARITY)
         self.assertEqual(out["rows"], [])
         self.assertIn("UNION", out["error"])
@@ -142,7 +142,7 @@ class TestSqlInjection(unittest.TestCase):
                 self.assertFalse(out["logged_in"], out["sql"])
 
     def test_binding_an_identifier_is_a_silent_no_op(self):
-        """ORDER BY 用占位符绑列名：不报错，但排序变成按常量排 ⇒ 与不排序同序。
+        """ORDER BY 用占位符绑列名：不报错，但排序变成按常量排 => 与不排序同序。
 
         比报错更危险的是这种"静默无效"，所以断言两边都必须看到：
         绑参结果 == 无排序结果 != 真按 phone 排的结果。
@@ -415,7 +415,7 @@ class TestPathTraversal(unittest.TestCase):
         self.assertNotIn("/", ref["unquote_overlong_c0af"], "本机实测过长编码不产生斜杠")
         self.assertEqual(ref["unquote_fullwidth_solidus"], repr("／"))
         self.assertTrue(ref["is_relative_to_case_flip"],
-                        "WindowsPath 的比较大小写无关 ⇒ 大小写变换打不穿判定")
+                        "WindowsPath 的比较大小写无关 => 大小写变换打不穿判定")
         self.assertEqual(ref["plus_in_unquote"], "a+b",
                          "unquote 不把 + 当空格；那是 unquote_plus 的语义")
 
