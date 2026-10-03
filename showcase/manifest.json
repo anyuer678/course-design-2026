@@ -148,9 +148,9 @@
    "course": "数据库系统",
    "title": "教学数据库：WAL + 页式快照 + 事务",
    "batch": 6,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B10-minidb/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -158,9 +158,9 @@
    "course": "分布式与云计算",
    "title": "Raft：快照 + 单步成员变更 + 哈希链账本",
    "batch": 6,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B30-mini-raft/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -168,9 +168,9 @@
    "course": "软件工程案例分析与实践",
    "title": "手写 Redis 子集：RESP2 + 过期 + 主从复制",
    "batch": 6,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B38-mini-redis/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B10-minidb · WAL + 事务 + 对拍（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(13rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.card span{font-size:.95rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+table.grid{border-collapse:collapse;margin:.4rem 0;font-size:.92rem}
+table.grid td,table.grid th{border:1px solid var(--line);padding:.3rem .6rem;text-align:left}
+.badge{display:inline-block;font-size:.8rem;padding:.08rem .55rem;border-radius:999px;border:1px solid var(--line);color:var(--muted)}
+.badge.ok{color:var(--ok);border-color:var(--ok)}.badge.bad{color:var(--bad);border-color:var(--bad)}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+ol,ul{padding-left:1.3rem}
+</style>
+</head>
+<body data-showcase="B10-minidb">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B10 · 教学数据库：B+ 树索引 + WAL 恢复 + 事务 + sqlite 对拍</h1>
+<p class="note">数据库系统 · 无第三方依赖：词法/语法解析 → 计划器 → 执行器 →
+B+ 树 → WAL → 崩溃恢复。压轴是与 sqlite3 的随机 SQL 对拍。</p>
+
+<h2 id="facts-title">实测数字（本页现算，临时目录真实跑库）</h2>
+<section id="facts" class="cards"><div class="card"><b>存储引擎</b><span>B+ 树索引 + 页式快照 + WAL 预写日志</span></div><div class="card"><b>WAL 恢复</b><span>重启回放 3 条日志，2 行完整（模拟崩溃）</span></div><div class="card"><b>CHECKPOINT</b><span>快照落盘后 WAL 清空，从快照恢复同样完整</span></div><div class="card"><b>事务回滚</b><span>BEGIN 内的插入与删除被 ROLLBACK 原样还原</span></div><div class="card"><b>sqlite3 对拍</b><span>300 轮随机 SQL 逐行一致（mini vs sqlite3）</span></div><div class="card"><b>测试方法</b><span>53 个（tests/ 里 def test_ 现数）</span></div></section>
+
+<h2 id="demo-title">展示区：四个真实场景（每次生成现跑一遍）</h2>
+<section id="demo" class="panel">
+  <p class="note">本页生成时真实跑了四个场景，结果：
+    <span class="badge ok">recovery: ✔</span> <span class="badge ok">checkpoint: ✔</span> <span class="badge ok">rollback: ✔</span> <span class="badge ok">agree: ✔</span> </p>
+  <div class="chips" id="chips"></div>
+  <div id="panel"></div>
+</section>
+
+<h2 id="repro-title">怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：自测（36 项，含 sqlite3 对拍）+ 六段演示。</li>
+    <li><kbd>python tests	est_minidb.py</kbd>：只跑自测。</li>
+    <li><kbd>python demo.py</kbd>：六段演示（CRUD → 计划器 → 约束 → JOIN → 事务 → 恢复）。</li>
+    <li><kbd>python tools/showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令现算；别手改本页。
+  观感与顺手程度归你实跑验收。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>const DATA = {"facts":[["存储引擎","B+ 树索引 + 页式快照 + WAL 预写日志"],["WAL 恢复","重启回放 3 条日志，2 行完整（模拟崩溃）"],["CHECKPOINT","快照落盘后 WAL 清空，从快照恢复同样完整"],["事务回滚","BEGIN 内的插入与删除被 ROLLBACK 原样还原"],["sqlite3 对拍","300 轮随机 SQL 逐行一致（mini vs sqlite3）"],["测试方法","53 个（tests/ 里 def test_ 现数）"]],"demo":{"wal":{"wal_lines":3,"recovered_ids":[1,2]},"checkpoint":{"wal_alive":false,"rows":2},"rollback":{"kept":[1]}},"checks":{"recovery":true,"checkpoint":true,"rollback":true,"agree":300}};</script>
+<script>
+(function(){
+  "use strict";
+  var chipBox = document.getElementById("chips");
+  var panel = document.getElementById("panel");
+
+  function el(tag, cls, text){
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined) node.textContent = text;
+    return node;
+  }
+
+  function show(name){
+    var chips = chipBox.children;
+    for (var i = 0; i < chips.length; ++i)
+      chips[i].className = "chip" + (chips[i].dataset.name === name ? " active" : "");
+    panel.textContent = "";
+    var d = DATA.demo[name];
+    if (name === "wal") {
+      panel.appendChild(el("p", "", "写入 3 条语句（建表 + 2 插入），未 CHECKPOINT 直接重启："));
+      panel.appendChild(el("p", "", "WAL 日志 " + d.wal_lines + " 条 → 回放后恢复 " +
+        d.recovered_ids.join(", ") + " —— 已提交数据零丢失"));
+    } else if (name === "checkpoint") {
+      panel.appendChild(el("p", "", "CHECKPOINT 后：WAL 文件" +
+        (d.wal_alive ? "仍存在" : "已清空") + "，从快照恢复 " + d.rows + " 行"));
+    } else if (name === "rollback") {
+      panel.appendChild(el("p", "", "BEGIN 后插入 id=2、删除 id=1，ROLLBACK → 剩 " +
+        d.kept.join(", ") + "（事务内的改动全部消失）"));
+    } else if (name === "battery") {
+      panel.appendChild(el("p", "", DATA.checks.agree + " 轮随机 SQL：mini 引擎与" +
+        " sqlite3 的查询结果逐行一致（含 ORDER BY / IS NULL / 三值逻辑）"));
+    }
+  }
+
+  [["wal", "WAL 恢复"], ["checkpoint", "CHECKPOINT"], ["rollback", "事务回滚"],
+   ["battery", "sqlite 对拍"]].forEach(function(pair){
+    var chip = el("button", "chip", pair[1]);
+    chip.dataset.name = pair[0];
+    chip.addEventListener("click", function(){ show(pair[0]); });
+    chipBox.appendChild(chip);
+  });
+  show("wal");
+})();
+</script>
+</body>
+</html>
