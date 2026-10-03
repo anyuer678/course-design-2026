@@ -4,13 +4,18 @@
 真实服务、真的发请求（原始字节进、原始字节出）、真的把服务日志流回页面。
 
 用法：
-    python showcase/lab.py                # 起在 127.0.0.1:7788
-    # 浏览器打开 http://127.0.0.1:7788/showcase/index.html （各页「实时实验台」分节变成控制台）
+    python showcase/lab.py                # 起在 127.0.0.1:7788（双击仓库根 lab.bat 同款）
+    # 总入口 http://127.0.0.1:7788/showcase/index.html 即「项目群控制台」：
+    #   每个项目行可 启动/停止真实服务、跑 demo/测试、看实时日志；
+    #   各项目页的「实时实验台」分节也会就地变成控制台。
+    python showcase/lab.py --lan          # 静态页绑 0.0.0.0 供局域网访问（控制仍只限本机）
     python showcase/lab.py --selftest     # 自检：真起 B31 服务 → 真发请求 → 真停，PASS/FAIL
 
 安全边界（先说死）：
-- 只绑回环地址；静态根 = 仓库根（实验台就是本机开发工具，不是给外人用的服务）；
-- `/lab/api/*` 只认识下表注册的**固定命令**：客户端只能选 id，不能携带命令/参数/路径；
+- 默认只绑回环地址；静态根 = 仓库根（实验台就是本机开发工具）；
+- `--lan` 只把**静态页**放开给局域网；`/lab/api/*`（含只读的 overview）一律**只接受回环
+  来源**，远端拿到的只有 403——控制面永远不出去；
+- `/lab/api/*` 只认识注册表里的**固定命令**：客户端只能选 id，不能携带命令/参数/路径；
 - `/lab/api/sock` 只在"本实验台启动的端口"上做连接转发，不接受任意地址；
 - 所有子进程在实验台退出时统一清理（atexit），不会留孤儿。
 """
@@ -84,6 +89,24 @@ SERVE = {
     },
 }
 
+def _actions_of(pid: str) -> list:
+    """某项目在实验台里的可做动作（info 与 overview 共用，口径唯一）。"""
+    serve = SERVE.get(pid)
+    acts = []
+    if serve:
+        acts.append({"id": "serve_start", "label": f"启动真实服务（:{serve['port']}）"})
+        acts.append({"id": "serve_stop", "label": "停止服务"})
+    for key, label in (("demo", "运行 demo.py"), ("tests", "跑测试套件"), ("run", "运行 run.bat")):
+        if pid in RUN and key in RUN[pid]:
+            acts.append({"id": key, "label": label})
+    return acts
+
+
+def _is_loopback(host: str) -> bool:
+    """回环判定：控制类 API 只认这些来源（含 IPv4 映射形式）。"""
+    return host in ("127.0.0.1", "::1", "::ffff:127.0.0.1") or host.startswith("127.")
+
+
 #: 可运行的现成动作（demo / 测试 / run.bat），全部按 run.bat 同款命令。
 def _run_entries(pid: str, demo: bool, tests: bool, bat=None) -> dict:
     out = {}
@@ -91,8 +114,10 @@ def _run_entries(pid: str, demo: bool, tests: bool, bat=None) -> dict:
         out["demo"] = [PY, "demo.py"]
     if tests:
         out["tests"] = [PY, "-m", "unittest", "discover", "-s", "tests"]
-    if bat:
-        out["run"] = ["cmd", "/c", "run.bat"] + (bat or [])
+    if bat is not None:
+        # 注意 bat=[] 是合法用法（run.bat 不带附加参数）——不能用 `if bat:` 判（2026-10-04 修：
+        # 这个真值判断曾让 B1/B2/B5/B6/B7/B9 的 run 动作整个消失，动作表静默为空）
+        out["run"] = ["cmd", "/c", "run.bat"] + bat
     return out
 
 
@@ -347,21 +372,35 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if not u.path.startswith("/lab/api/"):
             return super().do_GET()
+        if not _is_loopback(self.client_address[0]):
+            return self._json({"ok": False,
+                               "error": "控制 API 只接受本机（回环）请求；局域网可访问静态页"}, 403)
         q = parse_qs(u.query)
         if u.path == "/lab/api/ping":
             return self._json({"ok": True, "hub": "showcase-lab", "version": 1})
+        if u.path == "/lab/api/overview":
+            # 项目群控制台用：一次拿到全部项目的动作与实时状态（只读）
+            ids = []
+            manifest = ROOT / "showcase" / "manifest.json"
+            if manifest.is_file():
+                try:
+                    ids = [p["id"] for p in
+                           json.loads(manifest.read_text(encoding="utf-8"))["projects"]]
+                except (ValueError, KeyError):
+                    ids = []
+            projects = [{
+                "project": pid,
+                "port": SERVE[pid]["port"] if pid in SERVE else None,
+                "actions": _actions_of(pid),
+                "state": _state_of(pid),
+                "page": f"/projects/{pid}/web/showcase.html",
+            } for pid in (ids or sorted(set(SERVE) | set(RUN)))]
+            return self._json({"ok": True, "projects": projects})
         if u.path == "/lab/api/info":
             pid = (q.get("project") or [""])[0]
             serve = SERVE.get(pid)
-            acts = []
-            if serve:
-                acts.append({"id": "serve_start", "label": f"启动真实服务（:{serve['port']}）"})
-                acts.append({"id": "serve_stop", "label": "停止服务"})
-            for key, label in (("demo", "运行 demo.py"), ("tests", "跑测试套件"), ("run", "运行 run.bat")):
-                if pid in RUN and key in RUN[pid]:
-                    acts.append({"id": key, "label": label})
             return self._json({
-                "ok": True, "project": pid, "actions": acts,
+                "ok": True, "project": pid, "actions": _actions_of(pid),
                 "state": _state_of(pid),
                 "sample": serve.get("sample") if serve else None,
                 "hint": serve.get("hint") if serve else None,
@@ -377,6 +416,9 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if not self.path.startswith("/lab/api/"):
             return self._json({"ok": False, "error": "unknown"}, 404)
+        if not _is_loopback(self.client_address[0]):
+            return self._json({"ok": False,
+                               "error": "控制 API 只接受本机（回环）请求；局域网可访问静态页"}, 403)
         data = self._body()
         pid = str(data.get("project") or "")
         if self.path == "/lab/api/start":
@@ -410,7 +452,7 @@ def _busy_hint(port: int) -> str:
     return "已经有一个实验台在跑" if lab_running else "这个端口被别的程序占着"
 
 
-def serve(port: int) -> int:
+def serve(port: int, lan: bool = False) -> int:
     # Windows 的 SO_REUSEADDR 允许第二个进程绑同一端口，光靠 bind 失败判不出占用；
     # 先连一下：有应答就是被占，直接给出人话提示。
     try:
@@ -422,14 +464,23 @@ def serve(port: int) -> int:
         print(f"    先在浏览器里看看 http://127.0.0.1:{port}/ ，确认是不是你想用的那个；")
         print(f"    或换端口：python showcase/lab.py --port {port + 1}")
         return 1
+    host = "0.0.0.0" if lan else "127.0.0.1"
     try:
-        httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+        httpd = ThreadingHTTPServer((host, port), Handler)
     except OSError as exc:
         print(f"[!] 端口 {port} 仍然起不来：{exc}")
         print(f"    或换端口：python showcase/lab.py --port {port + 1}")
         return 1
     print(f"实验台已启动：http://127.0.0.1:{port}/showcase/index.html")
-    print("（已打开/刷新的展示页里，「实时实验台」分节会就地变成控制台；Ctrl+C 结束，子进程会一并清理）")
+    if lan:
+        print("局域网模式：静态页可被同网段访问；**控制 API 只接受本机请求**（远端只会看到 403）。")
+        try:
+            for ip in socket.gethostbyname_ex(socket.gethostname())[2]:
+                if not ip.startswith("127."):
+                    print(f"    局域网入口：http://{ip}:{port}/showcase/index.html")
+        except OSError:
+            pass
+    print("（总入口与各展示页的「实时实验台」会就地变成控制台；Ctrl+C 结束，子进程会一并清理）")
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -467,6 +518,21 @@ def selftest(port: int = 7799) -> int:
         ok = ok and bool(cond)
 
     check("ping", get("/lab/api/ping").get("ok"))
+    ov = get("/lab/api/overview")
+    n_ov = len(ov.get("projects") or [])
+    check("overview 覆盖全部项目", ov.get("ok") and n_ov >= 33, f"{n_ov} 项")
+    check("overview 里 B31 带服务动作",
+          any(p["project"] == "B31-shorturl" and p["port"] == 8312
+              and any(a["id"] == "serve_start" for a in p["actions"]) for p in ov["projects"]))
+    check("overview 里 B1 带 run 动作（bat=[] 曾整条消失的真回归）",
+          any(p["project"] == "B1-cpp-ministl"
+              and any(a["id"] == "run" for a in p["actions"]) for p in ov["projects"]))
+    no_act = [p["project"] for p in ov["projects"] if not p["actions"]]
+    check("无动作项目只有 B8（WSL 入口不替它选环境）", no_act == ["B8-mini-shell"], str(no_act))
+    check("回环判定（控制 API 的边界）",
+          _is_loopback("127.0.0.1") and _is_loopback("::1") and _is_loopback("::ffff:127.0.0.1")
+          and not _is_loopback("192.168.1.5") and not _is_loopback("::ffff:192.168.1.5")
+          and not _is_loopback("10.0.0.7"))
     info = get("/lab/api/info?project=B31-shorturl")
     check("info 提供 B31 动作", any(a["id"] == "serve_start" for a in info["actions"]))
     with urllib.request.urlopen(base + "/showcase/index.html", timeout=10) as r:
@@ -486,11 +552,13 @@ def selftest(port: int = 7799) -> int:
 def main(argv) -> int:
     ap = argparse.ArgumentParser(description="展示层实验台（本地真实后端控制）")
     ap.add_argument("--port", type=int, default=7788)
+    ap.add_argument("--lan", action="store_true",
+                    help="静态页绑 0.0.0.0 供局域网访问；控制 API 仍只接受本机请求")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args(argv[1:])
     if args.selftest:
         return selftest()
-    return serve(args.port)
+    return serve(args.port, lan=args.lan)
 
 
 if __name__ == "__main__":

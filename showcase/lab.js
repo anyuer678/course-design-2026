@@ -10,9 +10,9 @@
 (function () {
   "use strict";
   var slot = document.getElementById("lab-slot");
-  if (!slot) return;                       // 页面上没有实验台分节：完全安静
   var pid = (document.body && document.body.dataset) ? document.body.dataset.showcase : "";
-  if (!pid) return;
+  var isIndex = !!(document.body && document.body.dataset && document.body.dataset.labIndex);
+  if (!isIndex && !(slot && pid)) return;  // 既不是项目页也不是总入口：完全安静
   var HUB = (location.protocol === "http:") ? "" : "http:\/\/127.0.0.1:7788";
 
   function api(path, post) {
@@ -52,8 +52,157 @@
       "border-radius:10px;padding:10px 12px;margin:4px 0;",
       "max-height:240px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;",
       "white-space:pre-wrap;word-break:break-word}",
+      "[data-lab-index] .lab-ctl{display:inline-flex;gap:6px;align-items:center;margin-left:auto;flex-wrap:wrap}",
+      "[data-lab-index] .lab-dot{font-size:12px;color:#94a3b8}",
+      "[data-lab-index] .lab-dot.on{color:#16a34a}",
+      "[data-lab-index] .lab-mini{font:inherit;font-size:12px;padding:2px 9px;",
+      "border:1px solid var(--kb-border,#e2e8f0);border-radius:999px;background:#fff;",
+      "color:var(--kb-text-2,#475569);cursor:pointer;transition:all .2s ease}",
+      "[data-lab-index] .lab-mini:hover{border-color:var(--kb-primary,#3b82f6);color:var(--kb-primary,#3b82f6)}",
+      "[data-lab-index] .lab-mini:disabled{opacity:.45;cursor:default}",
+      "[data-lab-index] .lab-mini.on{background:var(--kb-primary,#3b82f6);",
+      "border-color:var(--kb-primary,#3b82f6);color:#fff}",
+      "[data-lab-index] .lab-err{color:#b91c1c;font-size:12px}",
+      "[data-lab-index] .lab-log{flex-basis:100%;width:100%;background:#0f172a;color:#e2e8f0;",
+      "border-radius:8px;padding:8px 10px;margin:6px 0 2px;max-height:200px;overflow:auto;",
+      "font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}",
     ].join("");
     document.head.appendChild(s);
+  }
+
+  // ------------------------------------------------ 总入口「项目群控制台」模式
+  function indexConsole() {
+    var hint = document.getElementById("hub-hint");
+    var openLogPid = null, logTimer = null, logFrom = 0, logPre = null;
+
+    function setHint(cls, text) {
+      if (!hint) return;
+      hint.className = "hub" + (cls ? (" " + cls) : "");
+      hint.textContent = text;
+    }
+
+    function rowOf(project) {
+      return document.querySelector('li[data-id="' + project + '"]');
+    }
+
+    function shortLabel(id, label) {
+      if (id === "serve_start") return "启动";
+      if (id === "serve_stop") return "停止";
+      if (id === "demo") return "演示";
+      if (id === "tests") return "测试";
+      if (id === "run") return "运行";
+      return label;
+    }
+
+    function flash(entry, text) {
+      var li = rowOf(entry.project);
+      var box = li && li.querySelector(".lab-ctl");
+      if (!box) return;
+      var old = box.querySelector(".lab-err");
+      if (old) old.remove();
+      var p = el("span", "lab-err", text);
+      box.appendChild(p);
+      setTimeout(function () { if (p.parentNode) p.remove(); }, 6000);
+    }
+
+    function fire(entry, action, btn) {
+      btn.disabled = true;
+      var req;
+      if (action.id === "serve_start") req = api("/lab/api/start", { project: entry.project });
+      else if (action.id === "serve_stop") req = api("/lab/api/stop", { project: entry.project });
+      else req = api("/lab/api/run", { project: entry.project, kind: action.id });
+      req.then(function (r) {
+        if (!r.ok) flash(entry, "失败：" + (r.error || "?") + (r.tail ? "（输出尾部见日志）" : ""));
+        return refresh();
+      }).catch(function (e) { flash(entry, "失败：" + e); })
+        .then(function () { btn.disabled = false; });
+    }
+
+    function closeLog() {
+      if (logTimer) { clearInterval(logTimer); logTimer = null; }
+      if (logPre && logPre.parentNode) logPre.parentNode.removeChild(logPre);
+      logPre = null;
+      openLogPid = null;
+      Array.prototype.forEach.call(document.querySelectorAll(".lab-mini.on"),
+        function (b) { b.classList.remove("on"); });
+    }
+
+    function toggleLog(entry, btn) {
+      var li = rowOf(entry.project);
+      if (!li) return;
+      if (openLogPid === entry.project) { closeLog(); return; }
+      closeLog();
+      openLogPid = entry.project;
+      logFrom = 0;
+      logPre = el("pre", "lab-log", "（暂无输出）");
+      li.appendChild(logPre);
+      btn.classList.add("on");
+      function pull() {
+        api("/lab/api/log?project=" + encodeURIComponent(entry.project) + "&from=" + logFrom)
+          .then(function (r) {
+            if (!r.ok) return;
+            (r.lines || []).forEach(function (ln) {
+              var atBottom = logPre.scrollTop + logPre.clientHeight >= logPre.scrollHeight - 8;
+              logPre.textContent = (logPre.textContent === "（暂无输出）" ? "" : logPre.textContent) + ln + "\n";
+              if (atBottom) logPre.scrollTop = logPre.scrollHeight;
+            });
+            logFrom = r.from;
+          }).catch(function () {});
+      }
+      pull();
+      logTimer = setInterval(pull, 1500);
+    }
+
+    function fillRow(entry) {
+      var li = rowOf(entry.project);
+      if (!li) return;
+      if (!(entry.actions || []).length) return;   // 没接动作的项目（如 B8 走 WSL）：保持静态行
+      var box = li.querySelector(".lab-ctl");
+      if (!box) {
+        box = el("span", "lab-ctl");
+        li.appendChild(box);
+      }
+      var dot = box.querySelector(".lab-dot");
+      if (!dot) {
+        dot = el("span", "lab-dot");
+        box.appendChild(dot);
+      }
+      var running = !!(entry.state && entry.state.running);
+      dot.textContent = running ? ("● " + (entry.state.port ? (":" + entry.state.port) : "运行中")) : "○";
+      dot.title = running ? ("运行中 pid=" + entry.state.pid + "（" + entry.state.up + "s）") : "未运行";
+      dot.className = "lab-dot" + (running ? " on" : "");
+      if (box.dataset.built === "1") return;    // 按钮只建一次，轮询只刷新状态点
+      box.dataset.built = "1";
+      (entry.actions || []).forEach(function (a) {
+        var b = el("button", "lab-mini", shortLabel(a.id, a.label));
+        b.addEventListener("click", function () { fire(entry, a, b); });
+        box.appendChild(b);
+      });
+      var lg = el("button", "lab-mini", "日志");
+      lg.addEventListener("click", function () { toggleLog(entry, lg); });
+      box.appendChild(lg);
+    }
+
+    function refresh() {
+      return api("/lab/api/overview").then(function (r) {
+        if (!r.ok) {
+          setHint("warn", "控制仅限本机：" + (r.error || "该来源不可用") +
+            "——局域网访客可以继续浏览全部页面。");
+          return;
+        }
+        var projects = r.projects || [];
+        projects.forEach(fillRow);
+        setHint("ok", "实验台已连接——共 " + projects.length +
+          " 项：每行可 启动/停止 真实服务、跑 演示/测试、看实时日志；点项目名进入各自页面。");
+      }).catch(function () {
+        setHint("", "实时控制台已断开——重新启动 lab.bat 后刷新本页即可恢复。");
+      });
+    }
+
+    ensureStyle();
+    refresh();
+    var timer = setInterval(refresh, 3000);
+    window.addEventListener("beforeunload", function () { clearInterval(timer); });
   }
 
   function consoleUI(info) {
@@ -181,10 +330,14 @@
     return out;
   }
 
-  api("/lab/api/info?project=" + encodeURIComponent(pid))
-    .then(function (info) {
-      if (info && info.ok) consoleUI(info);
-      // 实验台没跑：保留 #lab-slot 里的静态启动说明，不动它
-    })
-    .catch(function () { /* 同上：静态说明保持原样 */ });
+  if (isIndex) {
+    indexConsole();
+  } else {
+    api("/lab/api/info?project=" + encodeURIComponent(pid))
+      .then(function (info) {
+        if (info && info.ok) consoleUI(info);
+        // 实验台没跑：保留 #lab-slot 里的静态启动说明，不动它
+      })
+      .catch(function () { /* 同上：静态说明保持原样 */ });
+  }
 })();

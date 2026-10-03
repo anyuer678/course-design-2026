@@ -6,6 +6,8 @@ rem Usage:
 rem   lab.bat             start the hub on 127.0.0.1:7788 and open the index page
 rem   lab.bat no-open     start the hub only (no browser)
 rem   lab.bat selftest    run the lab self-test (starts B31, sends a real request, stops it)
+rem   lab.bat lan         bind 0.0.0.0 so LAN devices can browse the static pages
+rem                       (control APIs stay loopback-only; remote callers get 403)
 chcp 65001 >nul
 setlocal
 cd /d %~dp0
@@ -20,14 +22,22 @@ if /i "%~1"=="selftest" (
     exit /b 0
 )
 
+set EXTRA=
+set OPENARG=%~1
+if /i "%~1"=="lan" (
+    set EXTRA=--lan
+    set OPENARG=%~2
+)
+
 echo [1/2] checks passed: python in PATH, catalog and pages ready to serve
-if /i "%~1"=="no-open" goto :serve
+if /i "%OPENARG%"=="no-open" goto :serve
 echo       opening http://127.0.0.1:7788/showcase/index.html in about 2 seconds
 start "" /b python -c "import time,webbrowser; time.sleep(2); webbrowser.open('http://127.0.0.1:7788/showcase/index.html')"
 
 :serve
 echo [2/2] lab hub starting on http://127.0.0.1:7788/   (Ctrl+C stops it; child processes are cleaned up)
-python showcase\lab.py || (echo [!] lab exited with an error ^(port 7788 busy? see the message above^) & exit /b 1)
+if defined EXTRA echo [!] LAN mode: static pages bound to 0.0.0.0; control APIs stay loopback-only (remote GET/POST get 403).
+python showcase\lab.py %EXTRA% || (echo [!] lab exited with an error ^(port 7788 busy? see the message above^) & exit /b 1)
 echo.
 echo Lab stopped. All child processes were cleaned up.
 endlocal

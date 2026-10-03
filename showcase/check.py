@@ -248,6 +248,11 @@ def render_index(manifest: dict) -> str:
         "border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink);"
         "box-shadow:0 1px 2px rgb(15 23 42 / 6%)}"
         ".tools input:focus{outline:2px solid #bfdbfe;border-color:var(--primary)}",
+        ".hub{margin:.7rem 0 .2rem;padding:.55rem .9rem;border:1px solid var(--line);"
+        "border-radius:10px;background:#fff;color:var(--muted);font-size:.88rem;"
+        "box-shadow:0 1px 2px rgb(15 23 42 / 6%)}"
+        ".hub.ok{border-color:#a7f3d0;background:#ecfdf5;color:#047857}"
+        ".hub.warn{border-color:#fde68a;background:#fffbeb;color:#b45309}",
         ".chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.5rem 0 .7rem}"
         ".chip{font:inherit;font-size:.85rem;padding:.26rem .8rem;border:1px solid var(--line);"
         "border-radius:999px;background:#fff;cursor:pointer;color:var(--muted);transition:all .2s ease}"
@@ -258,11 +263,15 @@ def render_index(manifest: dict) -> str:
         "footer{color:var(--faint);font-size:.85rem;margin-top:2.5rem;border-top:1px solid var(--line);padding-top:1rem}",
         "</style>",
         "</head>",
-        "<body>",
+        '<body data-lab-index="1">',
         "<main>",
         "<h1>课设作品集</h1>",
         f'<p class="note">{len(projects)} 个项目 · 已交付展示页 <strong>{len(done)}</strong> 个（每页双击即看、零网络依赖；'
         "页面为生成物，检验器与批次表见 <code>showcase/SPEC.md</code>）。</p>",
+        '<div class="hub" id="hub-hint">实时控制台：双击仓库根 <code>lab.bat</code> 启动实验台后'
+        "刷新本页——每个项目行会出现 状态点 / 启动 / 停止 / 演示 / 测试 / 日志；"
+        "各项目页里的「实时实验台」分节也会就地变成控制台（控制 API 只认本机；"
+        "局域网访客可正常浏览全部页面）。</div>",
         '<div class="tools">'
         '<input id="q" type="search" autocomplete="off" '
         'placeholder="搜索：项目编号 / 课程 / 关键词（按 / 聚焦，Esc 清空，回车打开第一条）">'
@@ -298,15 +307,24 @@ def render_index(manifest: dict) -> str:
     lines += [
         "<footer>",
         "<p>页面里的数字来自各项目真实产物的现算；观感与顺手程度归你实跑验收。</p>",
-        "<p><strong>实时控制真实后端</strong>：仓库根跑 <code>python showcase/lab.py</code> 后，"
-        "从 http://127.0.0.1:7788/showcase/index.html 打开（或刷新任一页），右下角会出现实验台面板："
-        "可启动/停止各项目的真实服务（B11/B31/B38/B35/B28/dorm 六个已注册）、发送真实请求、"
-        "实时看服务与 demo/测试的输出。实验台没启动时页面仍是原来的静态自包含页。</p>",
+        "<p><strong>实时控制真实后端</strong>：仓库根双击 <code>lab.bat</code>（或 "
+        "<code>python showcase/lab.py</code>）后从这里（http://127.0.0.1:7788/showcase/index.html）"
+        "打开——每行项目长出 状态点 / 启动 / 停止 / 演示 / 测试 / 日志 按钮：真启停各项目的真实服务"
+        "（B11/B31/B38/B35/B28/dorm 六个已注册）、真跑 demo 与测试、实时看输出。"
+        "实验台没启动时本页就是原来的静态自包含页；局域网加 <code>--lan</code> 只放开静态浏览，"
+        "控制 API 永远只认本机。</p>",
         "<p>重生成本页：<code>python showcase/check.py --write-index</code>（清单在 "
         "<code>showcase/manifest.json</code>）。</p>",
         "</footer>",
         "</main>",
         f"<script>{INDEX_JS}</script>",
+        "<script>",
+        "/* 实时控制台引导（双击 lab.bat 启动实验台后，本页每行项目自动长出控制按钮） */",
+        '"use strict";',
+        'var s=document.createElement("script");',
+        's.src=(location.protocol==="http:")?"/showcase/lab.js":"http:\\/\\/127.0.0.1:7788/showcase/lab.js";',
+        "document.body.appendChild(s);",
+        "</script>",
         "</body>",
         "</html>",
         "",
@@ -381,7 +399,12 @@ def check(root: Path | None = None) -> tuple:
         problems.extend(sub_problems)
         notes.extend(f"{entry['id']}：{n}" for n in sub_notes)
     if INDEX.is_file():
-        problems.extend(index_problems(manifest, INDEX.read_text(encoding="utf-8"), root))
+        index_text = INDEX.read_text(encoding="utf-8")
+        problems.extend(index_problems(manifest, index_text, root))
+        idx_problems, idx_notes = _node_check(
+            re.findall(r"<script>(.*?)</script>", index_text, re.S))
+        problems.extend(f"showcase/index.html：{p}" for p in idx_problems)
+        notes.extend(f"showcase/index.html：{n}" for n in idx_notes)
     else:
         problems.append("showcase/index.html 不存在：跑 python showcase/check.py --write-index")
     return problems, notes
