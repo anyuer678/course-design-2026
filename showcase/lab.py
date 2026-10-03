@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import atexit
+import http.client
 import json
 import os
 import socket
@@ -37,9 +38,9 @@ PY = sys.executable
 SERVE = {
     "B11-net-lab": {
         "argv": [PY, "-c",
-                 "from netlab.server import Server; s = Server(port=8311); s.start(); "
-                 "print('netlab 已启动 127.0.0.1:%d' % s.port, flush=True); "
-                 "import time; time.sleep(10**8)"],
+                 ("from netlab.server import Server; s = Server(port=8311); s.start(); "
+                  "print('netlab 已启动 127.0.0.1:%d' % s.port, flush=True); "
+                  "import time; time.sleep(10**8)")],
         "port": 8311,
         "sample": "GET /kv/repair HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n",
         "hint": "HTTP/1.1 子集 + 单线程 select；示例是读回演示里 PUT 过的键",
@@ -53,18 +54,18 @@ SERVE = {
     },
     "B38-mini-redis": {
         "argv": [PY, "-c",
-                 "from redislite.server import Server; s = Server(port=8313).start(); "
-                 "print('redis 子集已启动 127.0.0.1:%d' % s.port, flush=True); "
-                 "import time; time.sleep(10**8)"],
+                 ("from redislite.server import Server; s = Server(port=8313).start(); "
+                  "print('redis 子集已启动 127.0.0.1:%d' % s.port, flush=True); "
+                  "import time; time.sleep(10**8)")],
         "port": 8313,
         "sample": "PING\\r\\nSET demo hello\\r\\nGET demo\\r\\nINCR n\\r\\nTTL demo\\r\\n",
         "hint": "RESP2：一行一条 inline 命令（也可发数组帧），回复按行返回",
     },
     "B35-iot-mqtt": {
         "argv": [PY, "-c",
-                 "from mqttlite.broker import Broker; b = Broker(port=8314).start(); "
-                 "print('mqtt broker 已启动 127.0.0.1:%d' % b.port, flush=True); "
-                 "import time; time.sleep(10**8)"],
+                 ("from mqttlite.broker import Broker; b = Broker(port=8314).start(); "
+                  "print('mqtt broker 已启动 127.0.0.1:%d' % b.port, flush=True); "
+                  "import time; time.sleep(10**8)")],
         "port": 8314,
         "sample": "\\x10\\x13\\x00\\x04MQTT\\x04\\x02\\x00\\x3c\\x00\\x07lab-cli",
         "hint": "MQTT：示例是 CONNECT 报文（\\xNN 转义），回包应为 CONNACK 20 02 00 00",
@@ -259,7 +260,7 @@ def sock_probe(pid: str, data: bytes, wait: float = 1.5) -> dict:
         while len(buf) < 65536:
             try:
                 chunk = s.recv(4096)
-            except socket.timeout:
+            except TimeoutError:
                 break
             if not chunk:
                 break
@@ -306,14 +307,14 @@ class Handler(SimpleHTTPRequestHandler):
         raw = self.rfile.read(n) if n else b"{}"
         try:
             return json.loads(raw.decode("utf-8"))
-        except Exception:
+        except ValueError:
             return {}
 
     # 跨源预检：file:// 打开页面时，POST JSON 会先发 OPTIONS
-    def do_OPTIONS(self):                     # noqa: N802
+    def do_OPTIONS(self):
         self._json({"ok": True})
 
-    def do_GET(self):                         # noqa: N802
+    def do_GET(self):
         from urllib.parse import parse_qs, urlparse
         u = urlparse(self.path)
         if not u.path.startswith("/lab/api/"):
@@ -345,7 +346,7 @@ class Handler(SimpleHTTPRequestHandler):
                                "state": _state_of(pid)})
         return self._json({"ok": False, "error": "unknown api"}, 404)
 
-    def do_POST(self):                        # noqa: N802
+    def do_POST(self):
         if not self.path.startswith("/lab/api/"):
             return self._json({"ok": False, "error": "unknown"}, 404)
         data = self._body()
@@ -368,8 +369,37 @@ class Handler(SimpleHTTPRequestHandler):
         return self._json({"ok": False, "error": "unknown api"}, 404)
 
 
-def serve(port: int) -> None:
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+def _busy_hint(port: int) -> str:
+    """端口有人应答时，尽力分辨是另一个实验台还是别的程序（只影响提示文案）。"""
+    import urllib.request
+
+    lab_running = False
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port}/lab/api/ping", timeout=0.8) as r:
+            lab_running = json.loads(r.read().decode("utf-8")).get("hub") == "showcase-lab"
+    except (OSError, ValueError, http.client.HTTPException):
+        lab_running = False     # 答非所问（非 HTTP 或坏 JSON）也算"被占"
+    return "已经有一个实验台在跑" if lab_running else "这个端口被别的程序占着"
+
+
+def serve(port: int) -> int:
+    # Windows 的 SO_REUSEADDR 允许第二个进程绑同一端口，光靠 bind 失败判不出占用；
+    # 先连一下：有应答就是被占，直接给出人话提示。
+    try:
+        socket.create_connection(("127.0.0.1", port), timeout=0.5).close()
+    except OSError:
+        pass
+    else:
+        print(f"[!] 端口 {port} 起不来：{_busy_hint(port)}。")
+        print(f"    先在浏览器里看看 http://127.0.0.1:{port}/ ，确认是不是你想用的那个；")
+        print(f"    或换端口：python showcase/lab.py --port {port + 1}")
+        return 1
+    try:
+        httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+    except OSError as exc:
+        print(f"[!] 端口 {port} 仍然起不来：{exc}")
+        print(f"    或换端口：python showcase/lab.py --port {port + 1}")
+        return 1
     print(f"实验台已启动：http://127.0.0.1:{port}/showcase/index.html")
     print("（页面右下角会出现实时控制台；Ctrl+C 结束，子进程会一并清理）")
     try:
@@ -378,6 +408,7 @@ def serve(port: int) -> None:
         pass
     finally:
         httpd.server_close()
+    return 0
 
 
 # ------------------------------------------------------------------ 自检
@@ -431,8 +462,7 @@ def main(argv) -> int:
     args = ap.parse_args(argv[1:])
     if args.selftest:
         return selftest()
-    serve(args.port)
-    return 0
+    return serve(args.port)
 
 
 if __name__ == "__main__":
