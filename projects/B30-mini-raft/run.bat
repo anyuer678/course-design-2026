@@ -13,18 +13,23 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/3] Unit tests via unittest discovery...
+echo [1/4] Unit tests via unittest discovery...
 python -m unittest discover -s tests -v
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/3] Unit tests via direct entry (catches import-order mistakes)...
+echo [2/4] Unit tests via direct entry (catches import-order mistakes)...
 python tests\test_b30.py
 if errorlevel 1 exit /b 1
 
 echo.
-echo [3/3] Eight-part demo (all numbers computed at runtime)...
+echo [3/4] Eight-part demo (all numbers computed at runtime)...
 python demo.py
+if errorlevel 1 exit /b 1
+
+echo.
+echo [4/4] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 echo.

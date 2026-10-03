@@ -106,13 +106,13 @@ def collect() -> dict:
                      for p in sorted(TESTS.glob("test_*.py")))
 
     facts = [
-        ["数据", f"Iris 150 行三类均衡；切分 120/30（seed=42）"],
+        ["数据", "Iris 150 行三类均衡；切分 120/30（seed=42）"],
         ["KNN(k=3) 测试精度", f"{acc_knn:.2f}（标准化后，实测阈值 ≥0.9）"],
         ["决策树(熵,深度4)", f"{acc_tree:.2f}；根分裂 {root_feat} ≤ {root_thr:.2f}"],
         ["BP 网络(4-8-3)", f"{acc_bp:.2f}；损失 {net.loss_history_[0]:.2f} → "
                            f"{net.loss_history_[-1]:.2f}"],
         ["感知机(setosa二分)", f"{acc_perc:.2f}（花瓣特征线性可分）"],
-        ["线性回归 R²", f"{r2:.3f}（闭式解 vs GD 差 {lin_diff:.1e}）"],
+        ["线性回归 R^2", f"{r2:.3f}（闭式解 vs GD 差 {lin_diff:.1e}）"],
         ["梯度检查", f"最大相对误差 {grad_worst:.1e}（数值 vs 手写反传）"],
         ["XOR 对照", f"感知机 {acc_xor_perc:.2f} vs BP {acc_xor_bp:.2f}"],
         ["月牙对照", f"感知机 {acc_moon_perc:.2f} vs BP {acc_moon_bp:.2f}"],
@@ -137,8 +137,8 @@ def collect() -> dict:
          "rows": [["setosa 二分测试精度", f"{acc_perc:.3f}"],
                   ["XOR 上限", f"{acc_xor_perc:.2f}（≤75% 是线性判别的天花板）"],
                   ["月牙", f"{acc_moon_perc:.2f}（不可分探测器）"]]},
-        {"name": "lin", "label": f"线性回归 R²={r2:.2f}",
-         "rows": [["R²(测试)", f"{r2:.3f}"],
+        {"name": "lin", "label": f"线性回归 R^2={r2:.2f}",
+         "rows": [["R^2(测试)", f"{r2:.3f}"],
                   ["闭式解 vs GD", f"最大差 {lin_diff:.1e}"],
                   ["说明", "标准化决定 GD 收敛速度"]]},
         {"name": "xor", "label": "XOR 对照",

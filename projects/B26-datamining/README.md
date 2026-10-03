@@ -10,18 +10,20 @@ K-means（Lloyd 迭代 + 空簇处理 + 手写轮廓系数）、一条**可追�
 ## 运行
 
 ```
-run.bat                        # 自测（28 项，含展示页 9 项）+ 四段演示
-python tests\test_mining.py    # 只跑自测
+run.bat                        # 三步：自测（28 = 19 核心 + 9 展示页）→ 四段演示 → 展示页新鲜度
+python tests\test_mining.py    # 只跑核心 19 项
+python tests\test_showcase.py  # 只跑展示页 9 项
 python demo.py                 # 只看演示
+python tools/showcase.py --write    # 重生展示页 web/showcase.html（--check 过期即红）
 ```
 
-## 课程知识点 ↔ 代码模块映射
+## 课程知识点 与 代码模块映射
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
-| 支持度 / 频繁项集 | `apriori.py` `apriori` | 与 2^n−1 项集**全穷举**逐项对拍（25 轮随机） |
+| 支持度 / 频繁项集 | `apriori.py` `apriori` | 与 2^n-1 项集**全穷举**逐项对拍（25 轮随机） |
 | 反单调性剪枝 | `_has_infrequent_subset` | 被剪候选 + 生成候选 ≤ 全组合数；结果一致证明剪对了 |
-| 连接步（共享前 k−2 项） | `_candidate_join` | 穷举对拍覆盖 |
+| 连接步（共享前 k-2 项） | `_candidate_join` | 穷举对拍覆盖 |
 | 置信度 / **提升度** | `association_rules` | 手算 conf=2/3、lift=8/9（负相关教学实例） |
 | 向下闭包 | 测试 | 频繁项集的所有子集必在频繁集合里 |
 | K-means Lloyd 迭代 | `kmeans.py` | 团块 100% 对齐真值（最优标签映射） |
@@ -56,6 +58,10 @@ python demo.py                 # 只看演示
 
 ## 测试策略（28 项 = 19 核心 + 9 展示页；28 项测试双入口同数）
 
+展示页（展示层批次⑦ 交付、⑩ 补全）：`web/showcase.html` = 清洗账本 + Apriori 穷举对拍 +
+植入配对规则 + K-means 散点现算；9 项展示页测试；run.bat 两跑退出码 0/0、规范化日志逐字相同
+（各 101 行；规范项=单测计时 2）。
+
 - Apriori：25 轮随机（3~6 商品、8~30 事务、三档支持度）与全穷举逐项
   一致；向下闭包断言；确定性；手算规则（conf 2/3、lift 8/9）
 - K-means：团块对齐 100%、k=1 惯性=总方差、k=2 < k=1 惯性、60 seed
@@ -70,7 +76,7 @@ python demo.py                 # 只看演示
 - Apriori 逐个扫描事务计数（一次遍历计数全部候选）；无 hash-tree /
   FP-growth 等进阶结构。
 - K-means 初始化为种子化随机取点（非 k-means++），小数据上够用；
-  轮廓系数 O(n²)。
+  轮廓系数 O(n^2)。
 - 清洗规则针对本项目注入的五类缺陷；真实数据的清洗清单只会更长。
 - 合成数据的关联规则结论不外推真实零售场景。
 

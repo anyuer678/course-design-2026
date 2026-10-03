@@ -41,8 +41,8 @@
 | 3 | 系统底层 | `B5-cpu-sim`、`B6-asm-lab`、`B9-os-sim` | 已交付（2026-10-03） |
 | 4 | 数据结构与工程 | `B1-cpp-ministl`、`B2-datastruct-lab`、`B7-mini-make` | 已交付（2026-10-03） |
 | 5 | 网络与安全 | `B8-mini-shell`、`B11-net-lab`、`B32-sec-lab` | 已交付（2026-10-03） |
-| 6 | 数据库与分布式 | `B10-minidb`、`B30-mini-raft`、`B38-mini-redis` | 待做 |
-| 7 | 人工智能与数据 | `B23-ml-from-scratch`、`B25-nlp-lab`、`B26-datamining` | 待做 |
+| 6 | 数据库与分布式 | `B10-minidb`、`B30-mini-raft`、`B38-mini-redis` | 已交付（2026-10-03；整合补全归本会话） |
+| 7 | 人工智能与数据 | `B23-ml-from-scratch`、`B25-nlp-lab`、`B26-datamining` | 已交付（2026-10-03；整合补全归本会话） |
 | 8 | 视觉 / 物联网 / 工业 | `B24-cv-scanner`、`B35-iot-mqtt`、`B37-industry-ai` | 已交付（2026-10-03） |
 | 9 | 数据与可视化（存量对齐） | `B27-course-kg`、`B28-bi-dashboard`、`B29-bigdata-spark`、`B33-viz-algo`、`B34-path-planner` | 已交付（2026-10-03） |
 | 10 | 交互 / 工具 / 业务存量 | `B14-java-paint`、`B31-shorturl`、`B39-tech-radar`、`B40-career-map`、`B41-thesis-seeds`、`dorm-repair` | 已交付（2026-10-03） |

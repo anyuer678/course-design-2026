@@ -75,11 +75,11 @@
   },
   {
    "id": "b10-minidb",
-   "claim": "手写 SQL 子集 + WAL/页式快照/事务（B41 候选①：提交即 fsync + 崩溃对账）：53 项自测（36 核心 + 17 持久性）",
+   "claim": "手写 SQL 子集 + WAL/页式快照/事务（B41 候选①：提交即 fsync + 崩溃对账）：62 项自测（36 核心 + 17 持久性 + 9 展示页）",
    "pointers": [
     "projects/B10-minidb/README.md"
    ],
-   "anchor": "自测（53 项：36 核心 + 17 持久性）",
+   "anchor": "测试策略（62 项：36 核心 + 17 持久性 + 9 展示页）",
    "commit": "4ccc788"
   },
   {
@@ -192,11 +192,11 @@
   },
   {
    "id": "b30-raft",
-   "claim": "事件驱动 Raft（逐事件不变式检查）+ 快照/InstallSnapshot + 单步成员变更（B41 候选③）+ 真套接字 mini-RPC：双入口同数 28 项",
+   "claim": "事件驱动 Raft（逐事件不变式检查）+ 快照/InstallSnapshot + 单步成员变更（B41 候选③）+ 真套接字 mini-RPC：37 项通过（15 + 13 + 9 展示页）",
    "pointers": [
     "projects/B30-mini-raft/README.md"
    ],
-   "anchor": "双入口同数：28 项",
+   "anchor": "（15 项原有 + 13 项快照/成员变更 + 9 项展示页",
    "commit": "e94f56b"
   },
   {
@@ -255,11 +255,11 @@
   },
   {
    "id": "b38-redis",
-   "claim": "手写 Redis 子集（RESP2/单线程事件循环/双策略过期/快照）+ 主从复制扩展（B41 候选④）：49 项测试双入口同数",
+   "claim": "手写 Redis 子集（RESP2/单线程事件循环/双策略过期/快照）+ 主从复制扩展（B41 候选④）：58 项测试（36 核心 + 13 复制 + 9 展示页）",
    "pointers": [
     "projects/B38-mini-redis/README.md"
    ],
-   "anchor": "49 项测试双入口同数",
+   "anchor": "58 项测试**（`discover` 58 = 36 核心 + 13 复制 + 9 展示页",
    "commit": "f0bb729"
   },
   {

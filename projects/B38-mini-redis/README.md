@@ -20,12 +20,14 @@ B41 候选④开题实施——主从复制子集（case-study §8）。
 ## 运行
 
 ```
-run.bat                                   # 两步：49 项测试 → demo（六段；不落任何产物文件）
-python -m unittest discover -s tests      # 49 项（36 核心 + 13 复制；双入口同数）
+run.bat                                   # 三步：58 项测试 → demo（六段；不落任何产物文件）→ 展示页新鲜度
+python -m unittest discover -s tests      # 58 项（36 核心 + 13 复制 + 9 展示页）
 python tests/test_redis.py                # 直跑核心 36 项
 python tests/test_replication.py          # 直跑复制 13 项
+python tests/test_showcase.py             # 直跑展示页 9 项
 python demo.py                            # 六段演示（唯一实时测量是末段吞吐【实测】行）
 python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则两类，会打印计数）
+python tools/showcase.py --write          # 重生展示页 web/showcase.html（--check 过期即红）
 ```
 
 ## 目录
@@ -63,12 +65,14 @@ python tools/logdiff.py a.log b.log       # 两次日志规范化比对（规则
 | 从库语义 | `passive_expire` + READONLY 门槛 | 拒写文本精确匹配；过期键"读作不存在但不删"（两阶段钉：先只读从库，再让主库 DEL 传播）；DEL/EXPIRE 清除 `expires` 有回归测试 |
 | 两库对账器 | `reconcile()` | 逐键逐值 + 逐到期时刻；**自带牙齿**（人为塞多键/改值必须被抓——负面自证） |
 
-## 实测（2026-10-02；核心轮 36 项 + 复制扩展 13 项）
+## 实测（2026-10-02；核心轮 36 项 + 复制扩展 13 项；展示页批次⑥ 补记）
 
-- **49 项测试双入口同数**（`discover` 与直跑均 49 OK，`-W error::ResourceWarning` 下也干净；
+- **58 项测试**（`discover` 58 = 36 核心 + 13 复制 + 9 展示页；三文件直跑合计 58，`-W error::ResourceWarning` 下也干净；
   复制套件连跑 3 遍 0 波动）；`run.bat` **两次退出码 0**、**无任何新增文件**
   （demo 全部写系统临时目录，仓库零产物）、两次日志经 `tools/logdiff.py` 规范化后
-  **逐字相同**（各 67 行；规范项 = 单测计时 1 + 吞吐 1）。
+  **逐字相同**（各 70 行；规范项 = 单测计时 1 + 吞吐 1——展示层批次⑥ 补全后重测）。
+- 展示页（展示层批次⑥ 交付、⑩ 补全）：`web/showcase.html` = RESP2 逐条线上字节 + 命令链现算
+  （编码即协议）；9 项展示页测试。
 - demo 关键读数（未动）：惰性过期后 `GET → nil` 且 lazy 计数 +1；100 个到期键从未被访问，
   一次主动周期删 80、剩余 20 由下一周期清完；交叉读逐条相等；服务器 fuzz 后
   `protocol_errors=3` 且新连接 PING 正常；快照 114 字节、重启后值与 TTL=60 原样。

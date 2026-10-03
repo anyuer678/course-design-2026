@@ -27,7 +27,7 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 负面对照改用注入式夹具继续钉规则）。本页数字全部现算自 <kbd>demo.py</kbd> 与 <kbd>data/seeds.json</kbd>。</p></div>
 <section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>29 项（20 核心 + 9 展示页自测）</span></div><div class="sw-card"><b>事实核验</b><span>PASS（0 个问题）；现存候选 0 个、行数 0 处、探针 0 个（收官态——双空才红）</span></div><div class="sw-card"><b>候选表</b><span>已清零：5 个候选全部选定实施（2026-10-02）；负面对照改用注入式夹具继续钉规则</span></div><div class="sw-card"><b>负面对照（核验器有没有牙齿）</b><span>3 条改坏全部报红且红在该原因上（改错行数 / 改错探针期望 / 假锚点）</span></div><div class="sw-card"><b>资源基准（候选①）</b><span>写 8KB 记录 plain / +fsync 两条中位数与边际成本为【实测】，本页固定为占位 <当场>——跑 demo.py 看当场读数</span></div></section>
 <section id="demo" class="sw-panel"><h3>选定清单与三维比较表（现算）</h3>
-<table><tr><th>已选定并实施（5 个）</th><th>日期</th><th>证据（指针 + 锚点）</th></tr><tr><td>B38 主从复制（RESP 内复制协议子集）</td><td>2026-10-02</td><td>projects/B38-mini-redis/README.md<br>锚点：49 项测试双入口同数</td></tr><tr><td>B10 加 fsync + 页式存储（持久性工程化）</td><td>2026-10-02</td><td>projects/B10-minidb/README.md<br>锚点：自测（53 项：36 核心 + 17 持久性）</td></tr><tr><td>B13 加函数调用帧与错误恢复</td><td>2026-10-02</td><td>projects/B13-tinylang/README.md<br>锚点：自测（94 项 + 417 subTest）</td></tr><tr><td>B30 Raft 完整化（快照 + 成员变更）</td><td>2026-10-02</td><td>projects/B30-mini-raft/README.md<br>锚点：双入口同数：28 项</td></tr><tr><td>B23 + NumPy/scikit-learn 对拍扩展到更大网络</td><td>2026-10-02</td><td>projects/B23-ml-from-scratch/README.md<br>锚点：54 项双入口同数</td></tr></table>
+<table><tr><th>已选定并实施（5 个）</th><th>日期</th><th>证据（指针 + 锚点）</th></tr><tr><td>B38 主从复制（RESP 内复制协议子集）</td><td>2026-10-02</td><td>projects/B38-mini-redis/README.md<br>锚点：58 项测试**（`discover` 58 = 36 核心 + 13 复制 + 9 展示页</td></tr><tr><td>B10 加 fsync + 页式存储（持久性工程化）</td><td>2026-10-02</td><td>projects/B10-minidb/README.md<br>锚点：测试策略（62 项：36 核心 + 17 持久性 + 9 展示页）</td></tr><tr><td>B13 加函数调用帧与错误恢复</td><td>2026-10-02</td><td>projects/B13-tinylang/README.md<br>锚点：自测（94 项 + 417 subTest）</td></tr><tr><td>B30 Raft 完整化（快照 + 成员变更）</td><td>2026-10-02</td><td>projects/B30-mini-raft/README.md<br>锚点：（15 项原有 + 13 项快照/成员变更 + 9 项展示页</td></tr><tr><td>B23 + NumPy/scikit-learn 对拍扩展到更大网络</td><td>2026-10-02</td><td>projects/B23-ml-from-scratch/README.md<br>锚点：54 项双入口同数</td></tr></table>
 <details><summary style="cursor:pointer;color:#1d4ed8;margin-top:8px">四段演示原文（含三维比较表与负面对照）</summary>
 <pre>B41-thesis-seeds 演示：毕设候选的三维可行性（数字现算；5 个候选全部已选定实施，候选表清零）
 
@@ -58,15 +58,15 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 
 ### B38 主从复制（RESP 内复制协议子集）（2026-10-02）
 
-用户选定并实施：见 projects/B38-mini-redis/——复制语义表（case-study §8，含 6 条偏差声明）、PSYNC 全量+命令流、断连重连全量重同步并追平（两库对账器逐键逐值+逐到期时刻，自带牙齿）、-READONLY 拒写、从库被动过期语义；49 项测试双入口（36 核心 + 13 复制）、run.bat 两次退出码 0、规范化日志逐字相同。实施中还把两条潜伏缺陷照了出来（DEL 不清 expires、export_state 迭代中被改字典）——详见 B38 README 坑记。
+用户选定并实施：见 projects/B38-mini-redis/——复制语义表（case-study §8，含 6 条偏差声明）、PSYNC 全量+命令流、断连重连全量重同步并追平（两库对账器逐键逐值+逐到期时刻，自带牙齿）、-READONLY 拒写、从库被动过期语义；58 项测试（36 核心 + 13 复制 + 9 展示页；展示层批次⑥ 补全后）、run.bat 两次退出码 0、规范化日志逐字相同。实施中还把两条潜伏缺陷照了出来（DEL 不清 expires、export_state 迭代中被改字典）——详见 B38 README 坑记。
 
-证据：`projects/B38-mini-redis/README.md`（锚点 49 项测试双入口同数）
+证据：`projects/B38-mini-redis/README.md`（锚点 58 项测试**（`discover` 58 = 36 核心 + 13 复制 + 9 展示页）
 
 ### B10 加 fsync + 页式存储（持久性工程化）（2026-10-02）
 
-用户紧接着选定并实施：见 projects/B10-minidb/——单调 LSN + 提交即 flush+fsync（事务组提交）、页式快照（固定页/逐页 crc32/双固定头槽位/代追加不覆盖/坏页回退旧代/阈值压实）、CHECKPOINT 写前次序（数据 fsync -&gt; 头 fsync -&gt; 删 WAL）、恢复按 lsn 跳过已进快照的记录；崩溃用**真子进程 os._exit 硬退**对账（已提交必在、未提交必不在）；53 项测试双入口（36 核心 + 17 持久性）、run.bat 两次退出码 0、规范化日志逐字相同（各 180 行）。实施中把三个格式/接口错误当场抓出（页尾标位置、补零对齐起点、Path 与 str 混用）——详见 B10 README 坑记 12-14。
+用户紧接着选定并实施：见 projects/B10-minidb/——单调 LSN + 提交即 flush+fsync（事务组提交）、页式快照（固定页/逐页 crc32/双固定头槽位/代追加不覆盖/坏页回退旧代/阈值压实）、CHECKPOINT 写前次序（数据 fsync -&gt; 头 fsync -&gt; 删 WAL）、恢复按 lsn 跳过已进快照的记录；崩溃用**真子进程 os._exit 硬退**对账（已提交必在、未提交必不在）；62 项测试（36 核心 + 17 持久性 + 9 展示页）、run.bat 两次退出码 0、规范化日志逐字相同（各 183 行；展示层批次⑥ 补全后重测）。实施中把三个格式/接口错误当场抓出（页尾标位置、补零对齐起点、Path 与 str 混用）——详见 B10 README 坑记 12-14。
 
-证据：`projects/B10-minidb/README.md`（锚点 自测（53 项：36 核心 + 17 持久性））
+证据：`projects/B10-minidb/README.md`（锚点 测试策略（62 项：36 核心 + 17 持久性 + 9 展示页））
 
 ### B13 加函数调用帧与错误恢复（2026-10-02）
 
@@ -76,9 +76,9 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 
 ### B30 Raft 完整化（快照 + 成员变更）（2026-10-02）
 
-用户选定并实施（候选表上最重的一个）：见 projects/B30-mini-raft/——口径先写纸上（docs/snapshot-membership-spec.md：快照记录与索引抽象/安装语义与陈旧守卫/配置进日志与一次一个/发送集并集与偏差登记），实现只做翻译；快照**只压缩已提交**（阈值触发、日志有界）、InstallSnapshot（进度只许前进 + 被压缩节点追赶）、单步成员变更（提交后生效、一次一个、新节点不自荐、被移除者学会后安静）、哈希链诊断账本替代压缩后不可见的已应用前缀；原缺口探针「snapshot 计数 0」「membership 计数 0」已填平（现 83 处与 3 处）。28 项测试双入口（15 原有 + 13 新增）、run.bat 两次退出码 0、规范化日志逐字相同（各 197 行）；逐事件不变式含配置交叠检查（600 事件 × 4 条 = 2400 次 0 失败）。实施中把两个真缺陷当场抓出（follower 日志更长时回执越界、第二次过强断言被 churn 证伪）——详见 B30 README 坑 6-8。
+用户选定并实施（候选表上最重的一个）：见 projects/B30-mini-raft/——口径先写纸上（docs/snapshot-membership-spec.md：快照记录与索引抽象/安装语义与陈旧守卫/配置进日志与一次一个/发送集并集与偏差登记），实现只做翻译；快照**只压缩已提交**（阈值触发、日志有界）、InstallSnapshot（进度只许前进 + 被压缩节点追赶）、单步成员变更（提交后生效、一次一个、新节点不自荐、被移除者学会后安静）、哈希链诊断账本替代压缩后不可见的已应用前缀；原缺口探针「snapshot 计数 0」「membership 计数 0」已填平（现 83 处与 3 处）。37 项测试（15 + 13 + 9 展示页）、run.bat 两次退出码 0、规范化日志逐字相同（各 209 行；展示层批次⑥ 补全后重测）；逐事件不变式含配置交叠检查（600 事件 × 4 条 = 2400 次 0 失败）。实施中把两个真缺陷当场抓出（follower 日志更长时回执越界、第二次过强断言被 churn 证伪）——详见 B30 README 坑 6-8。
 
-证据：`projects/B30-mini-raft/README.md`（锚点 双入口同数：28 项）
+证据：`projects/B30-mini-raft/README.md`（锚点 （15 项原有 + 13 项快照/成员变更 + 9 项展示页）
 
 ### B23 + NumPy/scikit-learn 对拍扩展到更大网络（2026-10-02）
 

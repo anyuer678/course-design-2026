@@ -12,8 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from redislite.resp import (FrameDecoder, RespError,                 # noqa: E402
-                            decode_commands, decode_replies, encode_command)
+from redislite.resp import (FrameDecoder,                            # noqa: E402
+                            decode_commands, encode_command)
 from redislite.store import Store                                    # noqa: E402
 
 OUT = ROOT / "web" / "showcase.html"
@@ -70,10 +70,10 @@ def collect() -> dict:
     decoder = FrameDecoder()
     decoder.feed(b"garbage\n")
     decoder.feed(encode_command("PING"))
-    cmds_ok = len(decoder.next_command() or [])
+    _ = len(decoder.next_command() or [])
 
     facts = [
-        ["RESP2 协议", "5 种类型前缀（+/−/:/$/*），支持 inline 与数组两种请求形态"],
+        ["RESP2 协议", "5 种类型前缀（+/-/:/$/*），支持 inline 与数组两种请求形态"],
         ["命令子集", "SET GET DEL INCR EXPIRE TTL PING + 主从复制握手"],
         ["过期策略", "惰性删除 + 定期采样（与 Redis 同款的两种机制）"],
         ["复制协议", "PSYNC → FULLRESYNC → RDB 快照 + 增量传播"],
@@ -131,7 +131,7 @@ APP_JS = """
       panel.appendChild(el("p", "", "RESP2 线上字节（真实编码器输出）："));
       var pre = el("pre", "code");
       var lines = DATA.resp_trace.map(function(t){
-        return t.label + "\\n  线上: " + t.wire + "\\n  回复: " + t.reply;
+        return t.cmd + "\\n  线上: " + t.wire + "\\n  回复: " + t.reply;
       }).join("\\n\\n");
       pre.textContent = lines;
       panel.appendChild(pre);

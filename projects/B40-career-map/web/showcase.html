@@ -84,8 +84,8 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 - `b11-net`：HTTP/1.1 子集 + UDP 可靠传输（GBN）与可复现丢包实验：101 项（75 + 16 + 10 展示页）；展示页（第⑤批）旅程/边界/GBN 现算（指针：projects/B11-net-lab/README.md，提交 `0f30423`）
 - `b31-shorturl`：短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：81 项测试（73 核心 + 8 展示页）+ 129 subTest 全通过（指针：projects/B31-shorturl/README.md，提交 `4ccc788`）
 - `b35-mqtt`：手写 MQTT 子集（字节级报文/selectors broker/断线重连/账本）：32 项全过（23 核心 + 9 展示页）；展示页（第⑧批）协议表 + SVG 内联（指针：projects/B35-iot-mqtt/README.md，提交 `5821891`）
-- `b38-redis`：手写 Redis 子集（RESP2/单线程事件循环/双策略过期/快照）+ 主从复制扩展（B41 候选④）：49 项测试双入口同数（指针：projects/B38-mini-redis/README.md，提交 `f0bb729`）
-- `b10-minidb`：手写 SQL 子集 + WAL/页式快照/事务（B41 候选①：提交即 fsync + 崩溃对账）：53 项自测（36 核心 + 17 持久性）（指针：projects/B10-minidb/README.md，提交 `4ccc788`）
+- `b38-redis`：手写 Redis 子集（RESP2/单线程事件循环/双策略过期/快照）+ 主从复制扩展（B41 候选④）：58 项测试（36 核心 + 13 复制 + 9 展示页）（指针：projects/B38-mini-redis/README.md，提交 `f0bb729`）
+- `b10-minidb`：手写 SQL 子集 + WAL/页式快照/事务（B41 候选①：提交即 fsync + 崩溃对账）：62 项自测（36 核心 + 17 持久性 + 9 展示页）（指针：projects/B10-minidb/README.md，提交 `4ccc788`）
 - `b28-bi`：商务智能看板：口径当一等交付物，SQL 与纯 Python 双路对拍：42 项通过（34 核心 + 8 展示页）；第⑨批看板原位提升 + 血缘来源说明修正（指针：projects/B28-bi-dashboard/README.md，提交 `352c499`）
 - `b14-paint`：Java Swing 图形编辑器（命令/撤销重做、原子存盘）：7054 项检查 0 失败（指针：projects/B14-java-paint/README.md，提交 `16d125f`）
 - `dorm-repair`：报修系统全生命周期（需求工程→架构→Java 平台→测试→质量门禁→PM）：225 项 + 298 subTest 通过（216 核心 + 9 展示页）（Java 37 项；流水线 11 层全绿）（指针：projects/dorm-repair/README.md，提交 `5826d70`）
@@ -100,7 +100,7 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 - `b29-spark`：PySpark 日志清洗/聚合/Spark SQL + 倾斜实验（salting 与 groupBy 逐行相等）：25 项（17 核心 + 8 展示页）；第⑨批展示页（stdout 只取 + 四条规范化）（指针：projects/B29-bigdata-spark/README.md，提交 `7eec2e5`）
 - `b24-cv`：文档扫描仪（Canny→四边逼近→透视变换→二值化）：23 项全过（16 核心 + 7 展示页），合成真值像素级对账；展示页（第⑧批）三张产物缩略图内联（指针：projects/B24-cv-scanner/README.md，提交 `5c1d205`）
 - `b32-sec`：四组漏洞版/修复版（SQL 注入/XSS/口令/路径穿越）+ 静态扫描器：60 项（50 核心 + 10 展示页）；展示页（第⑤批）四组对照/扫描器现算（指针：projects/B32-sec-lab/README.md，提交 `16d125f`）
-- `b30-raft`：事件驱动 Raft（逐事件不变式检查）+ 快照/InstallSnapshot + 单步成员变更（B41 候选③）+ 真套接字 mini-RPC：双入口同数 28 项（指针：projects/B30-mini-raft/README.md，提交 `e94f56b`）
+- `b30-raft`：事件驱动 Raft（逐事件不变式检查）+ 快照/InstallSnapshot + 单步成员变更（B41 候选③）+ 真套接字 mini-RPC：37 项通过（15 + 13 + 9 展示页）（指针：projects/B30-mini-raft/README.md，提交 `e94f56b`）
 - `repo-delivery`：全仓库交付纪律：run.bat 两跑比对/日志规范化、CRLF+ASCII 的 .bat、双入口测试计数（指针：PLAN.md，提交 `7b699b8`）
 
 JD 未提及（不计入矩阵）：C/C++ 内存与资源管理、编译原理与汇编

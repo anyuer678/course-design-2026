@@ -11,13 +11,20 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] Running test suite (19 tests)...
+echo [1/3] Running test suite (28: 19 core + 9 showcase)...
 python tests\test_mining.py
+if errorlevel 1 exit /b 1
+python tests\test_showcase.py
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/2] Running four-part demo...
+echo [2/3] Running four-part demo...
 python demo.py
+if errorlevel 1 exit /b 1
+
+echo.
+echo [3/3] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 echo.

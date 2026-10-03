@@ -11,12 +11,14 @@ B+ 树索引 → WAL 预写日志 → **页式快照（逐页校验和/双头槽
 ## 运行
 
 ```
-run.bat                          # 自测（53 项：36 核心 + 17 持久性）+ 七段演示
-python -m unittest discover -s tests     # 53 项（双入口同数）
+run.bat                          # 三步：自测（62: 36 核心 + 17 持久性 + 9 展示页）→ 七段演示 → 展示页新鲜度
+python -m unittest discover -s tests     # 62 项（双入口同数）
 python tests\test_minidb.py      # 只跑核心 36 项
 python tests\test_durability.py  # 只跑持久性 17 项（含真子进程硬退的崩溃对账）
+python tests\test_showcase.py    # 只跑展示页 9 项（新鲜度/改坏必红/真数据钉住）
 python demo.py                   # 七段演示（临时目录里建库，跑完即删）
 python tools\logdiff.py a.log b.log      # 两次 run.bat 日志的规范化比对（只有【实测】毫秒在动）
+python tools\showcase.py --write          # 重生展示页 web/showcase.html（--check 过期即红）
 ```
 
 `run.bat` 用纯 ASCII + CRLF + `chcp 65001` + `set PYTHONUTF8=1`。写它时踩过一次：`echo` 文案里
@@ -150,7 +152,12 @@ BEGIN / COMMIT / ROLLBACK / CHECKPOINT
 14. **Engine 只吃字符串路径**：`path + ".wal"` 撞上 `pathlib.Path` 直接 TypeError。
     公开接口要么只收 str、要么显式 `str(path)`——"看起来像路径"的类型太多了。
 
-## 测试策略（53 项：36 核心 + 17 持久性）
+## 测试策略（62 项：36 核心 + 17 持久性 + 9 展示页）
+
+**展示页（展示层批次⑥ 交付、⑩ 补全，2026-10-03）**：`web/showcase.html` 由 `tools/showcase.py` 现算
+（真实跑库：WAL 恢复 3 条回放、CHECKPOINT 清 WAL、ROLLBACK 还原、sqlite3 对拍 300 轮）；
+9 项展示页测试随 discover 同跑；两跑退出码 0/0、规范化日志逐字相同（各 183 行；
+规范项=单测计时 1 + 【实测】毫秒 4 行）。
 
 **核心 36 项（原样保留）**：
 - **B+ 树**：`order=4` 小阶数频繁分裂，800 键随机插入后与有序列表逐项对照；

@@ -13,11 +13,12 @@ B41 候选③ 之后**快照（日志压缩）与单步成员变更已实现**�
 ## 运行
 
 ```
-run.bat                    # 三步：unittest 发现 → 直跑测试文件 → 八段演示
+run.bat                    # 四步：unittest 发现 → 直跑测试文件 → 八段演示 → 展示页新鲜度
 python -m unittest discover -s tests -v
-python tests/test_b30.py   # 双入口同数：28 项
+python tests/test_b30.py   # 直跑本文件 28 项（discover 37 = 28 + 9 展示页）
 python demo.py             # 八段演示，数字全部运行时现算
 python tools/logdiff.py a.log b.log    # 两次日志规范化比对（唯一规范项=unittest 计时）
+python tools/showcase.py --check        # 展示页新鲜度（--write 重生）
 ```
 
 纯标准库（`socket` / `threading` / `heapq` / `hashlib` / `itertools` / `random` / `json`），
@@ -32,6 +33,7 @@ python tools/logdiff.py a.log b.log    # 两次日志规范化比对（唯一规
 | `raft30/sim.py` | Raft 模拟：选举、日志复制、§5.4.2 的只提交本任期条目、分区与重启、**快照与 InstallSnapshot、单步成员变更**、四条不变式检查 |
 | `docs/snapshot-membership-spec.md` | **先于实现写出的两个子问题口径**（快照记录/索引抽象/安装语义、配置进日志/一次一个/发送集并集、偏差登记） |
 | `tests/test_b30.py` | 28 项自测（参照出处写在文件头） |
+| `tests/test_showcase.py` | 9 项展示页测试（新鲜度/改坏必红/真数据钉住/零外链） |
 | `demo.py` · `tools/logdiff.py` | 八段演示与日志比对工具 |
 
 ## 知识点 与 实现 与 怎么被验证
@@ -56,9 +58,11 @@ python tools/logdiff.py a.log b.log    # 两次日志规范化比对（唯一规
 
 ## 实测（2026-10-02，`run.bat` 连跑两次）
 
-- 测试：**28 项通过**（15 项原有 + 13 项快照/成员变更），双入口同数。
+- 测试：**37 项通过**（15 项原有 + 13 项快照/成员变更 + 9 项展示页；两文件直跑 28 + 9）。
 - `run.bat` 两次退出码均 **0**、日志 `not recognized` **0**；两次日志经 `tools/logdiff.py`
-  规范化（唯一规范项=unittest 计时 2 条）后**逐字相同**（各 197 行）。
+  规范化（唯一规范项=unittest 计时 2 条）后**逐字相同**（各 209 行——展示层批次⑥ 补全后按新步数两跑重测）。
+- 展示页（展示层批次⑥ 交付、⑩ 补全）：`web/showcase.html` = 选举时间线 + §5.4.2 ghost 覆盖实验 +
+  一致性哈希 23.9% vs 81.0% 搬移对比（全部现算）；9 项展示页测试。
   `run.bat` 跑完**一条新文件都没加**（20 条文件里含 `.ruff_cache/` 与 `__pycache__`，
   是历史缓存不是本轮生成）。
 - 演示读数（现算）：选举 `seed=0` 在 t=20 选出节点 2（term=1），三条命令后全员 `commit=3`；

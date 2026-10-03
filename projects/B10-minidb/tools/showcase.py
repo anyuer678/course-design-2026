@@ -196,7 +196,7 @@ def render(payload: dict) -> str:
         f'<div class="card"><b>{k}</b><span>{v}</span></div>' for k, v in payload["facts"])
     checks = payload["checks"]
     badges = "".join(
-        f'<span class="badge {"ok" if v else "bad"}">{k}: {"✔" if v else "✘"}</span> '
+        f'<span class="badge {"ok" if v else "bad"}">{k}: {"ok" if v else "fail"}</span> '
         for k, v in checks.items())
     return f"""<!DOCTYPE html>
 <html lang="zh-CN">

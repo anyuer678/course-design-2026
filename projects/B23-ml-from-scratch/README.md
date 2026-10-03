@@ -14,12 +14,14 @@ KNN、决策树（熵/基尼）、多层感知机 + 反向传播。**核心五�
 ## 运行
 
 ```
-run.bat                        # 三步：discover（54 项）→ 双文件直跑 → 六段演示（约 2 分钟：
+run.bat                        # 四步：discover（54 项）→ 三文件直跑 → 六段演示（约 2 分钟：
                                #        纯 Python 训练本身就要几十秒，时间盒已登记）
 python tests\test_ml.py        # 核心 33 项（纯标准库，不需要 sklearn）
 python tests\test_sklearn_compare.py   # 对拍 12 项（sklearn 缺失时整文件跳过并给安装指引）
+python tests\test_showcase.py          # 展示页 9 项（页内数据由生成器现算）
 python demo.py                 # 六段演示（前五段纯标准库；第六段对拍 + 规模曲线【实测】）
 python tools/logdiff.py a.log b.log    # 两次日志规范化比对（unittest 计时 + 演示毫秒/兆字节）
+python tools/showcase.py --write       # 重生展示页 web/showcase.html（--check 过期即红）
 ```
 
 ## 第三方依赖与安装登记（B41 候选⑤）
@@ -69,10 +71,12 @@ python tools/logdiff.py a.log b.log    # 两次日志规范化比对（unittest 
 
 ## 实测（2026-10-02，`run.bat` 连跑两次）
 
-- 测试：**54 项双入口同数**（discover 54 = 核心 33 + 对拍 12 + 展示 9；两个文件直跑分别 33 / 12 / 9）。
-  单次耗时：discover 约 42 s、核心文件约 18 s、对拍文件约 22 s（本机实测量级）。
+- 测试：**54 项双入口同数**（discover 54 = 核心 33 + 对拍 12 + 展示 9；三个文件直跑分别 33 / 12 / 9）。
+  单次耗时：discover 约 60 s、核心文件约 11 s、对拍文件约 12 s、展示页文件约 36 s（本机实测量级；展示层批次⑦ 补全后重测）。
 - `run.bat` 两次退出码均 **0**；两次日志经 `tools/logdiff.py` 规范化后**逐字相同**
-  （各 166 行；规范项 = unittest 计时 3 + 规模曲线毫秒 15 + 内存兆字节 3）。
+  （各 184 行；规范项 = unittest 计时 4 + 规模曲线毫秒 15 行（含补位空格）；内存兆字节 3 行本轮两跑读数一致、规则保留）。
+- 展示页（展示层批次⑦ 交付、⑩ 补全）：`web/showcase.html` = 五模型精度卡 + 梯度检查 + 损失曲线 SVG 现算；
+  9 项展示页测试。
   **仓库零新增文件**（演示只做训练与读数，不落盘）。
 - **对拍读数（现算，差值远小于容差）**：线性回归系数差 3.2e-12（两侧解
   1.462278/-0.615734 逐位一致）；KNN 30 个测试点 0 处不一致、邻居距离差 0（容差 1e-9）；

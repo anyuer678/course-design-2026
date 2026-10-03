@@ -12,20 +12,27 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/3] Full test suite via unittest discovery (45 tests: 33 core + 12 sklearn compare)...
+echo [1/4] Full test suite via unittest discovery (54 tests: 33 core + 12 sklearn compare + 9 showcase)...
 python -m unittest discover -s tests
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/3] Direct entries (core file + sklearn compare file)...
+echo [2/4] Direct entries (core file + sklearn compare file + showcase)...
 python tests\test_ml.py
 if errorlevel 1 exit /b 1
 python tests\test_sklearn_compare.py
 if errorlevel 1 exit /b 1
+python tests\test_showcase.py
+if errorlevel 1 exit /b 1
 
 echo.
-echo [3/3] Six-part demo (core five parts are stdlib-only; part six needs scikit-learn)...
+echo [3/4] Six-part demo (core five parts are stdlib-only; part six needs scikit-learn)...
 python demo.py
+if errorlevel 1 exit /b 1
+
+echo.
+echo [4/4] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 echo.
