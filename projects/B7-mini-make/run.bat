@@ -13,12 +13,12 @@ python -c "import shutil,sys; sys.exit(0 if shutil.which('python') else 1)"
 if errorlevel 1 echo [!] python not found in PATH. Install Python 3.10+ first.
 if errorlevel 1 exit /b 1
 
-echo [1/3] unit tests (15: parsing / ordering / incremental / building / logstat)
+echo [1/4] unit tests (parsing / ordering / incremental / building / logstat / showcase)
 python -m unittest discover -s tests
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/3] incremental build demo: clean, full build, up to date, touch source, rebuild
+echo [2/4] incremental build demo: clean, full build, up to date, touch source, rebuild
 python src\mm.py -f demo\Makefile clean
 python src\mm.py -f demo\Makefile
 python src\mm.py -f demo\Makefile
@@ -29,8 +29,13 @@ if errorlevel 1 exit /b 1
 python src\mm.py -f demo\Makefile clean
 
 echo.
-echo [3/3] build log analysis demo (aggregate by message template)
+echo [3/4] build log analysis demo (aggregate by message template)
 python src\logstat.py demo\sample_build.log
+if errorlevel 1 exit /b 1
+
+echo.
+echo [4/4] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 echo.

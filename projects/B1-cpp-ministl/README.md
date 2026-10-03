@@ -15,9 +15,11 @@
 ## 运行
 
 ```
-run.bat                                            # 两步：自测（编译+运行）→ 五段演示
+run.bat                                            # 三步：自测（编译+运行）→ 五段演示 → 展示页新鲜度
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude tests\test_ministl.cpp -o build\tests.exe && build\tests.exe
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude src\main.cpp -o build\ministl-demo.exe && build\ministl-demo.exe
+python tests\test_showcase.py                      # 9 项展示页测试（直跑单文件）
+python tools\showcase.py --write                   # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
 只用 g++ 与标准库（含 `<filesystem>` 用于临时目录），**零下载零安装**。
@@ -33,9 +35,11 @@ g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude src\main.cpp -o build\ministl
 | `include/mini/fuzz.hpp` | **对拍引擎**（测试与演示共用同一份）：同一随机操作序列喂给 mini 与 std |
 | `include/mini/check.hpp` | 断言计数器：记"通过/失败"两项数，只印前 20 条失败与出处 |
 | `tests/test_ministl.cpp` | 268 项断言（边界 / RAII / 待办回读 / 对拍） |
+| `tests/test_showcase.py` | 9 项展示页测试（新鲜度 / 改坏必红 / 真数据抽查 / 标记与零外链） |
+| `tools/showcase.py` | 展示页生成器 → `web/showcase.html`（五段演示/逐模块断言/三类对拍数字，数据现算） |
 | `src/main.cpp` | 五段演示：增长曲线、迭代器稳定性、字节记账、待办回读对账、对拍汇总 |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -58,7 +62,12 @@ g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude src\main.cpp -o build\ministl
 - **对拍实量：253,086 次逐元素比较**（vector 60 种子×60 步 + list 40×60 + string 40×60），
   0 失败；演示里的较小规模为 64,306 次，同样 0 失败。
 - `run.bat` 连跑两次退出码 **0**、`not recognized` **0**、`build/` 之外**无新增文件**，
-  两次日志**逐字相同**（本演示不打印任何耗时——这是设计选择，不是运气）。
+  两次日志**逐字相同**（本演示不打印任何耗时——这是设计选择，不是运气；
+  2026-10-03 展示页批次④后按三步重测：各 64 行）。
+- 展示页（2026-10-03 展示层工程批次④）：`web/showcase.html` 单文件自包含——五段演示分段现场输出
+  （增长轨迹 4 → 8 → 16、迭代器稳定性、UTF-8 字节记账、待办存盘回读对账、三类对拍计数
+  14907 / 22960 / 26439 合计 64306）、自测逐模块断言表、对拍规模表；与现算**逐字一致**
+  （`--check` 过期即红）。展示页测试 9 项（`python tests\test_showcase.py`）。
 - 演示现算读数：vector 容量轨迹 4 → 8 → 16（10 个元素）；`"离散结构：闭包"` 是 21 字节、
   `find("闭")` = 15 字节偏移、`substr(0,6)` = "离散"（6 字节 = 两个汉字）；
   `"ab"` 自追加两次 = 8 字节；待办 3 条经增删改后存盘回读逐字段一致。

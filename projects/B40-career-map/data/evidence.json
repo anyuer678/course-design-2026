@@ -3,7 +3,7 @@
  "evidence": [
   {
    "id": "b1-ministl",
-   "claim": "手写 vector/list/string（RAII+迭代器），与 std 容器对拍 253,086 次比较 0 失败",
+   "claim": "手写 vector/list/string（RAII+迭代器），与 std 容器对拍 253,086 次比较 0 失败；展示页（第④批）五段演示与对拍数字现算",
    "pointers": [
     "projects/B1-cpp-ministl/README.md"
    ],
@@ -12,7 +12,7 @@
   },
   {
    "id": "b2-datastruct",
-   "claim": "八个 ADT + 与 std/参照实现 141,228 项对拍检查 0 失败（B33 又给堆/图加了只读 trace 观察口）",
+   "claim": "八个 ADT + 与 std/参照实现 141,228 项对拍检查 0 失败（B33 又给堆/图加了只读 trace 观察口）；展示页（第④批）六段演示/菜单/数字现算",
    "pointers": [
     "projects/B2-datastruct-lab/README.md"
    ],
@@ -48,11 +48,11 @@
   },
   {
    "id": "b7-mini-make",
-   "claim": "手写 make（依赖图/环检测/增量/-j 对拍/失败传播）：15 项通过，双入口同数",
+   "claim": "手写 make（依赖图/环检测/增量/-j 对拍/失败传播）：24 项通过（15 核心 + 9 展示页），双入口同数",
    "pointers": [
     "projects/B7-mini-make/README.md"
    ],
-   "anchor": "15 项通过",
+   "anchor": "24 项通过（15 核心 + 9 展示页）",
    "commit": "b67654f"
   },
   {

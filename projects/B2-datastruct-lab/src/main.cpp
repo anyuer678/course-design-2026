@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
         seq.insert(0, i);
         linked.push_front(i);
     }
-    std::printf("  头部插入 %d 次：顺序表共移动元素 %zu 步（≈n²/2），链表改链 %zu 次（O(1)/次）\n",
+    std::printf("  头部插入 %d 次：顺序表共移动元素 %zu 步（≈n^2/2），链表改链 %zu 次（O(1)/次）\n",
                 n, seq.moves(), linked.links());
     seq.reset_counters();
     linked.reset_counters();

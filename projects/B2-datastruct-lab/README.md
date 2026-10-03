@@ -19,11 +19,13 @@
 ## 运行
 
 ```
-run.bat                                                      # 三步：自测 → 六段演示 → 菜单冒烟
+run.bat                                                      # 四步：自测 → 六段演示 → 菜单冒烟 → 展示页新鲜度
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude tests\test_ds.cpp -o build\tests.exe && build\tests.exe
 g++ -std=c++17 -O2 -Wall -Wextra -static -Iinclude src\main.cpp -o build\datastruct.exe
 build\datastruct.exe                                         # 脚本演示（六段，数字现算）
 build\datastruct.exe --menu                                  # 交互菜单：九个结构挨个点着玩
+python tests\test_showcase.py                                # 9 项展示页测试（直跑单文件）
+python tools\showcase.py --write                             # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
 只用 g++ 与标准库，**零下载零安装**。
@@ -44,6 +46,8 @@ build\datastruct.exe --menu                                  # 交互菜单：�
 | `include/ds/fuzz.hpp` | **对拍引擎**（测试与演示共用）：八条"自研 vs 标准库/参照实现"随机对拍 |
 | `include/ds/menu.hpp` | 交互菜单：`run_menu(in, out)`——**首尾是流参数，所以菜单本身可被脚本测试** |
 | `tests/test_ds.cpp` | 428 项断言（手算边界 / 对拍 / 菜单脚本） |
+| `tests/test_showcase.py` | 9 项展示页测试（新鲜度 / 改坏必红 / 真数据抽查 / 菜单截取形状 / 标记与零外链） |
+| `tools/showcase.py` | 展示页生成器 → `web/showcase.html`（六段演示/逐模块断言/菜单版式截取，数据现算） |
 | `src/main.cpp` | 六段脚本演示 + `--menu` 入口 |
 
 > **为 B33 增补的只读观察口（2026-10-02）**：`include/ds/trace.hpp`——把 `Tracer` 挂到
@@ -52,7 +56,7 @@ build\datastruct.exe --menu                                  # 交互菜单：�
 > 本项目的 428 项断言 0 失败、`run.bat` 两次退出码 0 且**两次日志逐字相同**，均已重跑复核。
 > 矩阵图（`MatrixGraph`）未接观察口——B33 只用邻接表版，README 如实标注。
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -79,7 +83,11 @@ build\datastruct.exe --menu                                  # 交互菜单：�
 - **对拍实量：141,228 项检查**（顺序表 25 种子×80 步 + 链表 25×80 + 队列 25×80 +
   BST 30×80 + 两种哈希 40×80 + 堆 25×80 + 并查集 20 图 + 图 20 图），0 失败。
 - `run.bat` 连跑两次退出码 **0**、`not recognized` **0**、`build/` 之外**无新增文件**、
-  两次日志**逐字相同**（演示不打印任何耗时）。
+  两次日志**逐字相同**（演示不打印任何耗时；2026-10-03 展示页批次④后按四步重测：各 78 行）。
+- 展示页（2026-10-03 展示层工程批次④）：`web/showcase.html` 单文件自包含——六段演示分段现场输出
+  （头插 44850 vs 改链 300、BST 高 31 vs 5、哈希探测 78/78/12、建堆 494 vs 1538、
+  并查集 find 390 → 199）、自测逐模块断言表（428 项）、交互菜单版式截取（脚本驱动 17 项）；
+  与现算**逐字一致**（`--check` 过期即红）。展示页测试 9 项（`python tests\test_showcase.py`）。
 - 演示现算读数（六段）：头插 300 次"搬 44850 vs 改链 300"；`3*(4+5)-6` → 21；
   升序 vs 折半建树"高 31 vs 5、比较 465 vs 98"；同余键探测"链 78 / 线性 78、分散键 12"；
   降序建堆"494 vs 1538"；锦标赛合并后 find 全体步数"390 → 199"。

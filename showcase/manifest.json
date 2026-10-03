@@ -88,9 +88,9 @@
    "course": "计算机程序设计基础(C++)",
    "title": "手写 vector / list / string 容器",
    "batch": 4,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B1-cpp-ministl/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -98,9 +98,9 @@
    "course": "数据结构",
    "title": "八个 ADT + 复杂度对照 + 交互菜单",
    "batch": 4,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B2-datastruct-lab/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -108,9 +108,9 @@
    "course": "软件开发技术基础",
    "title": "Makefile 子集 + 依赖图 + 增量构建",
    "batch": 4,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B7-mini-make/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {

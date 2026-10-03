@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B2-datastruct-lab · 八个 ADT（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+pre.code{margin:.6rem 0 0;padding:.8rem .9rem;background:#0f1115;color:#e6e9ef;border-radius:8px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+pre.code.wrap{white-space:pre-wrap;word-break:break-word}
+.badge{display:inline-block;font-size:.8rem;padding:.08rem .55rem;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-right:.3rem}
+.badge.ok{color:var(--ok);border-color:var(--ok)}
+table.plain{border-collapse:collapse;font-size:.9rem;margin:.5rem 0}
+table.plain th,table.plain td{border:1px solid var(--line);padding:.3rem .7rem;text-align:left}
+details{margin:.4rem 0}
+summary{cursor:pointer;color:var(--accent)}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+</style>
+</head>
+<body data-showcase="B2-datastruct-lab">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B2-datastruct-lab · 八个 ADT + 复杂度对照</h1>
+<p class="note">数据结构 · 顺序表/链表/栈与表达式/循环队列/BST/哈希/堆/并查集/图：
+每个结构都有手算边界与"参考答案"对拍；最出彩的是**计数器**——把复杂度变成实测步数
+（头插 44850 vs 改链 300、建堆 494 vs 逐插 1538、find 390→199）。</p>
+
+<h2>实测数字（本页现算）</h2>
+<section id="facts" class="cards"><div class="card"><b>自测断言</b><span>428 项、0 失败（八个结构的手算边界 + 对拍 + 菜单脚本）</span></div><div class="card"><b>对拍规模</b><span>与 std/参照实现共 141228 项检查，0 失败</span></div><div class="card"><b>头插 300 次</b><span>顺序表搬 44850 步 vs 链表改链 300 次（差一个数量级的那个操作）</span></div><div class="card"><b>同集合对照</b><span>BST 升序插入高 31 vs 折半插入高 5；并查集 find 390 → 压缩后 199</span></div><div class="card"><b>交互菜单</b><span>8 个结构 + 退出；菜单版式见下方面板（现场截取）</span></div></section>
+
+<h2>展示区</h2>
+<section id="demo" class="panel">
+  <div class="chips" data-tabs="panels">
+    <button class="chip" data-tab="demo6">演示 · 六段</button>
+    <button class="chip" data-tab="numbers">自测数字</button>
+    <button class="chip" data-tab="menu">交互菜单</button>
+  </div>
+  <div data-pane="panels">
+    <div data-pane-id="demo6">
+      <p class="note">每段都是 datastruct.exe 的现场输出（数字现算）。</p>
+      <details open><summary>1) 顺序表 vs 单链表：头部插入的"搬"与"跳"</summary><pre class="code wrap">  头部插入 300 次：顺序表共移动元素 44850 步（≈n^2/2），链表改链 300 次（O(1)/次）
+  再按值查找 300 次：顺序表比较 45150 次，链表跳链 44850 步 + 比较 45150 次
+  （两种查找同为 O(n)；头插才是差一个数量级的那个操作）</pre></details><details open><summary>2) 栈与队列：括号匹配 / 中缀转后缀 / 循环队列绕圈</summary><pre class="code wrap">  括号匹配 ([])         配对
+  括号匹配 a(b[c]{d})e  配对
+  括号匹配 ([)]         不配对
+  括号匹配 (()          不配对
+  3*(4+5)-6 → 后缀 3 4 5 + * 6 - → 求值 21
+  循环队列容量 5，轨迹（head,tail,size）：(0,2,2) (1,2,1) (1,4,3) (2,4,2) (2,1,4) (3,1,3)</pre></details><details open><summary>3) BST：升序插入的退化和折半插入的平衡</summary><pre class="code wrap">  同一集合 {1..31}：升序插入高度 31（=n），折半插入高度 5（≈log2 n+1）
+  插入比较次数：升序 465 次，折半 98 次
+  删根 16（双子→后继顶替）后中序：1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31</pre></details><details open><summary>4) 哈希：同余键扎堆时，链地址 vs 线性探测</summary><pre class="code wrap">  12 个键全落同一条链/同一段槽（k ≡ 1 mod 16），各查 12 次：
+    链地址：最长链 12，探测合计 78 次
+    线性探测：探测合计 78 次（读作：平均每次查找看 6.5 格）
+  分散键（k = 0..11）对照：最长链 1、探测合计 12 次（每键一眼命中）
+  删除一个键后线性探测仍能查到后面的键（墓碑不切断链）：查 33=有，查 17=无，墓碑=1</pre></details><details open><summary>5) 堆：线性建堆 vs 逐个插入；堆排序</summary><pre class="code wrap">  降序 255 个元素：线性建堆比较 494 次（O(n)），逐个插入比较 1538 次（最坏 O(n log n)）
+  堆排序输入：42 7 19 3 88 25 61 12 50 33
+  升序输出：3 7 12 19 25 33 42 50 61 88</pre></details><details open><summary>6) 并查集 vs BFS：连通分量对拍 + 路径压缩</summary><pre class="code wrap">  随机图（n=12，边=20，种子固定）：并查集分量 1，BFS 分量 1 → 一致
+  锦标赛式合并 200 个结点后：全体 find 步数 首轮 390 → 压缩后 199（第二次几乎直达根）
+完成：6 段演示全部跑通。--menu 进入交互菜单；演示无耗时输出，两遍逐字一致。</pre></details>
+    </div>
+    <div data-pane-id="numbers" hidden>
+      <p class="note">自测逐模块断言数（共 428 项）：</p>
+      <table class="plain"><tr><th>模块</th><th>断言</th></tr><tr><td>顺序表边界</td><td>17</td></tr><tr><td>单链表边界</td><td>24</td></tr><tr><td>栈/队列/表达式</td><td>42</td></tr><tr><td>BST 边界</td><td>26</td></tr><tr><td>哈希</td><td>36</td></tr><tr><td>堆</td><td>25</td></tr><tr><td>并查集/图</td><td>30</td></tr><tr><td>菜单脚本</td><td>17</td></tr>
+      <tr><td>与 std/参照实现对拍</td><td>141228 项检查 + 211 项断言</td></tr></table>
+      <p class="note">"复杂度对照"全部来自计数器实测：同一操作在两种实现里的步数差——
+      这是本项目把 O(·) 从口号变成数字的方式。</p>
+    </div>
+    <div data-pane-id="menu" hidden>
+      <p class="note">交互菜单的现场截取（<kbd>build\datastruct.exe --menu</kbd>；下面这次输入 0 即退）。
+      菜单本身也在自测里（脚本驱动 17 项）：</p>
+      <pre class="code">== B2 数据结构实验台 ==
+
+ 1) 顺序表   2) 单链表   3) 栈/表达式   4) 循环队列(容量8)
+ 5) 二叉搜索树 6) 哈希表(16桶,链地址) 7) 堆   8) 并查集(10结点)
+ 9) 图遍历(8结点)   0) 退出
+选择:</pre>
+    </div>
+  </div>
+</section>
+
+<h2>怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：四步（构建+自测 → 六段演示 → 菜单冒烟 → 展示页新鲜度）。</li>
+    <li><kbd>build\datastruct.exe --menu</kbd>：进交互菜单玩八个结构。</li>
+    <li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令真跑 build 里的可执行文件现算（不含计时数字）。
+  观感与顺手程度归你实跑验收。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  function activate(group, id){
+    var chips = document.querySelectorAll('[data-tabs="' + group + '"] [data-tab]');
+    for (var i = 0; i < chips.length; i++){
+      var on = chips[i].getAttribute("data-tab") === id;
+      chips[i].className = on ? "chip active" : "chip";
+    }
+    var panes = document.querySelectorAll('[data-pane="' + group + '"] [data-pane-id]');
+    for (var j = 0; j < panes.length; j++){
+      panes[j].hidden = panes[j].getAttribute("data-pane-id") !== id;
+    }
+  }
+  var lines = document.querySelectorAll("[data-tabs]");
+  for (var k = 0; k < lines.length; k++){
+    (function(line){
+      var group = line.getAttribute("data-tabs");
+      var chips = line.querySelectorAll("[data-tab]");
+      for (var c = 0; c < chips.length; c++){
+        chips[c].addEventListener("click", function(){
+          activate(group, this.getAttribute("data-tab"));
+        });
+      }
+      if (chips.length) activate(group, chips[0].getAttribute("data-tab"));
+    })(lines[k]);
+  }
+})();
+</script>
+</body>
+</html>
