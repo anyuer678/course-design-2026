@@ -16,12 +16,14 @@
 ## 运行
 
 ```
-run.bat                                   # 自测（85 项 + 417 subTest）+ 10 个可运行样例
-                                          # + 4 个错误样例断言（2/2/1/1）+ 七段演示
+run.bat                                   # 自测（94 项 + 417 subTest）+ 10 个可运行样例
+                                          # + 4 个错误样例断言（2/2/1/1）+ 七段演示 + 展示页新鲜度
 python tests\test_tinylang.py             # 逐层单测：词法/语法/语义/代码生成/VM/调用帧
 python tests\test_against_reference.py    # 随机程序对拍：VM vs 树遍历（300 个，含函数）
 python tests\test_recursion.py            # 递归互证：fib/汉诺塔/Ackermann/二项式 vs Python 参照
+python tests\test_showcase.py             # 展示页：新鲜度/改坏必红/真数据抽查/零外链
 python demo.py                            # 七段演示（全链 → 定义 → 错误 → 调用帧 → 对拍 → 样例）
+python tools\showcase.py --write          # 重新生成展示页 web\showcase.html（双击即看；--check 过期即红）
 
 python tiny.py programs\gcd.tiny                  # 跑
 python tiny.py programs\fib.tiny --asm            # 看字节码（CALL/RET/NORET 都在这）
@@ -35,7 +37,10 @@ python tiny.py -c "let x : int := 1.5;"           # 一句话试错
 `tiny.py` 退出码：**0** 正常、**1** 运行期错误、**2** 编译期错误、**3** 用法/读文件问题。
 `run.bat` 会**断言**四个故意写错的样例分别以 2 / 2 / 1 / 1 退出——报错被吞掉等于没报错。
 `run.bat` 连跑两次的日志经 `tools/logdiff.py` 规范化（只允许 unittest 计时行不同）后
-**逐字相同**（各 347 行）——演示输出必须全部是确定性的。
+**逐字相同**（各 350 行，2026-10-03 展示层试点后重测）——演示输出必须全部是确定性的。
+浏览器里也不含糊：**`web/showcase.html` 是双击即看的自包含展示页**（流水线逐段透视：
+点一个样例，看它的记号/AST/字节码/双后端运行/故意报错；数据由 `tools/showcase.py` 现算），
+仓库根 `showcase/index.html` 是全部 33 个项目的总入口。
 
 ## 目录
 
@@ -54,8 +59,9 @@ tinylang/tree_walk.py    参照实现：不生成指令，直接递归解释 AST
 tinylang/fuzz.py         随机程序生成器（含 1–3 个函数；函数间调用图无环）
 tinylang/pipeline.py     对外入口：build / compile_source / run
 docs/frames-spec.md      **先于实现写出的调用约定**（帧布局/返回值通道/深度上限/错误文本）
+tools/showcase.py        展示页生成器 → web/showcase.html（单文件自包含；--check 过期即红）
 tiny.py                  命令行    programs/*.tiny    14 个样例（10 个可运行 + 4 个故意写错）
-tests/                   三个测试文件    tools/logdiff.py    demo.py（七段）
+tests/                   四个测试文件    tools/logdiff.py    demo.py（七段）
 ```
 
 ## 课程章节 与 代码 与 怎么验
@@ -206,7 +212,7 @@ error_depth.tiny   → 无限递归：第 3 行，调用深度超过上限 100�
 * **随机语料**：生成器每个程序先造 1–3 个函数（函数体只调用更早定义的函数，调用图无环 →
   运行必终止），300 个随机程序**全部**含调用，两后端逐字节一致。
 
-## 测试与对拍（85 项 + 417 个 subTest）
+## 测试与对拍（94 项 + 417 个 subTest）
 
 | 组 | 数量 | 覆盖 |
 |---|---|---|
@@ -218,6 +224,7 @@ error_depth.tiny   → 无限递归：第 3 行，调用深度超过上限 100�
 | `TestValuesModule` | 3 | `bool` 是 `int` 的子类这个陷阱、`to_real` 拒 bool、浮点表示可往返 |
 | `TestEnginesAgree` | 7 | 300 随机（含函数）+ 19 手写语料 + 运行期错误一致性 + **函数错误一致 + 深度边界翻转** + 语料真的在调函数/走循环 |
 | `TestRecursionVersusReferences` | 6 | fib vs 迭代、汉诺塔 vs Python 递归参照、2^n-1 性质（n=1,2,4,5）、Ackermann、二项式 vs `math.comb`、步数下界 |
+| `TestShowcase`（展示层工程试点，2026-10-03） | 9 | 展示页新鲜度（重算比对）与改坏必红；真数据抽查（14 个样例/双后端输出钉值/报错带行列/深度上限 100）；页面必备标记与零外链 |
 
 随机语料的实测规模（本轮现算）：300 个程序共 15005 行源码、71845 条指令（平均 239 条/程序）、
 3027 个槽位（全局 + 各调用帧）、3108 行输出、108150 步 VM 执行、**3665 处函数调用**

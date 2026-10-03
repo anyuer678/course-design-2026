@@ -1,0 +1,347 @@
+{
+ "schema": 1,
+ "batch_names": {
+  "1": "口径与试点（编译器透视）",
+  "2": "算法与离散基本盘",
+  "3": "系统底层",
+  "4": "数据结构与工程",
+  "5": "网络与安全",
+  "6": "数据库与分布式",
+  "7": "人工智能与数据",
+  "8": "视觉 / 物联网 / 工业",
+  "9": "数据与可视化（存量对齐）",
+  "10": "交互 / 工具 / 业务存量"
+ },
+ "projects": [
+  {
+   "id": "B13-tinylang",
+   "course": "编译原理",
+   "title": "编译流水线透视：词法→语法→语义→字节码→执行（含函数调用帧）",
+   "batch": 1,
+   "status": "done",
+   "page": "projects/B13-tinylang/web/showcase.html",
+   "generator": "tools/showcase.py",
+   "note": ""
+  },
+  {
+   "id": "B12-algo-arena",
+   "course": "算法分析与设计",
+   "title": "算法实验场：分治/DP/贪心/回溯/图 + 暴力参照",
+   "batch": 2,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B3-logic-lab",
+   "course": "离散结构",
+   "title": "命题逻辑 + 二元关系：真值表/主范式/闭包",
+   "batch": 2,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B4-algebra-rsa",
+   "course": "集合论与代数",
+   "title": "数论底座 + 教学 RSA + 群运算表判定",
+   "batch": 2,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B5-cpu-sim",
+   "course": "数字设计与计算机原理",
+   "title": "单周期 CPU + 五级流水线 + 时空图",
+   "batch": 3,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B6-asm-lab",
+   "course": "汇编语言",
+   "title": "x86-64 汇编四函数 + ABI 探针 + 反汇编对照",
+   "batch": 3,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B9-os-sim",
+   "course": "操作系统原理",
+   "title": "操作系统模拟器：调度/内存/文件系统",
+   "batch": 3,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B1-cpp-ministl",
+   "course": "计算机程序设计基础(C++)",
+   "title": "手写 vector / list / string 容器",
+   "batch": 4,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B2-datastruct-lab",
+   "course": "数据结构",
+   "title": "八个 ADT + 复杂度对照 + 交互菜单",
+   "batch": 4,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B7-mini-make",
+   "course": "软件开发技术基础",
+   "title": "Makefile 子集 + 依赖图 + 增量构建",
+   "batch": 4,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B8-mini-shell",
+   "course": "开源操作系统",
+   "title": "mini-shell：fork/exec、管道、重定向、回收",
+   "batch": 5,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B11-net-lab",
+   "course": "计算机网络",
+   "title": "HTTP 子集 + 多路复用 + UDP 可靠传输",
+   "batch": 5,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B32-sec-lab",
+   "course": "信息安全导论",
+   "title": "四组“漏洞版 vs 修复版” + 静态扫描器",
+   "batch": 5,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B10-minidb",
+   "course": "数据库系统",
+   "title": "教学数据库：WAL + 页式快照 + 事务",
+   "batch": 6,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B30-mini-raft",
+   "course": "分布式与云计算",
+   "title": "Raft：快照 + 单步成员变更 + 哈希链账本",
+   "batch": 6,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B38-mini-redis",
+   "course": "软件工程案例分析与实践",
+   "title": "手写 Redis 子集：RESP2 + 过期 + 主从复制",
+   "batch": 6,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B23-ml-from-scratch",
+   "course": "人工智能导论",
+   "title": "手写机器学习五算法 + sklearn 同参对拍",
+   "batch": 7,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B25-nlp-lab",
+   "course": "自然语言处理",
+   "title": "中文分词 + 朴素贝叶斯文本分类",
+   "batch": 7,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B26-datamining",
+   "course": "数据挖掘与实践",
+   "title": "Apriori + K-means + 可追溯清洗链",
+   "batch": 7,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B24-cv-scanner",
+   "course": "计算机视觉",
+   "title": "文档扫描仪：边缘→透视变换→二值化",
+   "batch": 8,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": "已有 PNG 处理产物"
+  },
+  {
+   "id": "B35-iot-mqtt",
+   "course": "工业物联网技术",
+   "title": "手写 MQTT：传感器→broker→SQLite→曲线",
+   "batch": 8,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": "已有 SVG 曲线产物"
+  },
+  {
+   "id": "B37-industry-ai",
+   "course": "行业软件前沿应用",
+   "title": "设备故障预测 + 误报/漏报分析",
+   "batch": 8,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B27-course-kg",
+   "course": "知识图谱与知识工程",
+   "title": "课程先修知识图谱（自包含交互 HTML 生成器）",
+   "batch": 9,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": "生成器已有，产物临时目录；提升为提交物"
+  },
+  {
+   "id": "B28-bi-dashboard",
+   "course": "数据分析与商务智能",
+   "title": "商务智能看板：SQL/纯 Python 双路对拍",
+   "batch": 9,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": "已有手写 SVG 看板产物"
+  },
+  {
+   "id": "B29-bigdata-spark",
+   "course": "工业大数据处理技术",
+   "title": "PySpark 日志清洗/聚合/倾斜实验",
+   "batch": 9,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B33-viz-algo",
+   "course": "可视化技术",
+   "title": "算法可视化：B2 追踪导出 + 回放动画",
+   "batch": 9,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": "自包含动画生成器已有，产物 build/ 不进仓库"
+  },
+  {
+   "id": "B34-path-planner",
+   "course": "无人系统",
+   "title": "栅格 A*/Dijkstra/BFS + 搜索动画",
+   "batch": 9,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": "自包含动画生成器已有，产物 build/ 不进仓库"
+  },
+  {
+   "id": "B14-java-paint",
+   "course": "Java 面向对象程序设计",
+   "title": "画图程序：撤销/重做 + 可信文件存取（Swing）",
+   "batch": 10,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": "已有真窗口 GUI；展示页嵌离屏渲染产物"
+  },
+  {
+   "id": "B31-shorturl",
+   "course": "Web 系统与技术",
+   "title": "短链系统：base62 + 跳转统计 + 原生前端",
+   "batch": 10,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": "已有浏览器前端（需起服务）"
+  },
+  {
+   "id": "B39-tech-radar",
+   "course": "专业前沿技术讲座",
+   "title": "技术雷达：记录模板 + 可机验证据",
+   "batch": 10,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B40-career-map",
+   "course": "专业实习",
+   "title": "专业技能差距矩阵 + JD 映射器",
+   "batch": 10,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "B41-thesis-seeds",
+   "course": "毕业设计（论文）",
+   "title": "毕设种子：五候选三维可行性（已清零收官）",
+   "batch": 10,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": ""
+  },
+  {
+   "id": "dorm-repair",
+   "course": "软件工程等（B15–B22 十门合集）",
+   "title": "宿舍报修系统：需求→原型→平台→测试→门禁",
+   "batch": 10,
+   "status": "todo",
+   "page": null,
+   "generator": null,
+   "note": "已有浏览器原型（需起服务）"
+  }
+ ]
+}

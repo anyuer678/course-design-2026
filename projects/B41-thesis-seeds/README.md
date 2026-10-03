@@ -12,7 +12,7 @@
 ④ B38 主从复制（`projects/B38-mini-redis/`：复制语义表、49 项测试双入口）、
 ① B10 fsync + 页式存储（`projects/B10-minidb/`：提交即 fsync、双头页式快照、
 真子进程崩溃对账、53 项测试双入口）、② B13 调用帧（`projects/B13-tinylang/`：
-调用约定先写纸上、深度上限 100、双后端对拍含函数、85 项测试双入口）、
+调用约定先写纸上、深度上限 100、双后端对拍含函数、94 项测试双入口（含 9 项展示页））、
 ③ B30 Raft 完整化（`projects/B30-mini-raft/`：快照只压已提交、InstallSnapshot、
 单步成员变更一次一个、28 项测试双入口）、⑤ B23 + sklearn 对拍（`projects/B23-ml-from-scratch/`：
 口径先写纸上、四组模型同参对照 + 四条负面对照、45 项测试双入口，安装双口径 8.7MB/47.0MB）；

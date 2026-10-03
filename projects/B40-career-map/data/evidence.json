@@ -1,284 +1,284 @@
 {
-  "note": "B40 证据索引：每条声明都必须可机验——pointers 里的仓库路径必须存在、commit 必须在 git 里、anchor 必须真出现在某个指针文件里（tools/check_evidence.py 逐条核验）。数字口径来自各项目 README 的「实测」节（当轮现算），此处只做指针与锚点，不重抄一遍会过期的数字。",
-  "evidence": [
-    {
-      "id": "b1-ministl",
-      "claim": "手写 vector/list/string（RAII+迭代器），与 std 容器对拍 253,086 次比较 0 失败",
-      "pointers": [
-        "projects/B1-cpp-ministl/README.md"
-      ],
-      "anchor": "253,086",
-      "commit": "a3c9956"
-    },
-    {
-      "id": "b2-datastruct",
-      "claim": "八个 ADT + 与 std/参照实现 141,228 项对拍检查 0 失败（B33 又给堆/图加了只读 trace 观察口）",
-      "pointers": [
-        "projects/B2-datastruct-lab/README.md"
-      ],
-      "anchor": "141,228",
-      "commit": "6ce1488"
-    },
-    {
-      "id": "b4-algebra",
-      "claim": "数论底座 + 教学 RSA + 群表判定 + 集合论：43 项通过，egcd 双实现互拍",
-      "pointers": [
-        "projects/B4-algebra-rsa/README.md"
-      ],
-      "anchor": "43 项通过",
-      "commit": "4575c8a"
-    },
-    {
-      "id": "b5-cpu-sim",
-      "claim": "单周期 + 五级流水线（前递/load-use 停顿/分支冲刷）：双模型对拍逐字节一致",
-      "pointers": [
-        "projects/B5-cpu-sim/README.md"
-      ],
-      "anchor": "双模型对拍",
-      "commit": "2ceff9e"
-    },
-    {
-      "id": "b6-asm",
-      "claim": "x86-64 汇编四函数 + ABI 哨兵探针（哨兵值进、破坏位掩码出）+ 反汇编结构对照",
-      "pointers": [
-        "projects/B6-asm-lab/README.md"
-      ],
-      "anchor": "哨兵值进",
-      "commit": "cd5da56"
-    },
-    {
-      "id": "b7-mini-make",
-      "claim": "手写 make（依赖图/环检测/增量/-j 对拍/失败传播）：15 项通过，双入口同数",
-      "pointers": [
-        "projects/B7-mini-make/README.md"
-      ],
-      "anchor": "15 项通过",
-      "commit": "b67654f"
-    },
-    {
-      "id": "b8-shell",
-      "claim": "fork/exec/任意段管道/重定向 shell：24 项测试全过，僵尸进程去 /proc 当面数",
-      "pointers": [
-        "projects/B8-mini-shell/README.md"
-      ],
-      "anchor": "24 项测试全过",
-      "commit": "fb5bab5"
-    },
-    {
-      "id": "b9-os-sim",
-      "claim": "CPU 模拟 + 五级流水线：183 项断言 0 失败，教科书数字逐个吻合",
-      "pointers": [
-        "projects/B9-os-sim/README.md"
-      ],
-      "anchor": "183 项断言",
-      "commit": "16d125f"
-    },
-    {
-      "id": "b10-minidb",
-      "claim": "手写 SQL 子集 + WAL/页式快照/事务（B41 候选①：提交即 fsync + 崩溃对账）：53 项自测（36 核心 + 17 持久性）",
-      "pointers": [
-        "projects/B10-minidb/README.md"
-      ],
-      "anchor": "自测（53 项：36 核心 + 17 持久性）",
-      "commit": "4ccc788"
-    },
-    {
-      "id": "b11-net",
-      "claim": "HTTP/1.1 子集 + UDP 可靠传输（GBN）与可复现丢包实验：91 项（75+16）",
-      "pointers": [
-        "projects/B11-net-lab/README.md"
-      ],
-      "anchor": "75 + 16 = 91 项",
-      "commit": "0f30423"
-    },
-    {
-      "id": "b12-algo",
-      "claim": "分治/DP/贪心/回溯/图 各一代表算法 + 暴力参照 + 规模计时表：57 项自测",
-      "pointers": [
-        "projects/B12-algo-arena/README.md"
-      ],
-      "anchor": "自测（57 项",
-      "commit": "4ccc788"
-    },
-    {
-      "id": "b13-tinylang",
-      "claim": "语言前端→字节码 VM + 参照解释器（含函数调用帧，B41 候选②）：双后端 300 例对拍 + 递归与 Python 参照互证；85 项自测（72 逐层 + 7 对拍 + 6 递归）",
-      "pointers": [
-        "projects/B13-tinylang/README.md"
-      ],
-      "anchor": "自测（85 项 + 417 subTest）",
-      "commit": "16d125f"
-    },
-    {
-      "id": "b14-paint",
-      "claim": "Java Swing 图形编辑器（命令/撤销重做、原子存盘）：7054 项检查 0 失败",
-      "pointers": [
-        "projects/B14-java-paint/README.md"
-      ],
-      "anchor": "7054 项检查",
-      "commit": "16d125f"
-    },
-    {
-      "id": "dorm-repair",
-      "claim": "报修系统全生命周期（需求工程→架构→Java 平台→测试→质量门禁→PM）：198 项 + 242 subTest 通过",
-      "pointers": [
-        "projects/dorm-repair/README.md"
-      ],
-      "anchor": "198 项 + 242 个 subTest 通过",
-      "commit": "5826d70"
-    },
-    {
-      "id": "b23-ml",
-      "claim": "手写五算法（回归/感知机/KNN/决策树/BP）+ 与 scikit-learn 同参对拍台（B41 候选⑤：容差表先行、四条负面对照、规模曲线）：45 项自测（33 核心 + 12 对拍）",
-      "pointers": [
-        "projects/B23-ml-from-scratch/README.md"
-      ],
-      "anchor": "45 项双入口同数",
-      "commit": "d274eb4"
-    },
-    {
-      "id": "b24-cv",
-      "claim": "文档扫描仪（Canny→四边逼近→透视变换→二值化）：16 项全过、双入口同数，合成真值像素级对账",
-      "pointers": [
-        "projects/B24-cv-scanner/README.md"
-      ],
-      "anchor": "16 项全过、双入口同数",
-      "commit": "5c1d205"
-    },
-    {
-      "id": "b25-nlp",
-      "claim": "中文分词（最大匹配/双向歧义）+ 朴素贝叶斯 + 手写指标：16 项自测",
-      "pointers": [
-        "projects/B25-nlp-lab/README.md"
-      ],
-      "anchor": "自测（16 项）",
-      "commit": "c7648fd"
-    },
-    {
-      "id": "b26-mining",
-      "claim": "Apriori + K-means + 可追溯清洗链：19 项自测，剪枝候选数 ≤ 穷举数被断言",
-      "pointers": [
-        "projects/B26-datamining/README.md"
-      ],
-      "anchor": "自测（19 项）",
-      "commit": "c7648fd"
-    },
-    {
-      "id": "b27-kg",
-      "claim": "课程知识图谱（拓扑/闭包/缺先修）+ 自包含交互 HTML：14 项自测",
-      "pointers": [
-        "projects/B27-course-kg/README.md"
-      ],
-      "anchor": "自测（14 项）",
-      "commit": "c7648fd"
-    },
-    {
-      "id": "b28-bi",
-      "claim": "商务智能看板：口径当一等交付物，SQL 与纯 Python 双路对拍：34 项通过",
-      "pointers": [
-        "projects/B28-bi-dashboard/README.md"
-      ],
-      "anchor": "34 项通过",
-      "commit": "352c499"
-    },
-    {
-      "id": "b29-spark",
-      "claim": "PySpark 日志清洗/聚合/Spark SQL + 倾斜实验（salting 与 groupBy 逐行相等）：17 项测试",
-      "pointers": [
-        "projects/B29-bigdata-spark/README.md"
-      ],
-      "anchor": "17 项测试",
-      "commit": "7eec2e5"
-    },
-    {
-      "id": "b30-raft",
-      "claim": "事件驱动 Raft（逐事件不变式检查）+ 快照/InstallSnapshot + 单步成员变更（B41 候选③）+ 真套接字 mini-RPC：双入口同数 28 项",
-      "pointers": [
-        "projects/B30-mini-raft/README.md"
-      ],
-      "anchor": "双入口同数：28 项",
-      "commit": "e94f56b"
-    },
-    {
-      "id": "b31-shorturl",
-      "claim": "短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：73 项测试 + 129 subTest 全通过",
-      "pointers": [
-        "projects/B31-shorturl/README.md"
-      ],
-      "anchor": "73 项测试 + 129 个 subTest 全通过",
-      "commit": "4ccc788"
-    },
-    {
-      "id": "b32-sec",
-      "claim": "四组漏洞版/修复版（SQL 注入/XSS/口令/路径穿越）+ 静态扫描器：50 项测试",
-      "pointers": [
-        "projects/B32-sec-lab/README.md"
-      ],
-      "anchor": "50 项测试",
-      "commit": "16d125f"
-    },
-    {
-      "id": "b33-viz",
-      "claim": "从 B2 导出操作记录回放成自包含 HTML 动画：11 项（双入口同数）",
-      "pointers": [
-        "projects/B33-viz-algo/README.md"
-      ],
-      "anchor": "11 项（双入口同数）",
-      "commit": "6ce1488"
-    },
-    {
-      "id": "b34-path",
-      "claim": "栅格 A*/Dijkstra/BFS 同源对拍 + 不可采纳反例 + 搜索展开动画：20 项测试双入口同数",
-      "pointers": [
-        "projects/B34-path-planner/README.md"
-      ],
-      "anchor": "20 项测试双入口同数",
-      "commit": "5b7e9ac"
-    },
-    {
-      "id": "b35-mqtt",
-      "claim": "手写 MQTT 子集（字节级报文/selectors broker/断线重连/账本）：23 项全过、双入口同数",
-      "pointers": [
-        "projects/B35-iot-mqtt/README.md"
-      ],
-      "anchor": "23 项全过、双入口同数",
-      "commit": "5821891"
-    },
-    {
-      "id": "b37-ai",
-      "claim": "设备故障预测 + 误报/漏报解剖（复用 B35/B23，边界按实测换 OU）：27 项测试双入口同数",
-      "pointers": [
-        "projects/B37-industry-ai/README.md"
-      ],
-      "anchor": "27 项测试双入口同数",
-      "commit": "b55eb21"
-    },
-    {
-      "id": "b38-redis",
-      "claim": "手写 Redis 子集（RESP2/单线程事件循环/双策略过期/快照）+ 主从复制扩展（B41 候选④）：49 项测试双入口同数",
-      "pointers": [
-        "projects/B38-mini-redis/README.md"
-      ],
-      "anchor": "49 项测试双入口同数",
-      "commit": "f0bb729"
-    },
-    {
-      "id": "b39-radar",
-      "claim": "技术雷达（模板 + 可机验证据检查器 + 最小复现）：18 项测试双入口同数",
-      "pointers": [
-        "projects/B39-tech-radar/README.md"
-      ],
-      "anchor": "18 项测试双入口同数",
-      "commit": "7b699b8"
-    },
-    {
-      "id": "repo-delivery",
-      "claim": "全仓库交付纪律：run.bat 两跑比对/日志规范化、CRLF+ASCII 的 .bat、双入口测试计数",
-      "pointers": [
-        "PLAN.md"
-      ],
-      "anchor": "CRLF 行尾",
-      "commit": "7b699b8"
-    }
-  ]
+ "note": "B40 证据索引：每条声明都必须可机验——pointers 里的仓库路径必须存在、commit 必须在 git 里、anchor 必须真出现在某个指针文件里（tools/check_evidence.py 逐条核验）。数字口径来自各项目 README 的「实测」节（当轮现算），此处只做指针与锚点，不重抄一遍会过期的数字。",
+ "evidence": [
+  {
+   "id": "b1-ministl",
+   "claim": "手写 vector/list/string（RAII+迭代器），与 std 容器对拍 253,086 次比较 0 失败",
+   "pointers": [
+    "projects/B1-cpp-ministl/README.md"
+   ],
+   "anchor": "253,086",
+   "commit": "a3c9956"
+  },
+  {
+   "id": "b2-datastruct",
+   "claim": "八个 ADT + 与 std/参照实现 141,228 项对拍检查 0 失败（B33 又给堆/图加了只读 trace 观察口）",
+   "pointers": [
+    "projects/B2-datastruct-lab/README.md"
+   ],
+   "anchor": "141,228",
+   "commit": "6ce1488"
+  },
+  {
+   "id": "b4-algebra",
+   "claim": "数论底座 + 教学 RSA + 群表判定 + 集合论：43 项通过，egcd 双实现互拍",
+   "pointers": [
+    "projects/B4-algebra-rsa/README.md"
+   ],
+   "anchor": "43 项通过",
+   "commit": "4575c8a"
+  },
+  {
+   "id": "b5-cpu-sim",
+   "claim": "单周期 + 五级流水线（前递/load-use 停顿/分支冲刷）：双模型对拍逐字节一致",
+   "pointers": [
+    "projects/B5-cpu-sim/README.md"
+   ],
+   "anchor": "双模型对拍",
+   "commit": "2ceff9e"
+  },
+  {
+   "id": "b6-asm",
+   "claim": "x86-64 汇编四函数 + ABI 哨兵探针（哨兵值进、破坏位掩码出）+ 反汇编结构对照",
+   "pointers": [
+    "projects/B6-asm-lab/README.md"
+   ],
+   "anchor": "哨兵值进",
+   "commit": "cd5da56"
+  },
+  {
+   "id": "b7-mini-make",
+   "claim": "手写 make（依赖图/环检测/增量/-j 对拍/失败传播）：15 项通过，双入口同数",
+   "pointers": [
+    "projects/B7-mini-make/README.md"
+   ],
+   "anchor": "15 项通过",
+   "commit": "b67654f"
+  },
+  {
+   "id": "b8-shell",
+   "claim": "fork/exec/任意段管道/重定向 shell：24 项测试全过，僵尸进程去 /proc 当面数",
+   "pointers": [
+    "projects/B8-mini-shell/README.md"
+   ],
+   "anchor": "24 项测试全过",
+   "commit": "fb5bab5"
+  },
+  {
+   "id": "b9-os-sim",
+   "claim": "CPU 模拟 + 五级流水线：183 项断言 0 失败，教科书数字逐个吻合",
+   "pointers": [
+    "projects/B9-os-sim/README.md"
+   ],
+   "anchor": "183 项断言",
+   "commit": "16d125f"
+  },
+  {
+   "id": "b10-minidb",
+   "claim": "手写 SQL 子集 + WAL/页式快照/事务（B41 候选①：提交即 fsync + 崩溃对账）：53 项自测（36 核心 + 17 持久性）",
+   "pointers": [
+    "projects/B10-minidb/README.md"
+   ],
+   "anchor": "自测（53 项：36 核心 + 17 持久性）",
+   "commit": "4ccc788"
+  },
+  {
+   "id": "b11-net",
+   "claim": "HTTP/1.1 子集 + UDP 可靠传输（GBN）与可复现丢包实验：91 项（75+16）",
+   "pointers": [
+    "projects/B11-net-lab/README.md"
+   ],
+   "anchor": "75 + 16 = 91 项",
+   "commit": "0f30423"
+  },
+  {
+   "id": "b12-algo",
+   "claim": "分治/DP/贪心/回溯/图 各一代表算法 + 暴力参照 + 规模计时表：57 项自测",
+   "pointers": [
+    "projects/B12-algo-arena/README.md"
+   ],
+   "anchor": "自测（57 项",
+   "commit": "4ccc788"
+  },
+  {
+   "id": "b13-tinylang",
+   "claim": "语言前端→字节码 VM + 参照解释器（含函数调用帧，B41 候选②）：双后端 300 例对拍 + 递归与 Python 参照互证；94 项自测（72 逐层 + 7 对拍 + 6 递归 + 9 展示页）",
+   "pointers": [
+    "projects/B13-tinylang/README.md"
+   ],
+   "anchor": "自测（94 项 + 417 subTest）",
+   "commit": "16d125f"
+  },
+  {
+   "id": "b14-paint",
+   "claim": "Java Swing 图形编辑器（命令/撤销重做、原子存盘）：7054 项检查 0 失败",
+   "pointers": [
+    "projects/B14-java-paint/README.md"
+   ],
+   "anchor": "7054 项检查",
+   "commit": "16d125f"
+  },
+  {
+   "id": "dorm-repair",
+   "claim": "报修系统全生命周期（需求工程→架构→Java 平台→测试→质量门禁→PM）：216 项 + 298 subTest 通过（Java 37 项；流水线 11 层全绿）",
+   "pointers": [
+    "projects/dorm-repair/README.md"
+   ],
+   "anchor": "216 项 + 298 个 subTest 通过",
+   "commit": "5826d70"
+  },
+  {
+   "id": "b23-ml",
+   "claim": "手写五算法（回归/感知机/KNN/决策树/BP）+ 与 scikit-learn 同参对拍台（B41 候选⑤：容差表先行、四条负面对照、规模曲线）：45 项自测（33 核心 + 12 对拍）",
+   "pointers": [
+    "projects/B23-ml-from-scratch/README.md"
+   ],
+   "anchor": "45 项双入口同数",
+   "commit": "d274eb4"
+  },
+  {
+   "id": "b24-cv",
+   "claim": "文档扫描仪（Canny→四边逼近→透视变换→二值化）：16 项全过、双入口同数，合成真值像素级对账",
+   "pointers": [
+    "projects/B24-cv-scanner/README.md"
+   ],
+   "anchor": "16 项全过、双入口同数",
+   "commit": "5c1d205"
+  },
+  {
+   "id": "b25-nlp",
+   "claim": "中文分词（最大匹配/双向歧义）+ 朴素贝叶斯 + 手写指标：16 项自测",
+   "pointers": [
+    "projects/B25-nlp-lab/README.md"
+   ],
+   "anchor": "自测（16 项）",
+   "commit": "c7648fd"
+  },
+  {
+   "id": "b26-mining",
+   "claim": "Apriori + K-means + 可追溯清洗链：19 项自测，剪枝候选数 ≤ 穷举数被断言",
+   "pointers": [
+    "projects/B26-datamining/README.md"
+   ],
+   "anchor": "自测（19 项）",
+   "commit": "c7648fd"
+  },
+  {
+   "id": "b27-kg",
+   "claim": "课程知识图谱（拓扑/闭包/缺先修）+ 自包含交互 HTML：14 项自测",
+   "pointers": [
+    "projects/B27-course-kg/README.md"
+   ],
+   "anchor": "自测（14 项）",
+   "commit": "c7648fd"
+  },
+  {
+   "id": "b28-bi",
+   "claim": "商务智能看板：口径当一等交付物，SQL 与纯 Python 双路对拍：34 项通过",
+   "pointers": [
+    "projects/B28-bi-dashboard/README.md"
+   ],
+   "anchor": "34 项通过",
+   "commit": "352c499"
+  },
+  {
+   "id": "b29-spark",
+   "claim": "PySpark 日志清洗/聚合/Spark SQL + 倾斜实验（salting 与 groupBy 逐行相等）：17 项测试",
+   "pointers": [
+    "projects/B29-bigdata-spark/README.md"
+   ],
+   "anchor": "17 项测试",
+   "commit": "7eec2e5"
+  },
+  {
+   "id": "b30-raft",
+   "claim": "事件驱动 Raft（逐事件不变式检查）+ 快照/InstallSnapshot + 单步成员变更（B41 候选③）+ 真套接字 mini-RPC：双入口同数 28 项",
+   "pointers": [
+    "projects/B30-mini-raft/README.md"
+   ],
+   "anchor": "双入口同数：28 项",
+   "commit": "e94f56b"
+  },
+  {
+   "id": "b31-shorturl",
+   "claim": "短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：73 项测试 + 129 subTest 全通过",
+   "pointers": [
+    "projects/B31-shorturl/README.md"
+   ],
+   "anchor": "73 项测试 + 129 个 subTest 全通过",
+   "commit": "4ccc788"
+  },
+  {
+   "id": "b32-sec",
+   "claim": "四组漏洞版/修复版（SQL 注入/XSS/口令/路径穿越）+ 静态扫描器：50 项测试",
+   "pointers": [
+    "projects/B32-sec-lab/README.md"
+   ],
+   "anchor": "50 项测试",
+   "commit": "16d125f"
+  },
+  {
+   "id": "b33-viz",
+   "claim": "从 B2 导出操作记录回放成自包含 HTML 动画：11 项（双入口同数）",
+   "pointers": [
+    "projects/B33-viz-algo/README.md"
+   ],
+   "anchor": "11 项（双入口同数）",
+   "commit": "6ce1488"
+  },
+  {
+   "id": "b34-path",
+   "claim": "栅格 A*/Dijkstra/BFS 同源对拍 + 不可采纳反例 + 搜索展开动画：20 项测试双入口同数",
+   "pointers": [
+    "projects/B34-path-planner/README.md"
+   ],
+   "anchor": "20 项测试双入口同数",
+   "commit": "5b7e9ac"
+  },
+  {
+   "id": "b35-mqtt",
+   "claim": "手写 MQTT 子集（字节级报文/selectors broker/断线重连/账本）：23 项全过、双入口同数",
+   "pointers": [
+    "projects/B35-iot-mqtt/README.md"
+   ],
+   "anchor": "23 项全过、双入口同数",
+   "commit": "5821891"
+  },
+  {
+   "id": "b37-ai",
+   "claim": "设备故障预测 + 误报/漏报解剖（复用 B35/B23，边界按实测换 OU）：27 项测试双入口同数",
+   "pointers": [
+    "projects/B37-industry-ai/README.md"
+   ],
+   "anchor": "27 项测试双入口同数",
+   "commit": "b55eb21"
+  },
+  {
+   "id": "b38-redis",
+   "claim": "手写 Redis 子集（RESP2/单线程事件循环/双策略过期/快照）+ 主从复制扩展（B41 候选④）：49 项测试双入口同数",
+   "pointers": [
+    "projects/B38-mini-redis/README.md"
+   ],
+   "anchor": "49 项测试双入口同数",
+   "commit": "f0bb729"
+  },
+  {
+   "id": "b39-radar",
+   "claim": "技术雷达（模板 + 可机验证据检查器 + 最小复现）：18 项测试双入口同数",
+   "pointers": [
+    "projects/B39-tech-radar/README.md"
+   ],
+   "anchor": "18 项测试双入口同数",
+   "commit": "7b699b8"
+  },
+  {
+   "id": "repo-delivery",
+   "claim": "全仓库交付纪律：run.bat 两跑比对/日志规范化、CRLF+ASCII 的 .bat、双入口测试计数",
+   "pointers": [
+    "PLAN.md"
+   ],
+   "anchor": "CRLF 行尾",
+   "commit": "7b699b8"
+  }
+ ]
 }

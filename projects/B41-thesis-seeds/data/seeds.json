@@ -1,56 +1,56 @@
 {
-  "note": "B41 毕设种子：5 个候选的三维可行性（数据/资源/评价）。facts 段里的每个数字都由 tools/check_seeds.py 现算复核（行数逐字比对、缺口关键词按'计数=0'断言、import 探针实跑）——数字过期就红，防止'可行性分析'变成文艺创作。选定由用户：本文件只做比较，不替你开题。**当前状态：候选表已清零——5 个候选全部由用户选定并实施完成（见 chosen）**；候选为空是收官状态，核验器允许（但候选与已选定不能同时为空）。",
-  "seeds": [],
-  "chosen": [
-    {
-      "id": "b38-replication",
-      "title": "B38 主从复制（RESP 内复制协议子集）",
-      "date": "2026-10-02",
-      "note": "用户选定并实施：见 projects/B38-mini-redis/——复制语义表（case-study §8，含 6 条偏差声明）、PSYNC 全量+命令流、断连重连全量重同步并追平（两库对账器逐键逐值+逐到期时刻，自带牙齿）、-READONLY 拒写、从库被动过期语义；49 项测试双入口（36 核心 + 13 复制）、run.bat 两次退出码 0、规范化日志逐字相同。实施中还把两条潜伏缺陷照了出来（DEL 不清 expires、export_state 迭代中被改字典）——详见 B38 README 坑记。",
-      "evidence": {
-        "path": "projects/B38-mini-redis/README.md",
-        "anchor": "49 项测试双入口同数"
-      }
-    },
-    {
-      "id": "b10-fsync-pages",
-      "title": "B10 加 fsync + 页式存储（持久性工程化）",
-      "date": "2026-10-02",
-      "note": "用户紧接着选定并实施：见 projects/B10-minidb/——单调 LSN + 提交即 flush+fsync（事务组提交）、页式快照（固定页/逐页 crc32/双固定头槽位/代追加不覆盖/坏页回退旧代/阈值压实）、CHECKPOINT 写前次序（数据 fsync -> 头 fsync -> 删 WAL）、恢复按 lsn 跳过已进快照的记录；崩溃用**真子进程 os._exit 硬退**对账（已提交必在、未提交必不在）；53 项测试双入口（36 核心 + 17 持久性）、run.bat 两次退出码 0、规范化日志逐字相同（各 180 行）。实施中把三个格式/接口错误当场抓出（页尾标位置、补零对齐起点、Path 与 str 混用）——详见 B10 README 坑记 12-14。",
-      "evidence": {
-        "path": "projects/B10-minidb/README.md",
-        "anchor": "自测（53 项：36 核心 + 17 持久性）"
-      }
-    },
-    {
-      "id": "b13-call-frames",
-      "title": "B13 加函数调用帧与错误恢复",
-      "date": "2026-10-02",
-      "note": "用户选定并实施（三个候选里最后落实的一个）：见 projects/B13-tinylang/——调用约定**先写纸上再动手**（docs/frames-spec.md：帧布局/返回值通道/深度上限 100/逐字错误文本表），再改 parser/codegen/vm/bytecode 与树遍历参照实现；自递归可用、互递归明确不做；宿主栈护栏（树遍历临时提升 sys.setrecursionlimit，实测不提升时约 7 层就被 Python RecursionError 抢先）；原缺口探针「CALL 计数 0」已填平（现 34 处）。85 项测试双入口（72 逐层 + 7 对拍 + 6 递归互证）、run.bat 两次退出码 0、规范化日志逐字相同（各 347 行）。实施中把三个真缺陷当场抓出（词法漏逗号、检查器全局作用域泄漏、树遍历不认识函数定义）——详见 B13 README 坑记 9-13。",
-      "evidence": {
-        "path": "projects/B13-tinylang/README.md",
-        "anchor": "自测（85 项 + 417 subTest）"
-      }
-    },
-    {
-      "id": "b30-raft-snapshot",
-      "title": "B30 Raft 完整化（快照 + 成员变更）",
-      "date": "2026-10-02",
-      "note": "用户选定并实施（候选表上最重的一个）：见 projects/B30-mini-raft/——口径先写纸上（docs/snapshot-membership-spec.md：快照记录与索引抽象/安装语义与陈旧守卫/配置进日志与一次一个/发送集并集与偏差登记），实现只做翻译；快照**只压缩已提交**（阈值触发、日志有界）、InstallSnapshot（进度只许前进 + 被压缩节点追赶）、单步成员变更（提交后生效、一次一个、新节点不自荐、被移除者学会后安静）、哈希链诊断账本替代压缩后不可见的已应用前缀；原缺口探针「snapshot 计数 0」「membership 计数 0」已填平（现 83 处与 3 处）。28 项测试双入口（15 原有 + 13 新增）、run.bat 两次退出码 0、规范化日志逐字相同（各 197 行）；逐事件不变式含配置交叠检查（600 事件 × 4 条 = 2400 次 0 失败）。实施中把两个真缺陷当场抓出（follower 日志更长时回执越界、第二次过强断言被 churn 证伪）——详见 B30 README 坑 6-8。",
-      "evidence": {
-        "path": "projects/B30-mini-raft/README.md",
-        "anchor": "双入口同数：28 项"
-      }
-    },
-    {
-      "id": "b23-numpy-sklearn",
-      "title": "B23 + NumPy/scikit-learn 对拍扩展到更大网络",
-      "date": "2026-10-02",
-      "note": "用户选定并实施（候选表上最后一个）：见 projects/B23-ml-from-scratch/——口径先写纸上（docs/sklearn-compare-spec.md：四组模型同参口径/容差表/不可比项/陷阱参数/负面对照设计），核心五模块保持纯标准库，对拍台 ml/compare_sklearn.py 是唯一 import sklearn 的地方；安装登记双口径（下载 8.7MB / 安装 47.0MB；numpy 2.4.6 与 scipy 1.17.1 本已在位、安装未动任何已有包）；原缺口探针「sklearn 缺失」随安装获批转为在位。45 项测试双入口（33 核心 + 12 对拍）、run.bat 两次退出码 0、规范化日志逐字相同（各 166 行）；负面对照四条（LR 乱标签/树 depth=1/KNN k=1 平票/MLP 单隐元+lr0.001）全部红在该原因上；规模曲线 n=200→2000（n=2000 时树约 500 倍、KNN 约 70 倍、BP 约 18 倍差距，闭式回归同量级）。实施中把 sklearn 默认早停截胡、'坏参要实测选'等坑当场抓出——详见 B23 README 坑 7-11。",
-      "evidence": {
-        "path": "projects/B23-ml-from-scratch/README.md",
-        "anchor": "45 项双入口同数"
-      }
-    }
-  ]
+ "note": "B41 毕设种子：5 个候选的三维可行性（数据/资源/评价）。facts 段里的每个数字都由 tools/check_seeds.py 现算复核（行数逐字比对、缺口关键词按'计数=0'断言、import 探针实跑）——数字过期就红，防止'可行性分析'变成文艺创作。选定由用户：本文件只做比较，不替你开题。**当前状态：候选表已清零——5 个候选全部由用户选定并实施完成（见 chosen）**；候选为空是收官状态，核验器允许（但候选与已选定不能同时为空）。",
+ "seeds": [],
+ "chosen": [
+  {
+   "id": "b38-replication",
+   "title": "B38 主从复制（RESP 内复制协议子集）",
+   "date": "2026-10-02",
+   "note": "用户选定并实施：见 projects/B38-mini-redis/——复制语义表（case-study §8，含 6 条偏差声明）、PSYNC 全量+命令流、断连重连全量重同步并追平（两库对账器逐键逐值+逐到期时刻，自带牙齿）、-READONLY 拒写、从库被动过期语义；49 项测试双入口（36 核心 + 13 复制）、run.bat 两次退出码 0、规范化日志逐字相同。实施中还把两条潜伏缺陷照了出来（DEL 不清 expires、export_state 迭代中被改字典）——详见 B38 README 坑记。",
+   "evidence": {
+    "path": "projects/B38-mini-redis/README.md",
+    "anchor": "49 项测试双入口同数"
+   }
+  },
+  {
+   "id": "b10-fsync-pages",
+   "title": "B10 加 fsync + 页式存储（持久性工程化）",
+   "date": "2026-10-02",
+   "note": "用户紧接着选定并实施：见 projects/B10-minidb/——单调 LSN + 提交即 flush+fsync（事务组提交）、页式快照（固定页/逐页 crc32/双固定头槽位/代追加不覆盖/坏页回退旧代/阈值压实）、CHECKPOINT 写前次序（数据 fsync -> 头 fsync -> 删 WAL）、恢复按 lsn 跳过已进快照的记录；崩溃用**真子进程 os._exit 硬退**对账（已提交必在、未提交必不在）；53 项测试双入口（36 核心 + 17 持久性）、run.bat 两次退出码 0、规范化日志逐字相同（各 180 行）。实施中把三个格式/接口错误当场抓出（页尾标位置、补零对齐起点、Path 与 str 混用）——详见 B10 README 坑记 12-14。",
+   "evidence": {
+    "path": "projects/B10-minidb/README.md",
+    "anchor": "自测（53 项：36 核心 + 17 持久性）"
+   }
+  },
+  {
+   "id": "b13-call-frames",
+   "title": "B13 加函数调用帧与错误恢复",
+   "date": "2026-10-02",
+   "note": "用户选定并实施（三个候选里最后落实的一个）：见 projects/B13-tinylang/——调用约定**先写纸上再动手**（docs/frames-spec.md：帧布局/返回值通道/深度上限 100/逐字错误文本表），再改 parser/codegen/vm/bytecode 与树遍历参照实现；自递归可用、互递归明确不做；宿主栈护栏（树遍历临时提升 sys.setrecursionlimit，实测不提升时约 7 层就被 Python RecursionError 抢先）；原缺口探针「CALL 计数 0」已填平（现 34 处）。94 项测试双入口（72 逐层 + 7 对拍 + 6 递归互证 + 9 展示页——展示层工程试点把期望值也现算了）、run.bat 两次退出码 0、规范化日志逐字相同（各 350 行，2026-10-03 展示页接入后重测）。实施中把三个真缺陷当场抓出（词法漏逗号、检查器全局作用域泄漏、树遍历不认识函数定义）——详见 B13 README 坑记 9-13。",
+   "evidence": {
+    "path": "projects/B13-tinylang/README.md",
+    "anchor": "自测（94 项 + 417 subTest）"
+   }
+  },
+  {
+   "id": "b30-raft-snapshot",
+   "title": "B30 Raft 完整化（快照 + 成员变更）",
+   "date": "2026-10-02",
+   "note": "用户选定并实施（候选表上最重的一个）：见 projects/B30-mini-raft/——口径先写纸上（docs/snapshot-membership-spec.md：快照记录与索引抽象/安装语义与陈旧守卫/配置进日志与一次一个/发送集并集与偏差登记），实现只做翻译；快照**只压缩已提交**（阈值触发、日志有界）、InstallSnapshot（进度只许前进 + 被压缩节点追赶）、单步成员变更（提交后生效、一次一个、新节点不自荐、被移除者学会后安静）、哈希链诊断账本替代压缩后不可见的已应用前缀；原缺口探针「snapshot 计数 0」「membership 计数 0」已填平（现 83 处与 3 处）。28 项测试双入口（15 原有 + 13 新增）、run.bat 两次退出码 0、规范化日志逐字相同（各 197 行）；逐事件不变式含配置交叠检查（600 事件 × 4 条 = 2400 次 0 失败）。实施中把两个真缺陷当场抓出（follower 日志更长时回执越界、第二次过强断言被 churn 证伪）——详见 B30 README 坑 6-8。",
+   "evidence": {
+    "path": "projects/B30-mini-raft/README.md",
+    "anchor": "双入口同数：28 项"
+   }
+  },
+  {
+   "id": "b23-numpy-sklearn",
+   "title": "B23 + NumPy/scikit-learn 对拍扩展到更大网络",
+   "date": "2026-10-02",
+   "note": "用户选定并实施（候选表上最后一个）：见 projects/B23-ml-from-scratch/——口径先写纸上（docs/sklearn-compare-spec.md：四组模型同参口径/容差表/不可比项/陷阱参数/负面对照设计），核心五模块保持纯标准库，对拍台 ml/compare_sklearn.py 是唯一 import sklearn 的地方；安装登记双口径（下载 8.7MB / 安装 47.0MB；numpy 2.4.6 与 scipy 1.17.1 本已在位、安装未动任何已有包）；原缺口探针「sklearn 缺失」随安装获批转为在位。45 项测试双入口（33 核心 + 12 对拍）、run.bat 两次退出码 0、规范化日志逐字相同（各 166 行）；负面对照四条（LR 乱标签/树 depth=1/KNN k=1 平票/MLP 单隐元+lr0.001）全部红在该原因上；规模曲线 n=200→2000（n=2000 时树约 500 倍、KNN 约 70 倍、BP 约 18 倍差距，闭式回归同量级）。实施中把 sklearn 默认早停截胡、'坏参要实测选'等坑当场抓出——详见 B23 README 坑 7-11。",
+   "evidence": {
+    "path": "projects/B23-ml-from-scratch/README.md",
+    "anchor": "45 项双入口同数"
+   }
+  }
+ ]
 }
