@@ -6,10 +6,12 @@
 用法：
     python showcase/lab.py                # 起在 127.0.0.1:7788（双击仓库根 lab.bat 同款）
     # 总入口 http://127.0.0.1:7788/showcase/index.html 即「项目群控制台」：
-    #   每个项目行可 启动/停止真实服务、跑 demo/测试、看实时日志；
+    #   每个项目行可 启动/停止真实服务、跑 demo/测试/run.bat（可随时停止）、看实时日志；
     #   各项目页的「实时实验台」分节也会就地变成控制台。
     python showcase/lab.py --lan          # 静态页绑 0.0.0.0 供局域网访问（控制仍只限本机）
+    python showcase/lab.py --open         # 启动后自动打开浏览器总入口（lab.bat 默认传）
     python showcase/lab.py --selftest     # 自检：真起 B31 服务 → 真发请求 → 真停，PASS/FAIL
+    # 已在跑时再启动不是错误（2026-10-04）：复用已有实验台、按需开页面、退出 0。
 
 安全边界（先说死）：
 - 默认只绑回环地址；静态根 = 仓库根（实验台就是本机开发工具）；
@@ -462,15 +464,36 @@ def _busy_hint(port: int) -> str:
     return "已经有一个实验台在跑" if lab_running else "这个端口被别的程序占着"
 
 
-def serve(port: int, lan: bool = False) -> int:
+def _open_browser(url: str) -> None:
+    """尽力打开浏览器；失败只提示（自动开页面是锦上添花，不影响实验台本身）。"""
+    import webbrowser
+    try:
+        webbrowser.open(url)
+    except Exception:
+        print(f"    （自动打开浏览器失败，手动访问即可：{url}）")
+
+
+def serve(port: int, lan: bool = False, open_browser: bool = False) -> int:
+    url = f"http://127.0.0.1:{port}/showcase/index.html"
     # Windows 的 SO_REUSEADDR 允许第二个进程绑同一端口，光靠 bind 失败判不出占用；
-    # 先连一下：有应答就是被占，直接给出人话提示。
+    # 先连一下：有应答就是被占。是实验台就当"再点一次图标"——复用、开页面、退出 0；
+    # 是别的程序才是错误（2026-10-04 重复双击顺滑度）。
     try:
         socket.create_connection(("127.0.0.1", port), timeout=0.5).close()
     except OSError:
         pass
     else:
-        print(f"[!] 端口 {port} 起不来：{_busy_hint(port)}。")
+        hint = _busy_hint(port)
+        if hint == "已经有一个实验台在跑":
+            print("已有一个实验台在跑——直接用它就好（同一台机器不需要开两个）。")
+            if open_browser:
+                _open_browser(url)
+            else:
+                print(f"    要打开页面：浏览器里访问 {url}（或重跑不带 no-open 的 lab.bat）")
+            if lan:
+                print("    本次的 --lan 未生效：要切换局域网模式，请先在原实验台窗口按 Ctrl+C 停掉，再重跑。")
+            return 0
+        print(f"[!] 端口 {port} 起不来：{hint}。")
         print(f"    先在浏览器里看看 http://127.0.0.1:{port}/ ，确认是不是你想用的那个；")
         print(f"    或换端口：python showcase/lab.py --port {port + 1}")
         return 1
@@ -481,7 +504,7 @@ def serve(port: int, lan: bool = False) -> int:
         print(f"[!] 端口 {port} 仍然起不来：{exc}")
         print(f"    或换端口：python showcase/lab.py --port {port + 1}")
         return 1
-    print(f"实验台已启动：http://127.0.0.1:{port}/showcase/index.html")
+    print(f"实验台已启动：{url}")
     if lan:
         print("局域网模式：静态页可被同网段访问；**控制 API 只接受本机请求**（远端只会看到 403）。")
         try:
@@ -490,6 +513,9 @@ def serve(port: int, lan: bool = False) -> int:
                     print(f"    局域网入口：http://{ip}:{port}/showcase/index.html")
         except OSError:
             pass
+    if open_browser:
+        print(f"    浏览器将在 2 秒后自动打开：{url}")
+        threading.Timer(2.0, _open_browser, args=(url,)).start()
     print("（总入口与各展示页的「实时实验台」会就地变成控制台；Ctrl+C 结束，子进程会一并清理）")
     try:
         httpd.serve_forever()
@@ -548,6 +574,8 @@ def selftest(port: int = 7799) -> int:
     check("info 提供 B31 动作", any(a["id"] == "serve_start" for a in info["actions"]))
     with urllib.request.urlopen(base + "/showcase/index.html", timeout=10) as r:
         check("静态总入口 200", r.status == 200)
+    rc = serve(port)   # 本自检的 hub 已在 port 上：重复启动应走快路径（复用提示）而不是报错
+    check("重复启动走快路径、退出 0", rc == 0)
     r = start_server("B31-shorturl")
     check("启动真实服务", r.get("ok"), f"port={r.get('port')}")
     sample = SERVE["B31-shorturl"]["sample"]
@@ -565,11 +593,13 @@ def main(argv) -> int:
     ap.add_argument("--port", type=int, default=7788)
     ap.add_argument("--lan", action="store_true",
                     help="静态页绑 0.0.0.0 供局域网访问；控制 API 仍只接受本机请求")
+    ap.add_argument("--open", action="store_true",
+                    help="启动后自动打开浏览器总入口（lab.bat 默认传；已在跑时也用它再开页面）")
     ap.add_argument("--selftest", action="store_true")
     args = ap.parse_args(argv[1:])
     if args.selftest:
         return selftest()
-    return serve(args.port, lan=args.lan)
+    return serve(args.port, lan=args.lan, open_browser=args.open)
 
 
 if __name__ == "__main__":
