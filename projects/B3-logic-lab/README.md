@@ -15,10 +15,12 @@
 ## 运行
 
 ```
-run.bat                                         # 两步：36 项测试 → 五段演示
-python -m unittest discover -s tests            # 36 项
-python tests\test_logic.py                      # 同上（双入口同数）
+run.bat                                         # 三步：45 项测试 → 五段演示 → 展示页新鲜度
+python -m unittest discover -s tests            # 45 项（36 核心 + 9 展示页；pytest 同数）
+python tests\test_logic.py                      # 36 项核心（直跑单文件）
+python tests\test_showcase.py                   # 9 项展示页（直跑单文件）
 python demo.py                                  # 五段演示，数字现算
+python tools\showcase.py --write                # 重生展示页 web\showcase.html（--check 过期即红）
 ```
 
 纯标准库（`re` / `itertools` / `dataclasses` / `collections` / `random`），**零下载零安装**。
@@ -31,9 +33,11 @@ python demo.py                                  # 五段演示，数字现算
 | `logic3/truth.py` | 真值表（穷举）、极小项/极大项、主析取/合取范式、重言/矛盾/可满足、等价判定 |
 | `logic3/relation.py` | 关系矩阵、性质判定（按定义）、三种闭包、Warshall 与 BFS、等价类/偏序 |
 | `tests/test_logic.py` | 36 项测试（手算真值表、范式逐字符、种子固定对拍、错误定位） |
+| `tests/test_showcase.py` | 9 项展示页测试（新鲜度/改坏必红/真数据抽查/零外链） |
+| `tools/showcase.py` | 展示页生成器 → `web/showcase.html`（公式工作台/等价对拍/关系样板间，数据现算） |
 | `demo.py` | 五段演示：解析 / 真值表与范式 / 等价 / 关系与闭包 / 对拍与划分 |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -49,17 +53,18 @@ python demo.py                                  # 五段演示，数字现算
 | 关系性质按定义 | `Relation` 谓词 | 恒等/空关系/互反点对/严格序/整除，手推矩阵逐条断言 |
 | 反对称 ≠ 不对称 | `is_antisymmetric` | 恒等关系（对角线不受限）也是偏序；互反点对不是反对称 |
 | 传递闭包 | `transitive_closure_warshall` | 与 `transitive_closure_bfs` 在**固定种子**随机关系上逐格对拍（>400 格） |
-| 闭包性质 | 三种闭包 | 闭包自反/对称/传递；原关系 ⊆ 闭包；对称闭包幂等 |
+| 闭包性质 | 三种闭包 | 闭包自反/对称/传递；原关系包含于闭包；对称闭包幂等 |
 | 等价类与划分 | `equivalence_classes` / `check_partition` | mod 3 三分类；并集=全集、两两不交；**非等价关系拒绝划分**（不是硬算） |
 | 偏序 | `is_partial_order` | 整除关系（{1..6}，14 条边）；`<` 加自反闭包变 `≤` 后成为偏序 |
 
 ## 实测（2026-10-02，事故后重建并复验）
 
-- 测试：**36 项通过**（`unittest discover` 与 `python tests/test_logic.py` 双入口同数）。
+- 测试：**45 项通过（36 核心 + 9 展示页）**（`unittest discover` 与 `pytest` 同数；直跑 `tests/test_logic.py` 36、`tests/test_showcase.py` 9）。
+- 展示页（2026-10-03 展示层工程批次②）：`web/showcase.html` 单文件自包含——12 条公式逐条给解析形态/真值表/分类/主范式，4 对等价逐格判定，4 个关系含性质表、Warshall 与逐点 BFS 闭包互证、等价类划分自检；与现算**逐字一致**。
 - demo 五段现算：`p -> (q & r)` 真行 5 条假行 3 条、主范式回代等价；德摩根 4/4 行一致；
   {1..6} 整除 14 条边为偏序；环 0→1→2→0 的闭包 9 条边成为等价关系；
   n=6 随机关系 Warshall vs BFS **36/36 格一致**（种子固定，两遍输出逐字相同）。
-- `run.bat`（纯 ASCII + CRLF）连跑两次退出码 **0**、`not recognized` **0**、目录无新增。
+- `run.bat`（纯 ASCII + CRLF）三步连跑两次退出码 **0/0**、`not recognized` **0**、两次日志**逐字相同（各 79 行）**、目录除展示页交付件外无新增。
 
 ## 重建说明（2026-10-02 事故后，非逐字）
 
@@ -96,7 +101,7 @@ Warshall 闭包"+ 扩展"与穷举结果对照"）重建，**不保证与原文�
    说出为什么"报在末尾"对交互式输入不够友好（提示：栈里存括号的位置）。
 2. 把 `to_dnf` 的输出做一次"吸收律化简"（`p | (p & q)` → `p`），
    用回代测试证明化简前后等价，再说清为什么本项目**故意不做**（教学重点在"表两半"）。
-3. 给关系加"传递闭包的三条路"：Warshall、BFS、反复平方 `R := R ∪ R²` 直到不动点，
-   三者对拍；说明为什么反复平方是 O(n³ log n) 而前两者是 O(n³)。
+3. 给关系加"传递闭包的三条路"：Warshall、BFS、反复平方 `R := R ∪ R^2` 直到不动点，
+   三者对拍；说明为什么反复平方是 O(n^3 log n) 而前两者是 O(n^3)。
 4. 构造一个"对称 + 传递但不自反"的关系，验证 `equivalence_classes` 会拒绝，
    并解释：要让商集良定义，为什么自反那条不能省。

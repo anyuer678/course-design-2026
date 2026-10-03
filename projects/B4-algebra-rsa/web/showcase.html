@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B4-algebra-rsa · 数论与代数（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}h3{font-size:.98rem;margin:1.2rem 0 .4rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+pre.code{margin:.6rem 0 0;padding:.8rem .9rem;background:#0f1115;color:#e6e9ef;border-radius:8px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+pre.code.wrap{white-space:pre-wrap;word-break:break-word}
+.badge{display:inline-block;font-size:.8rem;padding:.08rem .55rem;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-right:.3rem}
+.badge.ok{color:var(--ok);border-color:var(--ok)}.badge.bad{color:var(--bad);border-color:var(--bad)}.badge.warn{color:var(--warn);border-color:var(--warn)}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+.callout{border-left:4px solid var(--warn);background:#fff8e6;padding:.5rem .8rem;border-radius:0 8px 8px 0;font-size:.88rem}
+</style>
+</head>
+<body data-showcase="B4-algebra-rsa">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B4-algebra-rsa · 数论底座 + 教学 RSA + 群判定</h1>
+<p class="note">集合论与代数 · 欧几里得与 Bézout、平方-乘快速幂、CRT、教学 RSA 的逐字节回读与
+"确定性"红牌；四条群公理逐条判定（含三张坏表的反例）；集合容斥与函数三档性质。</p>
+
+<h2>实测数字（本页现算）</h2>
+<section id="facts" class="cards"><div class="card"><b>RSA 教学密钥</b><span>p=983、q=127、n=124841（6 位）——种子 42 可复现</span></div><div class="card"><b>加密回读</b><span>逐字节往返成功；同明文两次密文相同（教科书 RSA 的确定性缺陷，页面下方明说）</span></div><div class="card"><b>快速幂成本</b><span>7^65537 mod 1e9+7：平方-乘 18 次乘法 vs 朴素 65536 次</span></div><div class="card"><b>群判定器</b><span>6 张表：2 张是群、4 张坏表带反例</span></div><div class="card"><b>测试方法</b><span>51 个（tests/ def test_ 现数；run.bat 一趟是权威）</span></div></section>
+
+<h2>展示区</h2>
+<section id="demo" class="panel">
+  <h3>教学 RSA（明文 -> 密文 -> 回读）</h3>
+  <pre class="code wrap">密钥（seed=42，确定性生成）：p=983  q=127  n=p·q=124841  φ=(p-1)(q-1)=123732
+公开指数 e=65537    私密指数 d=1601（e·d ≡ 1 mod φ）
+明文 m=2025   加密 c=m^e mod n = 116468   解密 c^d mod n = 2025
+往返校验：成功
+文本「B4 数论演示」→ 分块密文 [27459, 16278, 90299, 65823, 40438, 38689, 4901, 81353, 91087, 65823, 87222, 5957, 79043, 91162, 91087] → 回读「B4 数论演示」：逐字节一致
+同明文再加密一次：密文相同（c1 == c2）</pre>
+  <p class="callout">红牌：这是教科书 RSA——确定性、无填充、小素数。同明文两次同密文（如上）意味着
+  可猜测攻击成立；它只用来讲原理，绝不用于真实秘密保护。工程上的修法（OAEP 填充、大素数、恒定时间运算）
+  在 README 的练习里。</p>
+
+  <h3>数论底座（成本是数出来的）</h3>
+  <pre class="code wrap">egcd(1071, 462)：g=21，x=-3，y=7（递推版）
+              迭代版 给出相同结果
+Bézout 验证：1071·x + 462·y = 21：成立
+mod_pow(7, 65537, 1e9+7) = 95353359
+  平方-乘：18 次乘法；朴素逐个乘：65536 次 —— 差 3640 倍
+mod_inverse(17, 3120) = 2753（教学密钥里 d 就是用它在算）
+CRT：x ≡ 2 (mod 3) ≡ 3 (mod 5) ≡ 2 (mod 7) 的解 x = 23
+  逐项验证：23 % 3 = 2（期望 2）、23 % 5 = 3（期望 3）、23 % 7 = 2（期望 2）</pre>
+
+  <h3>群判定器（四条定义 + 反例）</h3>
+  <p class="note">点一张表：封闭 / 结合 / 单位元 / 逆元逐条判定；坏表给反例，好表再判交换性。</p>
+  <div class="chips" data-tabs="groups"><button class="chip" data-tab="g-0">Z6 加法表</button><button class="chip" data-tab="g-1">U(8) 乘法单位表</button><button class="chip" data-tab="g-2">坏表①：不封闭</button><button class="chip" data-tab="g-3">坏表②：没有单位元</button><button class="chip" data-tab="g-4">坏表③：缺逆元</button><button class="chip" data-tab="g-5">坏表④：不结合</button></div>
+  <div data-pane="groups"><div data-pane-id="g-0"><p><span class="badge ok">是群</span><span class="badge ok">封闭：是</span><span class="badge ok">结合：是</span><span class="badge ok">单位元：0</span><span class="badge ok">逆元：齐</span><span class="badge ok">交换（abelian_witness=None）</span></p><p class="note">教科书第一款群：6 个元素、可交换——判定依据：是群（6 个元素；结合律检查 216 组三元）</p><pre class="code">运算表：
+    0  1  2  3  4  5
+0:  0  1  2  3  4  5
+1:  1  2  3  4  5  0
+2:  2  3  4  5  0  1
+3:  3  4  5  0  1  2
+4:  4  5  0  1  2  3
+5:  5  0  1  2  3  4</pre></div><div data-pane-id="g-1" hidden><p><span class="badge ok">是群</span><span class="badge ok">封闭：是</span><span class="badge ok">结合：是</span><span class="badge ok">单位元：0</span><span class="badge ok">逆元：齐</span><span class="badge ok">交换（abelian_witness=None）</span></p><p class="note">与 8 互素的乘法单位：4 个元素的小群——判定依据：是群（4 个元素；结合律检查 64 组三元）</p><pre class="code">运算表：
+    0  1  2  3
+0:  0  1  2  3
+1:  1  0  3  2
+2:  2  3  0  1
+3:  3  2  1  0</pre></div><div data-pane-id="g-2" hidden><p><span class="badge bad">不是群</span><span class="badge bad">封闭：否</span><span class="badge bad">结合：否</span><span class="badge bad">单位元：无</span><span class="badge ok">逆元：齐</span></p><p class="note">出现了元素编号 2，但表里只有 0/1——判定依据：不封闭：1 处越界，例如 [1][1]=2；不结合（封闭性不满足，未能查完）；没有单位元（检查过 2 个候选）</p><pre class="code">运算表：
+    0  1
+0:  0  1
+1:  1  2</pre></div><div data-pane-id="g-3" hidden><p><span class="badge bad">不是群</span><span class="badge ok">封闭：是</span><span class="badge ok">结合：是</span><span class="badge bad">单位元：无</span><span class="badge ok">逆元：齐</span></p><p class="note">全零表：结合律成立，但谁都不是单位元——判定依据：没有单位元（检查过 2 个候选）</p><pre class="code">运算表：
+    0  1
+0:  0  0
+1:  0  0</pre></div><div data-pane-id="g-4" hidden><p><span class="badge bad">不是群</span><span class="badge ok">封闭：是</span><span class="badge ok">结合：是</span><span class="badge ok">单位元：0</span><span class="badge bad">逆元：缺</span></p><p class="note">有单位元 0，但元素 2 怎么乘都回不到它——判定依据：缺逆元：元素 [2]</p><pre class="code">运算表：
+    0  1  2
+0:  0  1  2
+1:  1  0  2
+2:  2  2  2</pre></div><div data-pane-id="g-5" hidden><p><span class="badge bad">不是群</span><span class="badge ok">封闭：是</span><span class="badge bad">结合：否</span><span class="badge bad">单位元：无</span><span class="badge ok">逆元：齐</span></p><p class="note">模 3 减法：封闭，但结合律当场翻车——判定依据：不结合：（0·0）·1=2，而 0·（0·1）=1；没有单位元（检查过 3 个候选）</p><pre class="code">运算表：
+    0  1  2
+0:  0  2  1
+1:  1  0  2
+2:  2  1  0</pre></div></div>
+
+  <h3>集合与函数</h3>
+  <pre class="code wrap">A={1,2,3,4,5}  B={4,5,6}  C={2,4,7}
+容斥：5+3+3-2-2-1+1 = {'ie': 7, 'brute': 7, 'terms': {'|A|': 5, '|B|': 3, '|C|': 3, '|A∩B|': 2, '|A∩C|': 2, '|B∩C|': 1, '|A∩B∩C|': 1}, 'power': 16, 'complement': [1, 2, 3], 'functions': [{'name': '双射 {1->a, 2->b, 3->c}', 'is_function': True, 'injective': True, 'surjective': True, 'bijective': True, 'reasons': ['是双射']}, {'name': '非单射 {1->a, 2->a, 3->b}', 'is_function': True, 'injective': False, 'surjective': False, 'bijective': False, 'reasons': ['不单射：1 与 2 都映到 a', "不满射：陪域里 ['c'] 没有原像"]}, {'name': '非满射 {1->a, 2->b, 3->b}', 'is_function': True, 'injective': False, 'surjective': False, 'bijective': False, 'reasons': ['不单射：2 与 3 都映到 b', "不满射：陪域里 ['c'] 没有原像"]}, {'name': '不是函数：1 有两像', 'is_function': False, 'injective': None, 'surjective': None, 'bijective': False, 'reasons': ["输入 1 对应多个输出 ['a', 'b']"]}, {'name': '不是函数：取值出陪域', 'is_function': False, 'injective': None, 'surjective': None, 'bijective': False, 'reasons': ["有不在 D×C 内的对：[(2, 'z')]"]}]}
+  暴力并集：|A∪B∪C| = 7 —— 两法分叉！
+幂集：|2^{1,2,3,4}| = 16（2^4）
+差集：A \ B = [1, 2, 3]</pre>
+  <table class="plain"><tr><th>函数样板（D=1,2,3 -> C=a,b,c）</th><th>是函数</th><th>单射</th><th>满射</th><th>双射</th><th>理由</th></tr><tr><td>双射 {1->a, 2->b, 3->c}</td><td>是</td><td>是</td><td>是</td><td>是</td><td class="note">是双射</td></tr><tr><td>非单射 {1->a, 2->a, 3->b}</td><td>是</td><td>否</td><td>否</td><td>否</td><td class="note">不单射：1 与 2 都映到 a；不满射：陪域里 ['c'] 没有原像</td></tr><tr><td>非满射 {1->a, 2->b, 3->b}</td><td>是</td><td>否</td><td>否</td><td>否</td><td class="note">不单射：2 与 3 都映到 b；不满射：陪域里 ['c'] 没有原像</td></tr><tr><td>不是函数：1 有两像</td><td>不是</td><td>否</td><td>否</td><td>否</td><td class="note">输入 1 对应多个输出 ['a', 'b']</td></tr><tr><td>不是函数：取值出陪域</td><td>不是</td><td>否</td><td>否</td><td>否</td><td class="note">有不在 D×C 内的对：[(2, 'z')]</td></tr></table>
+</section>
+
+<h2>怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：自测 + 六段演示（数论 / RSA / 群表 / 集合 / 函数 / 对拍）。</li>
+    <li><kbd>python -m unittest discover -s tests</kbd>：完整测试（手算 + 双实现对拍 + 暴力参照）。</li>
+    <li><kbd>python tools/showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令从 algebra/ 现算；别手改本页。观感与顺手程度归你实跑验收。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  function activate(group, id){
+    var chips = document.querySelectorAll('[data-tabs="' + group + '"] [data-tab]');
+    for (var i = 0; i < chips.length; i++){
+      var on = chips[i].getAttribute("data-tab") === id;
+      chips[i].className = on ? "chip active" : "chip";
+    }
+    var panes = document.querySelectorAll('[data-pane="' + group + '"] [data-pane-id]');
+    for (var j = 0; j < panes.length; j++){
+      panes[j].hidden = panes[j].getAttribute("data-pane-id") !== id;
+    }
+  }
+  var lines = document.querySelectorAll("[data-tabs]");
+  for (var k = 0; k < lines.length; k++){
+    (function(line){
+      var group = line.getAttribute("data-tabs");
+      var chips = line.querySelectorAll("[data-tab]");
+      for (var c = 0; c < chips.length; c++){
+        chips[c].addEventListener("click", function(){
+          activate(group, this.getAttribute("data-tab"));
+        });
+      }
+      if (chips.length) activate(group, chips[0].getAttribute("data-tab"));
+    })(lines[k]);
+  }
+})();
+</script>
+</body>
+</html>

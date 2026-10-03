@@ -21,11 +21,11 @@
   },
   {
    "id": "b4-algebra",
-   "claim": "数论底座 + 教学 RSA + 群表判定 + 集合论：43 项通过，egcd 双实现互拍",
+   "claim": "数论底座 + 教学 RSA + 群表判定 + 集合论：51 项通过（43 核心 + 8 展示页），egcd 双实现互拍",
    "pointers": [
     "projects/B4-algebra-rsa/README.md"
    ],
-   "anchor": "43 项通过",
+   "anchor": "51 项通过（43 核心 + 8 展示页）",
    "commit": "4575c8a"
   },
   {
@@ -93,11 +93,11 @@
   },
   {
    "id": "b12-algo",
-   "claim": "分治/DP/贪心/回溯/图 各一代表算法 + 暴力参照 + 规模计时表：57 项自测",
+   "claim": "分治/DP/贪心/回溯/图 各一代表算法 + 暴力参照 + 规模计时表：66 项自测（57 核心 + 9 展示页）",
    "pointers": [
     "projects/B12-algo-arena/README.md"
    ],
-   "anchor": "自测（57 项",
+   "anchor": "57 核心 + 9 展示页",
    "commit": "4ccc788"
   },
   {

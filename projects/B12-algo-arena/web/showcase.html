@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B12-algo-arena · 算法实验场（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+pre.code{margin:.6rem 0 0;padding:.8rem .9rem;background:#0f1115;color:#e6e9ef;border-radius:8px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+pre.code.wrap{white-space:pre-wrap;word-break:break-word}
+.badge{display:inline-block;font-size:.8rem;padding:.08rem .55rem;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-right:.3rem}
+.badge.ok{color:var(--ok);border-color:var(--ok)}.badge.bad{color:var(--bad);border-color:var(--bad)}.badge.warn{color:var(--warn);border-color:var(--warn)}
+table.plain{border-collapse:collapse;font-size:.88rem;margin:.5rem 0}
+table.plain th,table.plain td{border:1px solid var(--line);padding:.25rem .6rem;text-align:left}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+</style>
+</head>
+<body data-showcase="B12-algo-arena">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B12-algo-arena · 五个范式，每步都有暴力参照</h1>
+<p class="note">算法分析与设计 · 分治 / DP / 贪心 / 回溯 / 图：每一个算法都配一个"更笨但不会错"的
+参照实现，页面上的每个数都是这次现算的<b>计数或方案</b>——不用时间数字，因为时间会飘。</p>
+
+<h2>实测数字（本页现算）</h2>
+<section id="facts" class="cards"><div class="card"><b>N 皇后解数</b><span>n=6→4、n=7→40、n=8→92、n=9→352、n=10→724</span></div><div class="card"><b>背包最优</b><span>重量[2, 3, 4, 5] 价值[3, 4, 5, 6] 容量7：DP=9（选中 [1, 2]）vs 暴力=9</span></div><div class="card"><b>贪心对照</b><span>最早结束 3 个 = 最优；按开始 2、按最短 2（两条直觉贪心都有最小反例）</span></div><div class="card"><b>最短路三方对拍</b><span>Dijkstra == Bellman-Ford == Floyd（节点 0 出发）：全部一致</span></div><div class="card"><b>逆序对</b><span>[10 元素] 分治 17 = 暴力 17；三档规模 100/1000/5000 逐对拍</span></div><div class="card"><b>测试方法</b><span>66 个（tests/ def test_ 现数；run.bat 一趟是权威）</span></div></section>
+
+<h2>展示区</h2>
+<section id="demo" class="panel">
+  <div class="chips" data-tabs="panels">
+    <button class="chip" data-tab="queens">回溯 · N 皇后</button>
+    <button class="chip" data-tab="knapsack">DP · 背包</button>
+    <button class="chip" data-tab="greedy">贪心 · 区间调度</button>
+    <button class="chip" data-tab="graph">图 · 最短路</button>
+    <button class="chip" data-tab="inversions">分治 · 逆序对</button>
+  </div>
+  <div data-pane="panels">
+    <div data-pane-id="queens">
+      <p class="note">n=6..10 解数：位运算计数、逐个解枚举、以及（6/7）全排列暴力三条路互证。</p>
+      <table class="plain"><tr><th>规模</th><th>位运算计数</th><th>解集合大小</th><th>全排列暴力</th><th>对拍</th></tr><tr><td>n=6</td><td>4</td><td>4</td><td>4</td><td><span class="badge ok">计数/枚举/位运算一致</span></td></tr><tr><td>n=7</td><td>40</td><td>40</td><td>40</td><td><span class="badge ok">计数/枚举/位运算一致</span></td></tr><tr><td>n=8</td><td>92</td><td>92</td><td>——</td><td><span class="badge ok">计数/枚举/位运算一致</span></td></tr><tr><td>n=9</td><td>352</td><td>352</td><td>——</td><td><span class="badge ok">计数/枚举/位运算一致</span></td></tr><tr><td>n=10</td><td>724</td><td>724</td><td>——</td><td><span class="badge ok">计数/枚举/位运算一致</span></td></tr></table>
+      <p class="note">6 皇后的一个真解（Q 是皇后）：</p>
+      <pre class="code">. Q . . . .
+. . . Q . .
+. . . . . Q
+Q . . . . .
+. . Q . . .
+. . . . Q .</pre>
+    </div>
+    <div data-pane-id="knapsack" hidden>
+      <p>物品重量 [2, 3, 4, 5]、价值 [3, 4, 5, 6]、容量 7——
+      DP 最优值 <b>9</b>（选中下标 [1, 2]）。</p>
+      <p class="note">滚动数组对拍：9（必须等于 9）；
+      滚动"写反方向"的错法：10（<span class="badge warn">这就是 k 版写反会得到的数</span>）；
+      枚举全部子集：9（选中 [0, 3]）。</p>
+      <p class="note">完整 DP 表（i=前 i 件，列=容量 0..7）：</p>
+      <pre class="code">i=0:  0  0  0  0  0  0  0  0
+i=1:  0  0  3  3  3  3  3  3
+i=2:  0  0  3  4  4  7  7  7
+i=3:  0  0  3  4  5  7  8  9
+i=4:  0  0  3  4  5  7  8  9</pre>
+    </div>
+    <div data-pane-id="greedy" hidden>
+      <p>区间 [(0, 5), (1, 3), (3, 6), (5, 7), (6, 8), (2, 4)]（共 6 个）。</p>
+      <p>最早结束优先：选 3 个 [(1, 3), (3, 6), (6, 8)]——
+      <span class="badge ok">等于暴力最优 3</span></p>
+      <p>按开始时间贪心：2 个 <span class="badge warn">vs 最优 3</span>；
+      按时长最短贪心：2 个 <span class="badge warn">vs 最优 3</span></p>
+      <p class="note">为两条"直觉贪心"找到的最小反例（枚举小规模区间集合穷举出来的）：
+      按开始：((0, 3), (1, 2), (2, 3))；按最短：((0, 2), (2, 3))；
+      最早结束的反例：无（被交换论证保证）</p>
+    </div>
+    <div data-pane-id="graph" hidden>
+      <p class="note">无向图 6 个节点：<br>0 - 1  (权重 4)
+0 - 2  (权重 1)
+2 - 1  (权重 2)
+1 - 3  (权重 5)
+2 - 3  (权重 8)
+3 - 4  (权重 2)
+4 - 5  (权重 3)
+2 - 5  (权重 10)</p>
+      <p>Dijkstra 每轮"定标"快照（`on_settle` 回调——教材那张每轮 dist 表就是这么来的）：</p>
+      <table class="plain"><tr><th>定标节点</th><th>距离</th><th>当时 dist 快照</th></tr><tr><td>0</td><td>0</td><td>[0, inf, inf, inf, inf, inf]</td></tr><tr><td>2</td><td>1</td><td>[0, 4, 1, inf, inf, inf]</td></tr><tr><td>1</td><td>3</td><td>[0, 3, 1, 9, inf, 11]</td></tr><tr><td>3</td><td>8</td><td>[0, 3, 1, 8, inf, 11]</td></tr><tr><td>4</td><td>10</td><td>[0, 3, 1, 8, 10, 11]</td></tr><tr><td>5</td><td>11</td><td>[0, 3, 1, 8, 10, 11]</td></tr></table>
+      <p>最终距离（0 出发）：[0, 3, 1, 8, 10, 11]；
+      Bellman-Ford：[0, 3, 1, 8, 10, 11]；Floyd 第 0 行：[0, 3, 1, 8, 10, 11]
+      <span class="badge ok">
+      三方逐数一致</span></p>
+      <p>0 到 5 的还原路径：[0, 2, 5]</p>
+    </div>
+    <div data-pane-id="inversions" hidden>
+      <p>数组 [5, 1, 4, 2, 8, 0, 3, 9, 7, 6]（10 个元素）：逆序对分治计数 <b>17</b>，
+      暴力 <b>17</b>——
+      <span class="badge ok">
+      一致</span>；
+      归并前排 [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]…</p>
+      <p class="note">固定种子（Random(7)）三档规模对拍：</p>
+      <table class="plain"><tr><th>规模</th><th>分治计数</th><th>暴力计数</th><th>对拍</th></tr><tr><td>100</td><td>2263</td><td>2263</td><td><span class="badge ok">一致</span></td></tr><tr><td>1000</td><td>251737</td><td>251737</td><td><span class="badge ok">一致</span></td></tr><tr><td>5000</td><td>6229044</td><td>（O(n^2) 到此为止）</td><td><span class="badge ok">一致</span></td></tr></table>
+    </div>
+  </div>
+</section>
+
+<h2>怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：自测 + 演示（DP 表与方案还原 / 三种贪心对照 / N 皇后解数表 / Dijkstra 快照 / 规模计时）。</li>
+    <li><kbd>python -m unittest discover -s tests</kbd>：完整测试（每个范式都对拍暴力/参照）。</li>
+    <li><kbd>python tools/showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令从 algo/ 现算（页面只放计数与方案，不放计时数字——
+  计时在终端演示里现跑现看）。观感与顺手程度归你实跑验收。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  function activate(group, id){
+    var chips = document.querySelectorAll('[data-tabs="' + group + '"] [data-tab]');
+    for (var i = 0; i < chips.length; i++){
+      var on = chips[i].getAttribute("data-tab") === id;
+      chips[i].className = on ? "chip active" : "chip";
+    }
+    var panes = document.querySelectorAll('[data-pane="' + group + '"] [data-pane-id]');
+    for (var j = 0; j < panes.length; j++){
+      panes[j].hidden = panes[j].getAttribute("data-pane-id") !== id;
+    }
+  }
+  var lines = document.querySelectorAll("[data-tabs]");
+  for (var k = 0; k < lines.length; k++){
+    (function(line){
+      var group = line.getAttribute("data-tabs");
+      var chips = line.querySelectorAll("[data-tab]");
+      for (var c = 0; c < chips.length; c++){
+        chips[c].addEventListener("click", function(){
+          activate(group, this.getAttribute("data-tab"));
+        });
+      }
+      if (chips.length) activate(group, chips[0].getAttribute("data-tab"));
+    })(lines[k]);
+  }
+})();
+</script>
+</body>
+</html>

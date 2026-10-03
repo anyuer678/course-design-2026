@@ -28,9 +28,9 @@
    "course": "算法分析与设计",
    "title": "算法实验场：分治/DP/贪心/回溯/图 + 暴力参照",
    "batch": 2,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B12-algo-arena/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -38,9 +38,9 @@
    "course": "离散结构",
    "title": "命题逻辑 + 二元关系：真值表/主范式/闭包",
    "batch": 2,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B3-logic-lab/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -48,9 +48,9 @@
    "course": "集合论与代数",
    "title": "数论底座 + 教学 RSA + 群运算表判定",
    "batch": 2,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B4-algebra-rsa/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B3-logic-lab · 命题逻辑与关系（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(14rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+pre.code{margin:.6rem 0 0;padding:.8rem .9rem;background:#0f1115;color:#e6e9ef;border-radius:8px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+pre.code.wrap{white-space:pre-wrap;word-break:break-word}
+.badge{display:inline-block;font-size:.8rem;padding:.08rem .55rem;border-radius:999px;border:1px solid var(--line);color:var(--muted);margin-right:.3rem}
+.badge.ok{color:var(--ok);border-color:var(--ok)}.badge.bad{color:var(--bad);border-color:var(--bad)}
+table.plain{border-collapse:collapse;font-size:.88rem;margin:.5rem 0}
+table.plain th,table.plain td{border:1px solid var(--line);padding:.25rem .6rem;text-align:left}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+</style>
+</head>
+<body data-showcase="B3-logic-lab">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B3-logic-lab · 命题逻辑 + 二元关系</h1>
+<p class="note">离散结构 · 递归下降解析 → 真值表与主范式；关系矩阵 → 性质判定 → 两种闭包互证。
+下面每个公式、每对等价、每个关系都是现算的，切换着看。</p>
+
+<h2>实测数字（本页现算）</h2>
+<section id="facts" class="cards"><div class="card"><b>公式目录</b><span>12 条（真值表/主范式逐条现算）</span></div><div class="card"><b>等价对拍</b><span>4 对逐格判定（全部成立）</span></div><div class="card"><b>关系样板</b><span>4 个（性质 + 闭包互证 + 等价类划分自检）</span></div><div class="card"><b>测试方法</b><span>45 个（tests/ def test_ 现数；run.bat 一趟是权威）</span></div></section>
+
+<h2>展示区</h2>
+<section id="demo" class="panel">
+  <h3>公式工作台</h3>
+  <p class="note">点一个公式：解析形态、逐行真值表、分类、主析取/主合取范式与成真/成假行号。</p>
+  <div class="chips" data-tabs="formulas"><button class="chip" data-tab="f-0">p & ~p</button><button class="chip" data-tab="f-1">p | ~p</button><button class="chip" data-tab="f-2">(p -> q) & p -> q</button><button class="chip" data-tab="f-3">(p -> q) & (q -> r) -> (p -> r)</button><button class="chip" data-tab="f-4">~(p & q)</button><button class="chip" data-tab="f-5">~p | ~q</button><button class="chip" data-tab="f-6">p -> q</button><button class="chip" data-tab="f-7">~p | q</button><button class="chip" data-tab="f-8">(p | q) & ~(p & q)</button><button class="chip" data-tab="f-9">p & (q | r)</button><button class="chip" data-tab="f-10">(p & q) | (p & r)</button><button class="chip" data-tab="f-11">(p -> q) | (q -> p)</button></div>
+  <div data-pane="formulas"><div data-pane-id="f-0"><p><b>p & ~p</b> —— 矛盾式样板 | 解析形态：<code>(p & ~p)</code> | 分类：<span class="badge ">矛盾式</span>变量 1 个、真值表 2 行</p><details><summary>真值表（2 行，最后一列是行号）</summary><pre class="code">p  结果  行号
+0  0  0
+1  0  1</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 []）：0
+主合取（成假行 [0, 1]）：(p) & (~p)</pre></details></div><div data-pane-id="f-1" hidden><p><b>p | ~p</b> —— 排中律 | 解析形态：<code>(p | ~p)</code> | 分类：<span class="badge ok">重言式</span>变量 1 个、真值表 2 行</p><details><summary>真值表（2 行，最后一列是行号）</summary><pre class="code">p  结果  行号
+0  1  0
+1  1  1</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [0, 1]）：(~p) | (p)
+主合取（成假行 []）：1</pre></details></div><div data-pane-id="f-2" hidden><p><b>(p -> q) & p -> q</b> —— 肯定前件（重言） | 解析形态：<code>(((p -> q) & p) -> q)</code> | 分类：<span class="badge ok">重言式</span>变量 2 个、真值表 4 行</p><details><summary>真值表（4 行，最后一列是行号）</summary><pre class="code">p  q  结果  行号
+0  0  1  0
+0  1  1  1
+1  0  1  2
+1  1  1  3</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [0, 1, 2, 3]）：(~p & ~q) | (~p & q) | (p & ~q) | (p & q)
+主合取（成假行 []）：1</pre></details></div><div data-pane-id="f-3" hidden><p><b>(p -> q) & (q -> r) -> (p -> r)</b> —— 假言三段论（重言） | 解析形态：<code>(((p -> q) & (q -> r)) -> (p -> r))</code> | 分类：<span class="badge ok">重言式</span>变量 3 个、真值表 8 行</p><details><summary>真值表（8 行，最后一列是行号）</summary><pre class="code">p  q  r  结果  行号
+0  0  0  1  0
+0  0  1  1  1
+0  1  0  1  2
+0  1  1  1  3
+1  0  0  1  4
+1  0  1  1  5
+1  1  0  1  6
+1  1  1  1  7</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [0, 1, 2, 3, 4, 5, 6, 7]）：(~p & ~q & ~r) | (~p & ~q & r) | (~p & q & ~r) | (~p & q & r) | (p & ~q & ~r) | (p & ~q & r) | (p & q & ~r) | (p & q & r)
+主合取（成假行 []）：1</pre></details></div><div data-pane-id="f-4" hidden><p><b>~(p & q)</b> —— 德摩根（左） | 解析形态：<code>~((p & q))</code> | 分类：<span class="badge ">可满足（非重言）</span>变量 2 个、真值表 4 行</p><details><summary>真值表（4 行，最后一列是行号）</summary><pre class="code">p  q  结果  行号
+0  0  1  0
+0  1  1  1
+1  0  1  2
+1  1  0  3</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [0, 1, 2]）：(~p & ~q) | (~p & q) | (p & ~q)
+主合取（成假行 [3]）：(~p | ~q)</pre></details></div><div data-pane-id="f-5" hidden><p><b>~p | ~q</b> —— 德摩根（右） | 解析形态：<code>(~p | ~q)</code> | 分类：<span class="badge ">可满足（非重言）</span>变量 2 个、真值表 4 行</p><details><summary>真值表（4 行，最后一列是行号）</summary><pre class="code">p  q  结果  行号
+0  0  1  0
+0  1  1  1
+1  0  1  2
+1  1  0  3</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [0, 1, 2]）：(~p & ~q) | (~p & q) | (p & ~q)
+主合取（成假行 [3]）：(~p | ~q)</pre></details></div><div data-pane-id="f-6" hidden><p><b>p -> q</b> —— 蕴含 | 解析形态：<code>(p -> q)</code> | 分类：<span class="badge ">可满足（非重言）</span>变量 2 个、真值表 4 行</p><details><summary>真值表（4 行，最后一列是行号）</summary><pre class="code">p  q  结果  行号
+0  0  1  0
+0  1  1  1
+1  0  0  2
+1  1  1  3</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [0, 1, 3]）：(~p & ~q) | (~p & q) | (p & q)
+主合取（成假行 [2]）：(~p | q)</pre></details></div><div data-pane-id="f-7" hidden><p><b>~p | q</b> —— 蕴含的等价写法 | 解析形态：<code>(~p | q)</code> | 分类：<span class="badge ">可满足（非重言）</span>变量 2 个、真值表 4 行</p><details><summary>真值表（4 行，最后一列是行号）</summary><pre class="code">p  q  结果  行号
+0  0  1  0
+0  1  1  1
+1  0  0  2
+1  1  1  3</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [0, 1, 3]）：(~p & ~q) | (~p & q) | (p & q)
+主合取（成假行 [2]）：(~p | q)</pre></details></div><div data-pane-id="f-8" hidden><p><b>(p | q) & ~(p & q)</b> —— 异或的手写形态 | 解析形态：<code>((p | q) & ~((p & q)))</code> | 分类：<span class="badge ">可满足（非重言）</span>变量 2 个、真值表 4 行</p><details><summary>真值表（4 行，最后一列是行号）</summary><pre class="code">p  q  结果  行号
+0  0  0  0
+0  1  1  1
+1  0  1  2
+1  1  0  3</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [1, 2]）：(~p & q) | (p & ~q)
+主合取（成假行 [0, 3]）：(p | q) & (~p | ~q)</pre></details></div><div data-pane-id="f-9" hidden><p><b>p & (q | r)</b> —— 分配律（左） | 解析形态：<code>(p & (q | r))</code> | 分类：<span class="badge ">可满足（非重言）</span>变量 3 个、真值表 8 行</p><details><summary>真值表（8 行，最后一列是行号）</summary><pre class="code">p  q  r  结果  行号
+0  0  0  0  0
+0  0  1  0  1
+0  1  0  0  2
+0  1  1  0  3
+1  0  0  0  4
+1  0  1  1  5
+1  1  0  1  6
+1  1  1  1  7</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [5, 6, 7]）：(p & ~q & r) | (p & q & ~r) | (p & q & r)
+主合取（成假行 [0, 1, 2, 3, 4]）：(p | q | r) & (p | q | ~r) & (p | ~q | r) & (p | ~q | ~r) & (~p | q | r)</pre></details></div><div data-pane-id="f-10" hidden><p><b>(p & q) | (p & r)</b> —— 分配律（右） | 解析形态：<code>((p & q) | (p & r))</code> | 分类：<span class="badge ">可满足（非重言）</span>变量 3 个、真值表 8 行</p><details><summary>真值表（8 行，最后一列是行号）</summary><pre class="code">p  q  r  结果  行号
+0  0  0  0  0
+0  0  1  0  1
+0  1  0  0  2
+0  1  1  0  3
+1  0  0  0  4
+1  0  1  1  5
+1  1  0  1  6
+1  1  1  1  7</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [5, 6, 7]）：(p & ~q & r) | (p & q & ~r) | (p & q & r)
+主合取（成假行 [0, 1, 2, 3, 4]）：(p | q | r) & (p | q | ~r) & (p | ~q | r) & (p | ~q | ~r) & (~p | q | r)</pre></details></div><div data-pane-id="f-11" hidden><p><b>(p -> q) | (q -> p)</b> —— 重言（课本习题） | 解析形态：<code>((p -> q) | (q -> p))</code> | 分类：<span class="badge ok">重言式</span>变量 2 个、真值表 4 行</p><details><summary>真值表（4 行，最后一列是行号）</summary><pre class="code">p  q  结果  行号
+0  0  1  0
+0  1  1  1
+1  0  1  2
+1  1  1  3</pre></details><details><summary>主范式</summary><pre class="code wrap">主析取（成真行 [0, 1, 2, 3]）：(~p & ~q) | (~p & q) | (p & ~q) | (p & q)
+主合取（成假行 []）：1</pre></details></div></div>
+
+  <h3>等价对拍</h3>
+  <p class="note">每对公式逐格真值表判定——等价不是"看起来像"，是每一行都相等。</p>
+  <table class="plain"><tr><th>左</th><th>右</th><th>为什么拿它们对拍</th><th>判定</th></tr><tr><td><code>~(p & q)</code></td><td><code>~p | ~q</code></td><td>德摩根律</td><td><span class="badge ok">逐格相等</span></td></tr><tr><td><code>~(p | q)</code></td><td><code>~p & ~q</code></td><td>德摩根律（对偶）</td><td><span class="badge ok">逐格相等</span></td></tr><tr><td><code>p -> q</code></td><td><code>~p | q</code></td><td>蕴含改写</td><td><span class="badge ok">逐格相等</span></td></tr><tr><td><code>p & (q | r)</code></td><td><code>(p & q) | (p & r)</code></td><td>分配律</td><td><span class="badge ok">逐格相等</span></td></tr></table>
+
+  <h3>关系样板间</h3>
+  <p class="note">点一个关系：矩阵、5 种性质、判定（等价/偏序/其他）、闭包两法互证、等价类与划分自检。</p>
+  <div class="chips" data-tabs="relations"><button class="chip" data-tab="r-0">恒等关系</button><button class="chip" data-tab="r-1">模 3 同余（6 元）</button><button class="chip" data-tab="r-2">整除（4 元，i 整除 j）</button><button class="chip" data-tab="r-3">链条 0→1→2</button></div>
+  <div data-pane="relations"><div data-pane-id="r-0"><p><b>恒等关系</b>：最小的等价关系：每个类只有自己——判定：<span class="badge ok">等价关系</span></p><p><span class="badge ok">自反：是</span><span class="badge ">反自反：否</span><span class="badge ok">对称：是</span><span class="badge ok">反对称：是</span><span class="badge ok">传递：是</span></p><pre class="code">关系矩阵：
+    0  1  2
+0:  1  0  0
+1:  0  1  0
+2:  0  0  1
+点对集：(0,0)、(1,1)、(2,2)</pre><p>传递闭包（Warshall）：(0,0)、(1,1)、(2,2) | （逐点 BFS）：(0,0)、(1,1)、(2,2) <span class="badge ok">两法一致</span></p><p>对称闭包补出的点对：(0,0)、(1,1)、(2,2)</p><p>等价类：{0}、{1}、{2}——划分自检：<span class="badge ok">合法划分</span></p></div><div data-pane-id="r-1" hidden><p><b>模 3 同余（6 元）</b>：三个等价类 {0,3}、{1,4}、{2,5}——商集是一个合法划分——判定：<span class="badge ok">等价关系</span></p><p><span class="badge ok">自反：是</span><span class="badge ">反自反：否</span><span class="badge ok">对称：是</span><span class="badge ">反对称：否</span><span class="badge ok">传递：是</span></p><pre class="code">关系矩阵：
+    0  1  2  3  4  5
+0:  1  0  0  1  0  0
+1:  0  1  0  0  1  0
+2:  0  0  1  0  0  1
+3:  1  0  0  1  0  0
+4:  0  1  0  0  1  0
+5:  0  0  1  0  0  1
+点对集：(0,0)、(0,3)、(1,1)、(1,4)、(2,2)、(2,5)、(3,0)、(3,3)、(4,1)、(4,4)、(5,2)、(5,5)</pre><p>传递闭包（Warshall）：(0,0)、(0,3)、(1,1)、(1,4)、(2,2)、(2,5)、(3,0)、(3,3)、(4,1)、(4,4)、(5,2)、(5,5) | （逐点 BFS）：(0,0)、(0,3)、(1,1)、(1,4)、(2,2)、(2,5)、(3,0)、(3,3)、(4,1)、(4,4)、(5,2)、(5,5) <span class="badge ok">两法一致</span></p><p>对称闭包补出的点对：(0,0)、(0,3)、(1,1)、(1,4)、(2,2)、(2,5)、(3,0)、(3,3)、(4,1)、(4,4)、(5,2)、(5,5)</p><p>等价类：{0,3}、{1,4}、{2,5}——划分自检：<span class="badge ok">合法划分</span></p></div><div data-pane-id="r-2" hidden><p><b>整除（4 元，i 整除 j）</b>：偏序：自反、反对称、传递——判定：<span class="badge ok">偏序关系</span></p><p><span class="badge ok">自反：是</span><span class="badge ">反自反：否</span><span class="badge ">对称：否</span><span class="badge ok">反对称：是</span><span class="badge ok">传递：是</span></p><pre class="code">关系矩阵：
+    0  1  2  3
+0:  1  1  1  1
+1:  0  1  0  1
+2:  0  0  1  0
+3:  0  0  0  1
+点对集：(0,0)、(0,1)、(0,2)、(0,3)、(1,1)、(1,3)、(2,2)、(3,3)</pre><p>传递闭包（Warshall）：(0,0)、(0,1)、(0,2)、(0,3)、(1,1)、(1,3)、(2,2)、(3,3) | （逐点 BFS）：(0,0)、(0,1)、(0,2)、(0,3)、(1,1)、(1,3)、(2,2)、(3,3) <span class="badge ok">两法一致</span></p><p>对称闭包补出的点对：(0,0)、(0,1)、(0,2)、(0,3)、(1,0)、(1,1)、(1,3)、(2,0)、(2,2)、(3,0)、(3,1)、(3,3)</p></div><div data-pane-id="r-3" hidden><p><b>链条 0→1→2</b>：不传递（缺 0→2）；传递闭包会补出来，Warshall 与逐点 BFS 互证——判定：<span class="badge ok">其他（看性质表）</span></p><p><span class="badge ">自反：否</span><span class="badge ok">反自反：是</span><span class="badge ">对称：否</span><span class="badge ok">反对称：是</span><span class="badge ">传递：否</span></p><pre class="code">关系矩阵：
+    0  1  2
+0:  0  1  0
+1:  0  0  1
+2:  0  0  0
+点对集：(0,1)、(1,2)</pre><p>传递闭包（Warshall）：(0,0)、(0,1)、(0,2)、(1,1)、(1,2)、(2,2) | （逐点 BFS）：(0,0)、(0,1)、(0,2)、(1,1)、(1,2)、(2,2) <span class="badge ok">两法一致</span></p><p>对称闭包补出的点对：(0,1)、(1,0)、(1,2)、(2,1)</p></div></div>
+</section>
+
+<h2>怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：自测 + 五段演示（解析 / 主范式 / 等价 / 闭包 / 对拍）。</li>
+    <li><kbd>python -m unittest discover -s tests</kbd>：完整测试（手算真值表、范式逐字符、固定种子对拍）。</li>
+    <li><kbd>python tools/showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令从 logic3/ 现算；别手改本页。观感与顺手程度归你实跑验收。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  function activate(group, id){
+    var chips = document.querySelectorAll('[data-tabs="' + group + '"] [data-tab]');
+    for (var i = 0; i < chips.length; i++){
+      var on = chips[i].getAttribute("data-tab") === id;
+      chips[i].className = on ? "chip active" : "chip";
+    }
+    var panes = document.querySelectorAll('[data-pane="' + group + '"] [data-pane-id]');
+    for (var j = 0; j < panes.length; j++){
+      panes[j].hidden = panes[j].getAttribute("data-pane-id") !== id;
+    }
+  }
+  var lines = document.querySelectorAll("[data-tabs]");
+  for (var k = 0; k < lines.length; k++){
+    (function(line){
+      var group = line.getAttribute("data-tabs");
+      var chips = line.querySelectorAll("[data-tab]");
+      for (var c = 0; c < chips.length; c++){
+        chips[c].addEventListener("click", function(){
+          activate(group, this.getAttribute("data-tab"));
+        });
+      }
+      if (chips.length) activate(group, chips[0].getAttribute("data-tab"));
+    })(lines[k]);
+  }
+})();
+</script>
+</body>
+</html>

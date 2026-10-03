@@ -37,7 +37,7 @@
 | 批次 | 主题 | 项目 | 状态 |
 |---|---|---|---|
 | 1 | 口径与试点（编译器透视） | `B13-tinylang` | 已交付 |
-| 2 | 算法与离散基本盘 | `B12-algo-arena`、`B3-logic-lab`、`B4-algebra-rsa` | 待做 |
+| 2 | 算法与离散基本盘 | `B12-algo-arena`、`B3-logic-lab`、`B4-algebra-rsa` | 已交付（2026-10-03） |
 | 3 | 系统底层 | `B5-cpu-sim`、`B6-asm-lab`、`B9-os-sim` | 待做 |
 | 4 | 数据结构与工程 | `B1-cpp-ministl`、`B2-datastruct-lab`、`B7-mini-make` | 待做 |
 | 5 | 网络与安全 | `B8-mini-shell`、`B11-net-lab`、`B32-sec-lab` | 待做 |
