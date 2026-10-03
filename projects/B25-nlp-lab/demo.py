@@ -16,7 +16,7 @@ FAILS = []
 
 
 def check(cond, msg):
-    print(f"    {'✔' if cond else '✘'} {msg}")
+    print(f"    {'[ok]' if cond else '[fail]'} {msg}")
     if not cond:
         FAILS.append(msg)
 
@@ -28,7 +28,7 @@ def show(title):
 # ---------------------------------------------------------------- 1
 def demo_segment():
     show("第一段：分词 —— 正向/逆向最大匹配与歧义")
-    for text in ["今天下午在二教有讲座", "限时秒杀免费领取红包"]:
+    for text in ["今天下午在二教有答疑", "限时秒杀免费领取红包"]:
         print(f"    {text}")
         print(f"      FMM: {' / '.join(fmm(text))}")
         print(f"      BMM: {' / '.join(bmm(text))}")
@@ -36,7 +36,7 @@ def demo_segment():
     result = segment("研究生命起源")
     print(f"      FMM: {' / '.join(result['fmm'])}   BMM: {' / '.join(result['bmm'])}")
     check(result["ambiguous"], "歧义检测：FMM 与 BMM 分歧被标注")
-    for text in ["今天下午在二教有讲座", "限时秒杀免费领取红包"]:
+    for text in ["今天下午在二教有答疑", "限时秒杀免费领取红包"]:
         ok = "".join(fmm(text)) == text
         check(ok, f"拼接不变式（{text}）")
 
@@ -111,9 +111,9 @@ def main() -> int:
     if FAILS:
         print(f"演示存在 {len(FAILS)} 处失败：")
         for f in FAILS:
-            print(f"  ✘ {f}")
+            print(f"  [fail] {f}")
         return 1
-    print("四段演示全部通过 ✔")
+    print("四段演示全部通过 [ok]")
     return 0
 
 

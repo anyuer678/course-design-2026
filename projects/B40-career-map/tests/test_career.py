@@ -155,7 +155,7 @@ class TestMapJd(unittest.TestCase):
         self.assertEqual(one, two)
         self.assertIn("示例（非真实岗位）", one)
         self.assertIn("**缺口**", one)                        # 容器/消息队列两条真实缺口
-        self.assertIn("不替代真实实习", one)
+        self.assertIn("不替代真实工作场景", one)
 
     def test_gap_row_contains_practice(self):
         skills = [{"id": "s-gap", "name": "缺口语料", "keywords": ["docker"],

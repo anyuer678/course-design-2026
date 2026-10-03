@@ -20,6 +20,64 @@ body{font-family:"Microsoft YaHei",system-ui,sans-serif;margin:0;background:#f4f
 .pj-tab:hover{border-color:#1d4ed8}
 .pj-tab.active{background:#1d4ed8;border-color:#1d4ed8;color:#fff}
 .pj-pane{display:none}.pj-pane.active{display:block}
+
+/* ---------- KB 主题（token 学自 kb-ui 设计系统，2026-10-03）：统一观感 ---------- */
+:root{
+  --kb-primary:#3b82f6;--kb-primary-deep:#2563eb;
+  --kb-primary-gradient:linear-gradient(135deg,#3b82f6,#6366f1);
+  --kb-success:#16a34a;--kb-danger:#dc2626;--kb-warning:#d97706;
+  --kb-bg:#ffffff;--kb-bg-elevated:#f8fafc;--kb-border:#e2e8f0;
+  --kb-text-1:#0f172a;--kb-text-2:#475569;--kb-text-3:#94a3b8;
+  --kb-radius-sm:4px;--kb-radius-md:6px;--kb-radius-lg:10px;
+  --kb-shadow-1:0 1px 2px rgb(15 23 42 / 6%);
+  --kb-shadow-2:0 4px 12px rgb(15 23 42 / 10%);
+  --kb-font:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --kb-mono:ui-monospace,Consolas,"Cascadia Mono",monospace;
+  --kb-t:.2s ease;
+}
+body{background:#f8fafc;background-image:linear-gradient(180deg,#eff6ff 0,#f8fafc 340px,#f8fafc);
+  color:var(--kb-text-1);font-family:var(--kb-font);-webkit-font-smoothing:antialiased}
+body::before{content:"";display:block;height:4px;
+  background:linear-gradient(90deg,var(--kb-primary),#6366f1 55%,#8b5cf6)}
+a{color:var(--kb-primary-deep);text-decoration:none}
+a:hover{color:#1d4ed8;text-decoration:underline}
+h1,h2,h3{color:var(--kb-text-1);font-weight:650;letter-spacing:-.01em}
+::selection{background:#dbeafe}
+.sw-top{background:var(--kb-bg);border:1px solid var(--kb-border);
+  border-radius:var(--kb-radius-lg);box-shadow:var(--kb-shadow-1)}
+.sw-link{font-size:13px}
+.sw-panel,.panel{background:var(--kb-bg);border:1px solid var(--kb-border);
+  border-radius:var(--kb-radius-lg);box-shadow:var(--kb-shadow-1)}
+.sw-card,.card{background:var(--kb-bg);border:1px solid var(--kb-border);
+  border-radius:var(--kb-radius-lg);box-shadow:var(--kb-shadow-1);
+  transition:box-shadow var(--kb-t),transform var(--kb-t),border-color var(--kb-t)}
+.sw-card:hover,.card:hover{box-shadow:var(--kb-shadow-2);border-color:#bfdbfe;transform:translateY(-1px)}
+.card b,.sw-card b{color:var(--kb-text-3);font-size:12px;letter-spacing:.02em}
+.note,.muted{color:var(--kb-text-2)}
+.badge{display:inline-block;font-size:.78rem;padding:.1rem .55rem;border-radius:999px;
+  border:1px solid var(--kb-border);background:var(--kb-bg-elevated);color:var(--kb-text-2)}
+.badge.ok{color:#047857;border-color:#a7f3d0;background:#ecfdf5}
+.badge.bad{color:#b91c1c;border-color:#fecaca;background:#fef2f2}
+.badge.todo,.badge.warn{color:#b45309;border-color:#fde68a;background:#fffbeb}
+.chip,.pj-tab{font:inherit;font-size:.85rem;padding:.3rem .85rem;border:1px solid var(--kb-border);
+  border-radius:999px;background:#fff;color:var(--kb-text-2);cursor:pointer;transition:all var(--kb-t)}
+.chip:hover,.pj-tab:hover{border-color:var(--kb-primary);color:var(--kb-primary)}
+.chip.active,.pj-tab.active{background:var(--kb-primary);border-color:var(--kb-primary);
+  color:#fff;box-shadow:var(--kb-shadow-1)}
+.chip.active:hover,.pj-tab.active:hover{color:#fff}
+table{border-collapse:collapse}
+table th,table td{border:1px solid var(--kb-border);padding:.42rem .65rem;text-align:left}
+table th{background:var(--kb-bg-elevated);color:var(--kb-text-2);font-weight:600}
+table tr:hover td{background:#f8fafc}
+pre{background:#0f172a;color:#e2e8f0;border:1px solid #1e293b;
+  border-radius:var(--kb-radius-lg);font-family:var(--kb-mono)}
+pre code{background:none;border:none;padding:0;color:inherit}
+kbd{font-family:var(--kb-mono);font-size:.85em;border:1px solid var(--kb-border);
+  border-bottom-width:2px;border-radius:var(--kb-radius-sm);padding:1px 6px;
+  background:var(--kb-bg-elevated);color:#334155}
+code{font-family:var(--kb-mono);font-size:.9em;background:#f1f5f9;border:1px solid #e2e8f0;
+  border-radius:var(--kb-radius-md);padding:1px 5px}
+footer,.sw-footer{color:var(--kb-text-3);border-top:1px solid var(--kb-border)}
 </style></head>
 <body data-showcase="dorm-repair">
 <div class="sw-top"><a class="sw-link" href="../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B41-thesis-seeds/web/showcase.html">B41</a></span>　·　<a href="#lab">实时实验台</a>

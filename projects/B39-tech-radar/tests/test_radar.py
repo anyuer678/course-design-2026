@@ -64,8 +64,8 @@ class TestRecordChecker(MutationMixin):
         self.assertTrue(any("证据提交在 git 里不存在" in p for p in problems), problems)
 
     def test_sample_without_honesty_marker_turns_red(self):
-        problems = self.problems_for("示例（非真实讲座）", "示例")
-        self.assertTrue(any("非真实讲座" in p for p in problems), problems)
+        problems = self.problems_for("示例（非真实来源）", "示例")
+        self.assertTrue(any("非真实来源" in p for p in problems), problems)
 
     def test_bad_date_turns_red(self):
         problems = self.problems_for("日期：2026-10-02", "日期：2026/10/02")

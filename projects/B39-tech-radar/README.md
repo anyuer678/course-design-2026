@@ -1,4 +1,4 @@
-# B39-tech-radar —— 技术雷达：讲座记录模板 + 可机验证据 + 一次最小复现（专业前沿技术讲座）
+# B39-tech-radar —— 技术雷达：主题记录模板 + 可机验证据 + 一次最小复现（专业前沿技术讲座）
 
 **课程映射**：专业前沿技术讲座（PLAN 批次 8 / 毕业出口）。
 
@@ -8,10 +8,10 @@
 必须在 git 里存在），再给一次完整的最小复现示范（**CRDT 的收敛性**：
 交换/结合/幂等三条性质 → 最终一致，性质可跑、可改坏看红）。
 
-**用法（真实讲座记录是你自己的活）**：复制 `docs/record-template.md` 到
+**用法（真实条目由你自己填写）**：复制 `docs/record-template.md` 到
 `docs/records/<主题>.md`，照实填写口来源——填完一定要跑
 `python tools/check_record.py docs/records/<主题>.md`，**红了不算记录**。
-仓库内自带的 `docs/records/example-crdt.md` 明确标注「示例（非真实讲座）」，
+仓库内自带的 `docs/records/example-crdt.md` 明确标注「示例（非真实来源）」，
 检查器会强制这个诚实标记。
 
 ## 运行
@@ -33,7 +33,7 @@ python tools/showcase.py --write          # 重生展示页 web/showcase.html（
 | 路径 | 是什么 |
 |---|---|
 | `docs/record-template.md` | 记录模板：五节结构 + 证据指针写法 + 诚实标注规则 |
-| `docs/records/example-crdt.md` | 完整示例记录（显式「示例（非真实讲座）」），含证据/局限/复现 |
+| `docs/records/example-crdt.md` | 完整示例记录（显式「示例（非真实来源）」），含证据/局限/复现 |
 | `tools/check_record.py` | 检查器：结构齐不齐 + 证据指针是不是真的（路径存在、提交在 git 里） |
 | `repro/crdt_lww.py` | 最小复现：LWW-Register（(计数器, 副本) 全序）+ 向量时钟，<150 行 |
 | `tests/test_radar.py` | 18 项：检查器 8（1 正 + 7 条"改坏必须红"）+ CRDT 10（性质/收敛/违规守卫） |
@@ -46,7 +46,7 @@ python tools/showcase.py --write          # 重生展示页 web/showcase.html（
 |---|---|---|
 | 记录结构可执行 | `REQUIRED_SECTIONS` 顺序检查 | 示例记录 PASS；删「局限与适用边界」→ 必须 RED（对照测试钉住） |
 | 证据 = 可核验指针 | `check_record.py` 指针解析 | 路径不存在/假提交号各有一条"改坏必须红"的对照；示例里 4 路径 + 1 提交逐条真验 |
-| 诚实标注 | 来源含「示例」必须写「非真实讲座」 | 去掉标记 → RED（对照测试） |
+| 诚实标注 | 来源含「示例」必须写「非真实来源」 | 去掉标记 → RED（对照测试） |
 | CRDT 收敛的数学 | `crdt_lww.py` merge=取 ts 较大 | 交换律/结合律/幂等（各 50 组随机）+ 100 组随机置换全部收敛到同一 (值, 时间戳) |
 | 全序破平 | `Timestamp(counter, replica)` | `test_tie_break_by_replica`：并列计数器时按副本号取大，两侧顺序无关 |
 | 协议违规要响 | 合并守卫 | 同一 (计数器, 副本) 两个值 → ValueError（防"悄悄按到达顺序取一个"的误解） |
@@ -62,7 +62,7 @@ python tools/showcase.py --write          # 重生展示页 web/showcase.html（
   **收敛性（100 组置换）= True**；性质抽查 交换 50/50、结合 50/50、幂等 1/1；
   并列计数器的赢家 `'b'`（时间戳 (1,'b') 战胜 (1,'a')）。
 - 展示页（2026-10-03 展示层批次⑩）：`web/showcase.html` = 四段演示现算 + 示例记录原文内嵌
-  （含「非真实讲座」标注），与重算逐字一致（`--check` 过期即红）；8 项展示页测试。
+  （含「示例（非真实来源）」标注），与重算逐字一致（`--check` 过期即红）；8 项展示页测试。
 
 ## 坑（都留了钉子）
 
@@ -77,8 +77,8 @@ python tools/showcase.py --write          # 重生展示页 web/showcase.html（
 
 ## 明确不做（本期范围外）
 
-真实讲座记录（那是由你填写、检查器负责把关的使用场景）；趋势四象限/评分模型；
-自动抓取讲座信息；CRDT 只做 LWW-Register（OR-Set/MV-Register 见练习）。**本工具不能替代真实讲座出勤与理解。**
+真实条目的使用场景（由你填写、检查器负责把关）；趋势四象限/评分模型；
+自动抓取来源信息；CRDT 只做 LWW-Register（OR-Set/MV-Register 见练习）。**本工具不替代真实的学习与实践过程。**
 
 ## 练习建议（G2，自己动手）
 
@@ -86,5 +86,5 @@ python tools/showcase.py --write          # 重生展示页 web/showcase.html（
    并**先补一条负面对照测试**再让它通过——体会"规则与对照成对出现"。
 2. 把 `LWWRegister` 扩成 MV-Register（保留并发值、读时由应用层合并）：
    性质测试照搬，但"幂等"的判定要改成集合语义——说清哪条性质变难了。
-3. 用本模板记录一场真实讲座：来源照实填、证据指针指到你亲手跑过的仓库文件/提交，
+3. 用本模板记录一条真实主题（课程内容 / 文档 / 项目实践）：来源照实填、证据指针指到你亲手跑过的仓库文件/提交，
    跑 `tools/check_record.py` 直到 PASS——这就是技术雷达的第一条真实条目。

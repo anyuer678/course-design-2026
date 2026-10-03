@@ -36,16 +36,20 @@
     var s = document.createElement("style");
     s.id = "lab-style";
     s.textContent = [
-      "#lab-slot .lab-status{color:#5f6773;font-size:13px;margin:2px 0 6px}",
-      "#lab-slot .lab-hint{color:#5f6773;font-size:13px;margin:8px 0 3px}",
+      "#lab-slot .lab-status{color:var(--kb-text-2,#475569);font-size:13px;margin:2px 0 6px}",
+      "#lab-slot .lab-hint{color:var(--kb-text-2,#475569);font-size:13px;margin:8px 0 3px}",
       "#lab-slot .lab-row{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0}",
-      "#lab-slot button{font:inherit;font-size:13px;padding:4px 12px;border:1px solid #d5d9e0;",
-      "border-radius:999px;background:#fff;color:#1c2330;cursor:pointer}",
-      "#lab-slot button:hover{border-color:#1d4ed8}",
+      "#lab-slot button{font:inherit;font-size:13px;padding:4px 12px;border:1px solid var(--kb-border,#e2e8f0);",
+      "border-radius:999px;background:#fff;color:var(--kb-text-1,#0f172a);cursor:pointer;",
+      "transition:border-color .2s ease,color .2s ease}",
+      "#lab-slot button:hover{border-color:var(--kb-primary,#3b82f6);color:var(--kb-primary,#3b82f6)}",
       "#lab-slot button:disabled{opacity:.45;cursor:default}",
-      "#lab-slot textarea{width:100%;box-sizing:border-box;min-height:64px;border:1px solid #d5d9e0;",
-      "border-radius:8px;padding:6px;font:12px/1.5 ui-monospace,Consolas,monospace;resize:vertical}",
-      "#lab-slot pre{background:#0f1115;color:#e6e9ef;border-radius:8px;padding:10px 12px;margin:4px 0;",
+      "#lab-slot textarea{width:100%;box-sizing:border-box;min-height:64px;",
+      "border:1px solid var(--kb-border,#e2e8f0);border-radius:8px;padding:6px;",
+      "font:12px/1.5 ui-monospace,Consolas,monospace;resize:vertical}",
+      "#lab-slot textarea:focus{outline:2px solid #bfdbfe;border-color:var(--kb-primary,#3b82f6)}",
+      "#lab-slot pre{background:#0f172a;color:#e2e8f0;border:1px solid #1e293b;",
+      "border-radius:10px;padding:10px 12px;margin:4px 0;",
       "max-height:240px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;",
       "white-space:pre-wrap;word-break:break-word}",
     ].join("");

@@ -27,6 +27,64 @@ caption{text-align:left;font-size:12px;color:#5c6b7f}a{color:#2f5fbf}
 .sw-panel pre{background:#0f1115;color:#e6e9ef;border-radius:8px;padding:10px 12px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
 .sw-footer{max-width:1100px;margin:14px;color:#5f6773;font-size:13px}
 .sw-lin svg{max-width:100%;height:auto;display:block}
+
+/* ---------- KB 主题（token 学自 kb-ui 设计系统，2026-10-03）：统一观感 ---------- */
+:root{
+  --kb-primary:#3b82f6;--kb-primary-deep:#2563eb;
+  --kb-primary-gradient:linear-gradient(135deg,#3b82f6,#6366f1);
+  --kb-success:#16a34a;--kb-danger:#dc2626;--kb-warning:#d97706;
+  --kb-bg:#ffffff;--kb-bg-elevated:#f8fafc;--kb-border:#e2e8f0;
+  --kb-text-1:#0f172a;--kb-text-2:#475569;--kb-text-3:#94a3b8;
+  --kb-radius-sm:4px;--kb-radius-md:6px;--kb-radius-lg:10px;
+  --kb-shadow-1:0 1px 2px rgb(15 23 42 / 6%);
+  --kb-shadow-2:0 4px 12px rgb(15 23 42 / 10%);
+  --kb-font:-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+  --kb-mono:ui-monospace,Consolas,"Cascadia Mono",monospace;
+  --kb-t:.2s ease;
+}
+body{background:#f8fafc;background-image:linear-gradient(180deg,#eff6ff 0,#f8fafc 340px,#f8fafc);
+  color:var(--kb-text-1);font-family:var(--kb-font);-webkit-font-smoothing:antialiased}
+body::before{content:"";display:block;height:4px;
+  background:linear-gradient(90deg,var(--kb-primary),#6366f1 55%,#8b5cf6)}
+a{color:var(--kb-primary-deep);text-decoration:none}
+a:hover{color:#1d4ed8;text-decoration:underline}
+h1,h2,h3{color:var(--kb-text-1);font-weight:650;letter-spacing:-.01em}
+::selection{background:#dbeafe}
+.sw-top{background:var(--kb-bg);border:1px solid var(--kb-border);
+  border-radius:var(--kb-radius-lg);box-shadow:var(--kb-shadow-1)}
+.sw-link{font-size:13px}
+.sw-panel,.panel{background:var(--kb-bg);border:1px solid var(--kb-border);
+  border-radius:var(--kb-radius-lg);box-shadow:var(--kb-shadow-1)}
+.sw-card,.card{background:var(--kb-bg);border:1px solid var(--kb-border);
+  border-radius:var(--kb-radius-lg);box-shadow:var(--kb-shadow-1);
+  transition:box-shadow var(--kb-t),transform var(--kb-t),border-color var(--kb-t)}
+.sw-card:hover,.card:hover{box-shadow:var(--kb-shadow-2);border-color:#bfdbfe;transform:translateY(-1px)}
+.card b,.sw-card b{color:var(--kb-text-3);font-size:12px;letter-spacing:.02em}
+.note,.muted{color:var(--kb-text-2)}
+.badge{display:inline-block;font-size:.78rem;padding:.1rem .55rem;border-radius:999px;
+  border:1px solid var(--kb-border);background:var(--kb-bg-elevated);color:var(--kb-text-2)}
+.badge.ok{color:#047857;border-color:#a7f3d0;background:#ecfdf5}
+.badge.bad{color:#b91c1c;border-color:#fecaca;background:#fef2f2}
+.badge.todo,.badge.warn{color:#b45309;border-color:#fde68a;background:#fffbeb}
+.chip,.pj-tab{font:inherit;font-size:.85rem;padding:.3rem .85rem;border:1px solid var(--kb-border);
+  border-radius:999px;background:#fff;color:var(--kb-text-2);cursor:pointer;transition:all var(--kb-t)}
+.chip:hover,.pj-tab:hover{border-color:var(--kb-primary);color:var(--kb-primary)}
+.chip.active,.pj-tab.active{background:var(--kb-primary);border-color:var(--kb-primary);
+  color:#fff;box-shadow:var(--kb-shadow-1)}
+.chip.active:hover,.pj-tab.active:hover{color:#fff}
+table{border-collapse:collapse}
+table th,table td{border:1px solid var(--kb-border);padding:.42rem .65rem;text-align:left}
+table th{background:var(--kb-bg-elevated);color:var(--kb-text-2);font-weight:600}
+table tr:hover td{background:#f8fafc}
+pre{background:#0f172a;color:#e2e8f0;border:1px solid #1e293b;
+  border-radius:var(--kb-radius-lg);font-family:var(--kb-mono)}
+pre code{background:none;border:none;padding:0;color:inherit}
+kbd{font-family:var(--kb-mono);font-size:.85em;border:1px solid var(--kb-border);
+  border-bottom-width:2px;border-radius:var(--kb-radius-sm);padding:1px 6px;
+  background:var(--kb-bg-elevated);color:#334155}
+code{font-family:var(--kb-mono);font-size:.9em;background:#f1f5f9;border:1px solid #e2e8f0;
+  border-radius:var(--kb-radius-md);padding:1px 5px}
+footer,.sw-footer{color:var(--kb-text-3);border-top:1px solid var(--kb-border)}
 </style></head><body data-showcase="B28-bi-dashboard">
 <div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a> <span style="white-space:nowrap">　·　上一件 <a href="../../../projects/B27-course-kg/web/showcase.html">B27</a>　·　下一件 <a href="../../../projects/B29-bigdata-spark/web/showcase.html">B29</a></span>　·　<a href="#lab">实时实验台</a><h2>B28-bi-dashboard · 商务智能看板：口径当一等交付物，六指标两路对拍逐数相等</h2><p>本页是批次⑨「存量对齐」：本项目的自包含看板（bi/render 手写 SVG）原位提升为提交物，图表与数据表分毫未改；上面加实测数字、下面加运行方式与指标血缘图。</p></div>
 <section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>42 项（34 核心 + 8 展示页自测）</span></div><div class="sw-card"><b>数据与清洗</b><span>脏明细 1828 行 → 清洗后 1797 行；五步缺陷按量注入、账本逐数对上（True）</span></div><div class="sw-card"><b>六指标两路对拍</b><span>成交额 SQL 765,880 ｜ 参照 765,880；复购率 41.7%（204/489 客户）；履约 P50 5 ／ P90 9 ／ 均值 6.12 天（n=777）；商品集中度 冠军 显示器 ｜ CR5 94.0%——SQL 与纯 Python 参照**逐数相等**（异常清单：无）</span></div><div class="sw-card"><b>洞察</b><span>共购：777 / 24 / 3；conf 0.592 lift 1.528 supp 0.112 正相关；分群 489 / 3 / 0.563</span></div><div class="sw-card"><b>安全边界</b><span>B32 载荷当筛选值：成交额 0.0（空集）、两路一致；表数量前/后 8 / 8 → 结构没被动过；注入一处真拼接后被抓=True，点数 +1</span></div><div class="sw-card"><b>看板自检</b><span>页面数字 == API 数字（成交额 True、复购率 True）；自包含：外部请求 False；表格 6 张；SVG 3 个</span></div></section>

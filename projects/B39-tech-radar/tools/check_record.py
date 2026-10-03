@@ -1,9 +1,9 @@
-"""tools/check_record.py —— 讲座记录检查器：结构齐不齐 + 证据指针是不是真的
+"""tools/check_record.py —— 主题记录检查器：结构齐不齐 + 证据指针是不是真的
 
 课程要点（技术雷达的自律）：记录最容易被写成"听到过什么"——检查器把"证据"
 变成**可机验的指针**：反引号里的仓库路径必须存在，`@提交号` 必须在 git 里存在。
 结构上强制五节齐备且有序（问题/原理/证据/局限/复现），来源字段必须诚实
-（示例记录必须显式写"非真实讲座"）。
+（示例记录必须显式写"非真实来源"）。
 
 用法：
     python tools/check_record.py <记录.md> [仓库根]
@@ -37,6 +37,7 @@ def _sections(lines: list[str]) -> dict[str, tuple[int, str]]:
     """标题 → (行号, 该节正文)。按出现顺序，重复标题取首次。"""
     found: dict[str, tuple[int, str]] = {}
     current = None
+    start = 0
     buf: list[str] = []
     for idx, line in enumerate(lines):
         m = re.match(r"^##\s+(.+?)\s*$", line)
@@ -72,8 +73,8 @@ def check_record(path, repo_root) -> list[str]:
     if meta.get("日期") and not DATE_RE.match(meta["日期"]):
         problems.append(f"日期格式不是 YYYY-MM-DD：{meta['日期']!r}")
     source = meta.get("来源", "")
-    if "示例" in source and "非真实讲座" not in source:
-        problems.append("来源自称示例，必须显式写「非真实讲座」（诚实标注）")
+    if "示例" in source and "非真实来源" not in source:
+        problems.append("来源自称示例，必须显式写「非真实来源」（诚实标注）")
 
     sections = _sections(lines)
     missing = [s for s in REQUIRED_SECTIONS if s not in sections]

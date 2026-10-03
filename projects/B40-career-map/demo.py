@@ -81,8 +81,8 @@ def main() -> int:
     print("  2. 跑 python tools/map_jd.py --write —— 差距矩阵写到 build/jd_matrix.md；")
     print("  3. 缺口逐条对照 skill 的 practice 排期；证据条目随时用")
     print("     python tools/check_evidence.py 复核（改坏一条必须红）。")
-    print("  边界：本工具只做映射与核验，**不替你选岗位/方向**（PLAN §5），")
-    print("        也不替代真实实习——团队协作与业务上下文只能在实习里学。")
+    print("  边界：本工具只做映射与核验，**不替你选岗位/方向**（PLAN §5）；")
+    print("        团队协作与业务上下文不在覆盖范围——要靠真实团队实践。")
     return 0
 
 

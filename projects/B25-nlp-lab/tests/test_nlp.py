@@ -37,7 +37,7 @@ class TestSegment(unittest.TestCase):
 
     def test_concatenation_invariant(self):
         """拼接不变式：切分结果拼回去必须等于原文（一个字符都不丢）。"""
-        cases = ["研究生命起源", "今天下午在图书馆有讲座", "免费领取红包",
+        cases = ["研究生命起源", "今天下午在图书馆有答疑", "免费领取红包",
                  "xyz", "", "考试安排已发布"]
         for text in cases:
             self.assertEqual("".join(fmm(text)), text)

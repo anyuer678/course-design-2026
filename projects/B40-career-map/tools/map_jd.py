@@ -93,8 +93,8 @@ def render_matrix(jd_name: str, text: str, skills: list[dict],
     if missed:
         lines += [f"JD 未提及（不计入矩阵）：{'、'.join(missed)}", ""]
     lines += ["---",
-              "本表由工具从「JD 文本 × 技能表 × 证据索引」现算；**不替代真实实习**——",
-              "学习证据解决不了「真实团队协作与业务上下文」这一课，去投、去面、去干。"]
+              "本表由工具从「JD 文本 × 技能表 × 证据索引」现算；**不替代真实工作场景**——",
+              "团队协作与业务上下文要靠真实团队实践。"]
     return "\n".join(lines)
 
 
@@ -126,7 +126,7 @@ def main(argv: list[str]) -> int:
         out = ROOT / "build"
         out.mkdir(exist_ok=True)
         (out / "jd_matrix.md").write_text(report, encoding="utf-8")
-        print(f"\n[written] build/jd_matrix.md")
+        print("\n[written] build/jd_matrix.md")
     return 0
 
 
