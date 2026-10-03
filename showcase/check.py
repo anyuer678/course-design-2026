@@ -269,9 +269,9 @@ def render_index(manifest: dict) -> str:
         f'<p class="note">{len(projects)} 个项目 · 已交付展示页 <strong>{len(done)}</strong> 个（每页双击即看、零网络依赖；'
         "页面为生成物，检验器与批次表见 <code>showcase/SPEC.md</code>）。</p>",
         '<div class="hub" id="hub-hint">实时控制台：双击仓库根 <code>lab.bat</code> 启动实验台后'
-        "刷新本页——每个项目行会出现 状态点 / 启动 / 停止 / 演示 / 测试 / 日志；"
-        "各项目页里的「实时实验台」分节也会就地变成控制台（控制 API 只认本机；"
-        "局域网访客可正常浏览全部页面）。</div>",
+        "刷新本页——每个项目行会出现 状态点 / 启动 / 停止 / 演示 / 测试 / 运行 / 日志"
+        "（长任务可随时停止）；各项目页里的「实时实验台」分节也会就地变成控制台"
+        "（控制 API 只认本机；局域网访客可正常浏览全部页面）。</div>",
         '<div class="tools">'
         '<input id="q" type="search" autocomplete="off" '
         'placeholder="搜索：项目编号 / 课程 / 关键词（按 / 聚焦，Esc 清空，回车打开第一条）">'

@@ -1493,6 +1493,16 @@ run.bat**。本轮先体检再接手（`ruff --select F,E9` 查出测试里未�
   overview 与 POST `403`、静态页 `200`；`--lan` 启动横幅实测打印局域网入口；`check.py` 33/33 全绿；
   `node --check lab.js` 过；`lab.bat` 纯 ASCII + CRLF（实测 44 个 CRLF、0 个裸 LF）；ruff `--select F,E9`
   干净；本轮 5 个改动文件（lab.py/lab.js/check.py/index.html/lab.bat）字符级 GBK 全过。
+- **操作补全（2026-10-04 凌晨续，用户"继续"驱动）：长任务可中止**——① 非服务项目补 `stop_run`
+  「停止运行」动作（demo/测试/run.bat 这类长任务可从两个控制台直接中止，不用重启实验台；
+  SERVE 项目不重复给——已有「停止服务」）；② `_stop` 在 Windows 改 `taskkill /F /T` 杀**整棵进程树**
+  ——旧 `terminate()` 只杀外壳，`cmd /c run.bat` 的子进程会活下来继续跑（页面显示"已停止"、
+  日志却还在长，名不副实）。验证（全部实测，写进 SPEC）：selftest **11/11**（B1 项改为钉
+  run+stop_run）；**受控探针带负面对照**——tick.bat（cmd 外壳→python 子进程，每 0.2s 一行）：
+  旧 terminate 后 tick 持续增长（缺陷复现 12→20），新 `_stop` 后稳态零增长（12→15→15）；
+  B1 run.bat 经 API 全跑通（8.2s / 65 行、尾行 "Done."）；B2 run.bat 中途中止
+  （命中活进程 → 停止后输出不再增长 → 残留进程计数 0）；B1/B2 跑完仓库零新增；
+  总入口提示条补"运行/停止（长任务可随时停止）"并重生成。
 
 ### 下一轮：批次 6/7/8 的剩余项（施工图见 ROADMAP.md，方向待用户确认）
 

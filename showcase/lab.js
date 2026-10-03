@@ -88,6 +88,7 @@
     function shortLabel(id, label) {
       if (id === "serve_start") return "启动";
       if (id === "serve_stop") return "停止";
+      if (id === "stop_run") return "停止";
       if (id === "demo") return "演示";
       if (id === "tests") return "测试";
       if (id === "run") return "运行";
@@ -109,7 +110,7 @@
       btn.disabled = true;
       var req;
       if (action.id === "serve_start") req = api("/lab/api/start", { project: entry.project });
-      else if (action.id === "serve_stop") req = api("/lab/api/stop", { project: entry.project });
+      else if (action.id === "serve_stop" || action.id === "stop_run") req = api("/lab/api/stop", { project: entry.project });
       else req = api("/lab/api/run", { project: entry.project, kind: action.id });
       req.then(function (r) {
         if (!r.ok) flash(entry, "失败：" + (r.error || "?") + (r.tail ? "（输出尾部见日志）" : ""));
@@ -169,7 +170,10 @@
       }
       var running = !!(entry.state && entry.state.running);
       dot.textContent = running ? ("● " + (entry.state.port ? (":" + entry.state.port) : "运行中")) : "○";
-      dot.title = running ? ("运行中 pid=" + entry.state.pid + "（" + entry.state.up + "s）") : "未运行";
+      dot.title = running
+        ? ("运行中 pid=" + entry.state.pid + "（" + entry.state.up + "s" +
+           (entry.state.kind ? "，" + entry.state.kind : "") + "）")
+        : "未运行";
       dot.className = "lab-dot" + (running ? " on" : "");
       if (box.dataset.built === "1") return;    // 按钮只建一次，轮询只刷新状态点
       box.dataset.built = "1";
@@ -237,7 +241,7 @@
         b.disabled = true;
         var req;
         if (a.id === "serve_start") req = api("/lab/api/start", { project: pid });
-        else if (a.id === "serve_stop") req = api("/lab/api/stop", { project: pid });
+        else if (a.id === "serve_stop" || a.id === "stop_run") req = api("/lab/api/stop", { project: pid });
         else req = api("/lab/api/run", { project: pid, kind: a.id });
         req.then(function (r) {
           if (!r.ok) appendLog("[实验台] " + (r.error || "失败") + (r.tail ? "\n" + r.tail : ""));

@@ -99,6 +99,10 @@ def _actions_of(pid: str) -> list:
     for key, label in (("demo", "运行 demo.py"), ("tests", "跑测试套件"), ("run", "运行 run.bat")):
         if pid in RUN and key in RUN[pid]:
             acts.append({"id": key, "label": label})
+    if pid in RUN and pid not in SERVE:
+        # run/demo/测试是长任务，必须有中止入口（_stop 对任意 kind 都有效；
+        # SERVE 项目已有"停止服务"按钮，不重复给）——2026-10-04 操作补全
+        acts.append({"id": "stop_run", "label": "停止运行"})
     return acts
 
 
@@ -205,7 +209,13 @@ def _stop(pid: str) -> dict:
         proc = st.get("proc")
     if proc is None or proc.poll() is not None:
         return {"ok": True, "already": True}
-    proc.terminate()
+    # Windows 下 terminate() 只杀外壳：cmd /c run.bat 的子进程会活下来继续跑到完成，
+    # 页面显示"已停止"日志却还在长——用 taskkill /T 杀整棵树才对得上用户预期（2026-10-04）
+    if os.name == "nt":
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                       capture_output=True, timeout=10)
+    else:
+        proc.terminate()
     try:
         proc.wait(timeout=5)
     except subprocess.TimeoutExpired:
@@ -524,9 +534,10 @@ def selftest(port: int = 7799) -> int:
     check("overview 里 B31 带服务动作",
           any(p["project"] == "B31-shorturl" and p["port"] == 8312
               and any(a["id"] == "serve_start" for a in p["actions"]) for p in ov["projects"]))
-    check("overview 里 B1 带 run 动作（bat=[] 曾整条消失的真回归）",
-          any(p["project"] == "B1-cpp-ministl"
-              and any(a["id"] == "run" for a in p["actions"]) for p in ov["projects"]))
+    b1_ids = next(([a["id"] for a in p["actions"]]
+                   for p in ov["projects"] if p["project"] == "B1-cpp-ministl"), [])
+    check("B1 带 run + stop_run 动作（bat=[] 回归 + 长任务可中止）",
+          "run" in b1_ids and "stop_run" in b1_ids, str(b1_ids))
     no_act = [p["project"] for p in ov["projects"] if not p["actions"]]
     check("无动作项目只有 B8（WSL 入口不替它选环境）", no_act == ["B8-mini-shell"], str(no_act))
     check("回环判定（控制 API 的边界）",

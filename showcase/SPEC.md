@@ -115,6 +115,10 @@ python -m unittest discover -s showcase/tests
 - **能做什么**：启动/停止 6 个**已注册的真实服务**（B11 netlab HTTP、B31 短链、B38 Redis 子集、
   B35 MQTT broker、B28 看板、dorm 原型），对运行中的服务**发任意原始请求**（文本框里 `\r \n \t \\ \xNN` 转义成字节；回复文本 + 字节并排显示），对全部 Python 项目**真跑 demo.py/测试套件**（B1/B2/B5/B6/B7/B9/B14
   走 `run.bat`），并**实时看**这些进程的 stdout/stderr。B8 要在 WSL 里跑，实验台不替它选环境（如实显示未接）。
+- **长任务可中止（2026-10-04 操作补全）**：非服务项目补 `stop_run`「停止运行」动作（demo/测试/run.bat
+  这类长任务出错了不用重启实验台）；Windows 下 `_stop` 改 `taskkill /F /T` 杀**整棵进程树**——
+  只 `terminate()` 外壳的话，`cmd /c run.bat` 的子进程会活下来继续跑，页面显示"已停止"日志却还在长
+  （受控探针实测复现过：外层死后 tick 仍持续增长）。SERVE 项目已有「停止服务」按钮，不重复给。
 - **API**（页面 lab.js 与 lab.py 一一对应）：`/lab/api/ping|info|start|stop|run|log|sock|overview`。
   其中 `overview` 是总入口控制台专用：一次返回全部项目的动作清单 + 实时状态（只读）。
 - **项目群控制台（总入口，2026-10-04 交付；用户 10-03 晚点"可交互、可投入使用的项目群"）**：`index.html` 的
@@ -134,10 +138,13 @@ python -m unittest discover -s showcase/tests
   加载 `/showcase/lab.js`，加载失败则分节保持静态说明）；控制台界面全部 DOM API 构建（无 innerHTML），
   `lab.js`、每页内联脚本与总入口两段内联脚本都过 `node --check`（校验器执行）。
 - **自证**：`python showcase/lab.py --selftest`（真起 B31 → 真发请求断言 201 → 真停；含
-  overview 覆盖、B1 带 run 动作（`bat=[]` 曾让整条动作消失的真回归）、"只有 B8 无动作"、
+  overview 覆盖、B1 带 run + stop_run 动作（`bat=[]` 曾让整条动作消失的真回归）、"只有 B8 无动作"、
   回环判定四项边界；2026-10-04 自检 **11/11 PASS**——另曾全服务冒烟 6/6：B31 `201 Created`
   （341B）、B38 `+PONG`、B35 `CONNACK 20 02 00 00`、B28 `200 OK`（5719B）、dorm `200 OK`（6998B）、
-  B11 `HTTP/1.1 404`（真服务的正确回答）；B7 的 run.bat 动作 2026-10-04 经 API 活体跑通：
-  `run` 受理 → 进程结束 ~10.1s → 日志 52 行、尾行 "Done."）；`--lan` 边界活体实测（2026-10-04 凌晨）：回环 ping/overview/静态页
+  B11 `HTTP/1.1 404`（真服务的正确回答）；B7 的 run.bat 动作经 API 活体跑通（~10.1s / 52 行 /
+  尾行 "Done."）；**长任务中止带负面对照的受控实测**：tick.bat 探针（cmd 外壳→python 子进程每秒 5 行）——
+  旧 terminate 只杀外壳后 tick 继续增长（缺陷复现），新 `_stop`（taskkill /T）后 tick 稳态零增长；
+  B1 run.bat 经 API 全跑通（8.2s / 65 行 / 尾行 "Done."）；B2 run.bat 中途中止（命中活进程 →
+  停止后输出不再增长 → 残留进程 0））；`--lan` 边界活体实测（2026-10-04 凌晨）：回环 ping/overview/静态页
   `200`，局域网 IP（100.64.32.153）overview/POST `403`、静态页 `200`。
 
