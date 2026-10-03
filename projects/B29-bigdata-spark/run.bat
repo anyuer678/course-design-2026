@@ -21,13 +21,18 @@ python -c "import pyspark; print('[env] pyspark', pyspark.__version__)"
 if errorlevel 1 echo [!] pyspark not installed. Run: pip install pyspark
 if errorlevel 1 exit /b 1
 
-echo [1/2] unit tests (17: ledger / parity vs pure Python / Spark SQL / skew correctness)
+echo [1/3] unit tests (25: ledger / parity vs pure Python / Spark SQL / skew correctness / showcase)
 python -u -m unittest discover -s tests
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/2] demo (six sections; section 6 prints measured timings, so two runs differ there only)
+echo [2/3] demo (six sections; section 6 prints measured timings, so two runs differ there only)
 python -u demo.py
+if errorlevel 1 exit /b 1
+
+echo.
+echo [3/3] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 echo.

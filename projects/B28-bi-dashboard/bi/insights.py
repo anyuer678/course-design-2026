@@ -10,7 +10,7 @@
     2. **分群要报轮廓系数**，并说清"k 是我挑的"。k 由参数给定（不是自动选模），
        所以面板上写的是"按 k=3 划分的结果"，而不是"客户分成三类"这种事实句。
 
-样本量的边界也写在这里：轮廓系数是 O(n²) 的，所以分群面板只对**抽样子集**
+样本量的边界也写在这里：轮廓系数是 O(n^2) 的，所以分群面板只对**抽样子集**
 （种子化、按客户号排序后取前 N 个）计算，全量的簇标签照样给。抽样是为了算得动，
 不是为了好看，README 的局限一节会连着这条一起写。
 """
@@ -25,7 +25,7 @@ from mining import clean as C26
 from mining import kmeans as K26
 
 FEATURE_NAMES = ("下单数", "成交额", "首末跨度(天)", "涉及品类数")
-SAMPLE_FOR_SILHOUETTE = 60          # O(n²) 的预算上限，抽样是种子化的、可复现
+SAMPLE_FOR_SILHOUETTE = 60          # O(n^2) 的预算上限，抽样是种子化的、可复现
 
 
 def baskets(data: dict, filters: dict | None = None) -> list[frozenset]:
@@ -124,7 +124,7 @@ def segments(data: dict, filters: dict | None = None, k: int = 3,
     return {"id": "segments", "名称": "客户分群",
             "口径": f"特征向量=({', '.join(FEATURE_NAMES)})；KMeans k={k}、seed={seed}、"
                     f"初始中心取自数据点本身；轮廓系数在**等距抽样的 {len(sample_x)} 个客户**上算"
-                    "（该指标 O(n²)），全量簇标签照给；k 是人挑的，不是数据说的",
+                    "（该指标 O(n^2)），全量簇标签照给；k 是人挑的，不是数据说的",
             "客户数": len(matrix), "抽样人数": len(sample_x), "k": k, "簇": clusters,
             "轮廓系数": round(sil, 3), "迭代轮数": model.iterations_,
             "空簇事件": model.empty_cluster_events_,

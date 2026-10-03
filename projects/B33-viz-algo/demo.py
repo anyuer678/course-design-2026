@@ -10,7 +10,6 @@
 """
 from __future__ import annotations
 
-import json
 import pathlib
 import re
 import shutil
@@ -94,7 +93,7 @@ def main() -> int:
 
     section(5, "用户验收指引（动画观感由你实跑确认）")
     print("  1. 打开 build\\viz.html（双击即可，数据已内嵌，无需服务器）")
-    print("  2. 左卡片：点「▶ 播放」看建堆与取顶；用「下一步/上一步」单步，选速度换节奏")
+    print("  2. 左卡片：点「播放」看建堆与取顶；用「下一步/上一步」单步，选速度换节奏")
     print("  3. 右卡片：BFS / DFS 单选切换，观察队列与栈的前沿（橙色）怎么变")
     print("  4. 动画观感（动没动、卡不卡、讲不讲得清）请如实反馈——这一步我不代勾")
 

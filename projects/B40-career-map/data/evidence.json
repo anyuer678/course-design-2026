@@ -165,29 +165,29 @@
   },
   {
    "id": "b27-kg",
-   "claim": "课程知识图谱（拓扑/闭包/缺先修）+ 自包含交互 HTML：14 项自测",
+   "claim": "课程知识图谱（拓扑/闭包/缺先修）+ 自包含交互 HTML：21 项（14 核心 + 7 展示页）；第⑨批交互图原位提升为提交物",
    "pointers": [
     "projects/B27-course-kg/README.md"
    ],
-   "anchor": "自测（14 项）",
+   "anchor": "21 项（14 核心 + 7 展示页）",
    "commit": "c7648fd"
   },
   {
    "id": "b28-bi",
-   "claim": "商务智能看板：口径当一等交付物，SQL 与纯 Python 双路对拍：34 项通过",
+   "claim": "商务智能看板：口径当一等交付物，SQL 与纯 Python 双路对拍：42 项通过（34 核心 + 8 展示页）；第⑨批看板原位提升 + 血缘来源说明修正",
    "pointers": [
     "projects/B28-bi-dashboard/README.md"
    ],
-   "anchor": "34 项通过",
+   "anchor": "42 项通过（34 核心 + 8 展示页）",
    "commit": "352c499"
   },
   {
    "id": "b29-spark",
-   "claim": "PySpark 日志清洗/聚合/Spark SQL + 倾斜实验（salting 与 groupBy 逐行相等）：17 项测试",
+   "claim": "PySpark 日志清洗/聚合/Spark SQL + 倾斜实验（salting 与 groupBy 逐行相等）：25 项（17 核心 + 8 展示页）；第⑨批展示页（stdout 只取 + 四条规范化）",
    "pointers": [
     "projects/B29-bigdata-spark/README.md"
    ],
-   "anchor": "17 项测试",
+   "anchor": "25 项全过（17 核心 + 8 展示页）",
    "commit": "7eec2e5"
   },
   {
@@ -219,20 +219,20 @@
   },
   {
    "id": "b33-viz",
-   "claim": "从 B2 导出操作记录回放成自包含 HTML 动画：11 项（双入口同数）",
+   "claim": "从 B2 导出操作记录回放成自包含 HTML 动画：18 项（11 核心 + 7 展示页）；第⑨批动画页原位提升为提交物",
    "pointers": [
     "projects/B33-viz-algo/README.md"
    ],
-   "anchor": "11 项（双入口同数）",
+   "anchor": "18 项（11 核心 + 7 展示页）",
    "commit": "6ce1488"
   },
   {
    "id": "b34-path",
-   "claim": "栅格 A*/Dijkstra/BFS 同源对拍 + 不可采纳反例 + 搜索展开动画：20 项测试双入口同数",
+   "claim": "栅格 A*/Dijkstra/BFS 同源对拍 + 不可采纳反例 + 搜索展开动画：28 项（20 核心 + 8 展示页）；第⑨批动画页原位提升为提交物",
    "pointers": [
     "projects/B34-path-planner/README.md"
    ],
-   "anchor": "20 项测试双入口同数",
+   "anchor": "28 项（20 核心 + 8 展示页）",
    "commit": "5b7e9ac"
   },
   {

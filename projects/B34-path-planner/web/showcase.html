@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B34-path-planner · 栅格路径规划（课设作品集）</title>
+<style>
+  body { font-family: system-ui, "Segoe UI", "Microsoft YaHei", sans-serif;
+         margin: 0; background: #f5f6f8; color: #222; }
+  h1 { font-size: 19px; margin: 14px 18px 2px; }
+  .sub { margin: 0 18px 10px; color: #666; font-size: 13px; }
+  .card { background: #fff; border: 1px solid #e2e5ea; border-radius: 10px;
+          margin: 0 18px 18px; padding: 12px 14px; }
+  .controls { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+              font-size: 13px; margin-top: 8px; }
+  button { padding: 4px 10px; border: 1px solid #cfd6df; background: #fff;
+           border-radius: 6px; cursor: pointer; font-size: 13px; }
+  button:hover { background: #eef3f9; }
+  .status { color: #555; min-width: 260px; }
+  svg { background: #fafbfc; border-radius: 8px; width: 100%; height: auto; }
+  .legend { font-size: 12px; color: #666; margin-top: 6px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px;
+              margin: 0 4px 0 10px; vertical-align: -1px; }
+</style>
+<style>
+.sw-top{max-width:1100px;margin:12px 18px 0;padding:10px 14px;background:#fff;border:1px solid #d5d9e0;border-radius:10px}
+.sw-top .sw-link{font-size:13px;color:#1d4ed8;text-decoration:none}
+.sw-top h2{font-size:16px;margin:6px 0 2px}
+.sw-top p{margin:2px 0;color:#5f6773;font-size:13px}
+.sw-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px;margin:10px 18px 0}
+.sw-card{background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:8px 12px;font-size:13px}
+.sw-card b{display:block;font-size:12px;color:#5f6773;margin-bottom:2px}
+.sw-panel{max-width:1100px;margin:10px 18px 0;background:#fff;border:1px solid #d5d9e0;border-radius:10px;padding:10px 14px;font-size:14px}
+.sw-panel kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid #d5d9e0;border-radius:4px;padding:0 4px;background:#fff}
+.sw-panel pre{background:#0f1115;color:#e6e9ef;border-radius:8px;padding:10px 12px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}
+table.sw-t{border-collapse:collapse;font-size:13px;margin:6px 0}
+table.sw-t th,table.sw-t td{border:1px solid #d5d9e0;padding:3px 10px;text-align:right}
+table.sw-t th:first-child,table.sw-t td:first-child{text-align:left}
+.sw-footer{max-width:1100px;margin:14px 18px 26px;color:#5f6773;font-size:13px}
+</style></head>
+<body data-showcase="B34-path-planner">
+<div class="sw-top"><a class="sw-link" href="../../../showcase/index.html">← 作品集总入口</a><h2>B34-path-planner · 栅格 A*/Dijkstra/BFS 同源对拍：搜索展开动画（218 步）</h2><p>本页是批次⑨「存量对齐」：原自包含搜索动画页（planner/viz.py 的产物）原位提升为提交物，动画/数据分毫未改。动画观感（动没动、清不清楚）仍归你实跑验收。</p></div>
+<section id="facts" class="sw-cards"><div class="sw-card"><b>测试</b><span>28 项（20 核心 + 8 展示页自测）</span></div><div class="sw-card"><b>同源对拍</b><span>4 邻域 30 图代价一致 30/30；8 邻域（octile）29/30——差 1 张是 1 ulp 浮点求和次序（断言用 almost-equal，演示如实打印）；无权图 BFS 等价 True/20 图</span></div><div class="sw-card"><b>可采纳性（是量出来的）</b><span>曼哈顿/octile/欧氏 slack = +0.000；故意撒谎的曼哈顿×8 邻域 slack = +4.686</span></div><div class="sw-card"><b>反例（seed=3）</b><span>Dijkstra 14.242641 vs A* 14.828427，差 0.585786（恰好 2-√2）</span></div><div class="sw-card"><b>动画页</b><span>build/plan.html build/plan.html（10179 字节，展开 218 步）；冷色越深展开越晚、红色当前格、到终点后绿色高亮最终路径；node --check 退出码 0</span></div><div class="sw-card"><b>手算基准</b><span>1×4 走廊代价 3.0（手算 3）；A* 代价/路径长度 12.0 / 13 格</span></div></section>
+<section id="demo">
+<h1>B34 路径规划 —— 搜索展开动画（A* / Dijkstra 同源）</h1>
+<p class="sub">数据内嵌于本页（来自 planner 的搜索结果导出）。播放/单步只是在移动"展开下标"，
+页面不重算搜索。绿色为最终路径，冷色渐深表示展开次序，红色是当前展开的格子。</p>
+<div class="card">
+  <div id="meta" class="sub"></div>
+  <svg id="scene" viewBox="0 0 960 560" aria-label="搜索展开动画"></svg>
+  <div class="controls">
+    <button id="prev">上一步</button>
+    <button id="play">播放</button>
+    <button id="next">下一步</button>
+    <button id="finish">直接看结果</button>
+    <span id="status" class="status"></span>
+    <label>速度 <select id="speed">
+      <option value="400">0.5×</option>
+      <option value="200" selected>1×</option>
+      <option value="100">2×</option>
+      <option value="50">4×</option>
+    </select></label>
+  </div>
+  <p class="legend"><i style="background:#2f3b52"></i>障碍
+    <i style="background:#cfe3f7"></i>早期展开
+    <i style="background:#2a6fbb"></i>晚期展开
+    <i style="background:#d62728"></i>当前展开
+    <i style="background:#2ca02c"></i>最终路径
+    <i style="background:#ff9f1c"></i>起点/终点</p>
+</div>
+<script>
+const TRACE = {"grid":{"width":32,"height":24,"diagonal":true,"obstacles":[[0,3],[0,5],[0,8],[0,11],[0,16],[0,17],[0,18],[1,1],[1,6],[1,7],[1,8],[1,11],[1,14],[1,17],[1,20],[1,22],[2,1],[2,2],[2,3],[2,5],[2,6],[2,12],[2,14],[2,17],[2,20],[2,21],[3,0],[3,3],[3,5],[3,10],[3,18],[3,22],[4,1],[4,3],[4,5],[4,10],[4,13],[4,20],[4,22],[4,23],[5,1],[5,5],[5,6],[5,7],[5,12],[5,14],[5,15],[5,18],[6,0],[6,5],[6,6],[6,8],[6,10],[6,12],[6,13],[6,14],[6,18],[6,23],[7,6],[7,12],[7,17],[7,21],[8,2],[8,7],[8,8],[8,10],[8,11],[8,15],[8,19],[9,1],[9,3],[9,5],[9,6],[9,7],[9,8],[9,17],[9,18],[9,20],[9,23],[10,0],[10,2],[10,3],[10,6],[10,7],[10,8],[10,18],[10,20],[11,2],[11,3],[11,8],[11,11],[11,13],[11,16],[12,0],[12,3],[12,10],[12,14],[12,15],[12,17],[12,18],[12,19],[12,20],[13,3],[13,6],[13,9],[13,13],[13,15],[13,21],[13,22],[14,1],[14,8],[14,9],[14,12],[14,13],[14,14],[14,17],[14,18],[15,2],[15,11],[15,16],[15,22],[15,23],[16,2],[16,5],[16,7],[16,12],[16,13],[16,14],[16,16],[16,23],[17,5],[17,8],[17,11],[17,15],[17,16],[17,17],[17,21],[17,22],[18,0],[18,2],[18,3],[18,11],[18,13],[18,14],[18,15],[18,21],[19,1],[19,11],[19,19],[19,23],[20,0],[20,2],[20,6],[20,11],[20,18],[20,19],[20,21],[20,22],[21,0],[21,3],[21,5],[21,9],[21,12],[22,1],[22,5],[22,9],[22,15],[22,18],[22,22],[22,23],[23,7],[23,17],[23,21],[24,2],[24,3],[24,7],[24,13],[24,15],[24,16],[24,18],[24,21],[24,23],[25,7],[25,8],[25,10],[25,13],[25,14],[25,16],[25,23],[26,4],[26,5],[26,9],[26,14],[26,16],[26,17],[26,19],[26,20],[26,22],[26,23],[27,0],[27,3],[27,4],[27,6],[27,14],[27,16],[27,22],[28,5],[28,6],[28,8],[28,9],[28,10],[28,11],[28,13],[28,17],[28,19],[29,1],[29,3],[29,4],[29,5],[29,6],[29,8],[29,10],[29,14],[29,16],[29,17],[30,1],[30,6],[30,7],[30,8],[30,16],[30,20],[31,4],[31,6],[31,7],[31,9],[31,10],[31,14],[31,19],[31,20],[31,21],[31,22]]},"start":[0,0],"goal":[31,23],"steps":[[0,0],[1,0],[2,0],[0,1],[0,2],[1,2],[1,3],[1,4],[2,4],[3,4],[4,4],[5,4],[6,4],[7,4],[8,4],[8,5],[9,4],[10,4],[11,4],[11,5],[12,4],[12,5],[12,6],[13,5],[1,5],[7,5],[8,6],[10,5],[11,6],[13,4],[12,7],[14,5],[13,7],[13,8],[14,6],[15,6],[14,7],[15,7],[6,3],[7,3],[8,3],[11,7],[14,4],[12,8],[15,5],[16,6],[15,8],[16,8],[16,9],[17,9],[17,10],[18,10],[5,3],[7,2],[15,4],[12,9],[17,6],[15,9],[17,7],[16,10],[18,9],[19,10],[18,7],[18,8],[19,8],[19,9],[20,9],[20,10],[0,4],[6,2],[16,4],[18,6],[15,10],[16,11],[19,7],[20,8],[21,10],[21,11],[22,11],[22,12],[23,12],[22,13],[23,14],[23,15],[23,13],[22,14],[5,2],[17,4],[19,6],[20,7],[21,8],[22,10],[23,11],[24,12],[24,14],[23,16],[7,1],[8,1],[14,3],[15,3],[18,4],[21,7],[22,8],[23,10],[24,11],[25,12],[18,5],[19,5],[6,1],[16,3],[11,9],[21,13],[21,14],[8,0],[19,4],[23,8],[24,10],[20,5],[23,9],[22,7],[25,11],[26,12],[24,9],[26,13],[27,13],[17,3],[14,10],[11,10],[21,15],[7,0],[9,0],[20,4],[24,8],[26,11],[25,9],[27,12],[4,2],[22,16],[14,11],[21,16],[22,17],[14,2],[21,4],[27,11],[28,12],[21,6],[22,6],[21,17],[10,9],[20,15],[10,10],[20,13],[20,14],[22,4],[29,12],[30,13],[30,14],[30,15],[29,13],[19,3],[20,3],[23,6],[21,18],[17,2],[13,10],[13,11],[20,16],[10,11],[23,4],[23,5],[30,12],[31,13],[31,15],[24,5],[24,6],[31,16],[25,6],[31,17],[31,18],[13,2],[27,10],[21,19],[22,19],[22,20],[23,19],[23,20],[24,19],[24,20],[25,20],[26,10],[25,19],[3,2],[20,17],[13,12],[10,12],[11,12],[12,12],[24,4],[25,5],[26,6],[26,7],[27,8],[27,9],[26,8],[31,12],[20,12],[30,18],[21,20],[22,21],[25,21],[30,19],[26,21],[27,21],[28,21],[29,22],[30,22],[30,23],[31,23]],"path":[[0,0],[0,1],[0,2],[1,2],[1,3],[1,4],[2,4],[3,4],[4,4],[5,4],[6,4],[7,4],[8,4],[9,4],[10,4],[11,4],[12,4],[13,5],[14,5],[15,6],[16,6],[17,6],[18,7],[18,8],[19,9],[20,10],[21,10],[22,11],[22,12],[22,13],[21,14],[21,15],[21,16],[21,17],[21,18],[21,19],[22,19],[23,19],[24,19],[25,20],[25,21],[26,21],[27,21],[28,21],[29,22],[30,23],[31,23]],"meta":{"heuristic":"octile","expanded":218,"cost":50.142135623730944}};
+
+const svg = document.getElementById("scene");
+const NS = "http://www.w3.org/2000/svg";
+const grid = TRACE.grid;
+const cell = Math.min(54, Math.floor(920 / grid.width), Math.floor(520 / grid.height));
+const ox = 20, oy = 20;
+const meta = document.getElementById("meta");
+const status = document.getElementById("status");
+
+meta.textContent = "地图 " + grid.width + "×" + grid.height +
+  (grid.diagonal ? "（8 邻域）" : "（4 邻域）") + "；启发式 " + TRACE.meta.heuristic +
+  "；展开 " + TRACE.meta.expanded + " 个；路径代价 " + TRACE.meta.cost.toFixed(3) +
+  "；路径长 " + TRACE.path.length + " 格（障碍 " + grid.obstacles.length + " 个）";
+
+const obstacleSet = new Set(grid.obstacles.map(p => p[0] + "," + p[1]));
+const expandRank = new Map();
+TRACE.steps.forEach((cellXY, i) => expandRank.set(cellXY[0] + "," + cellXY[1], i));
+
+function cellRect(x, y, fill, extra) {
+  const r = document.createElementNS(NS, "rect");
+  r.setAttribute("x", ox + x * cell + 1); r.setAttribute("y", oy + y * cell + 1);
+  r.setAttribute("width", cell - 2); r.setAttribute("height", cell - 2);
+  r.setAttribute("fill", fill);
+  if (extra) r.setAttribute("style", extra);
+  return r;
+}
+
+function buildScene() {
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  for (let y = 0; y < grid.height; y += 1) {
+    for (let x = 0; x < grid.width; x += 1) {
+      const key = x + "," + y;
+      const isObs = obstacleSet.has(key);
+      svg.appendChild(cellRect(x, y, isObs ? "#2f3b52" : "#fbfcfd"));
+    }
+  }
+}
+buildScene();
+
+function draw(index) {
+  buildScene();
+  const totalSteps = TRACE.steps.length;
+  for (let i = 0; i < Math.min(index + 1, totalSteps); i += 1) {
+    const [x, y] = TRACE.steps[i];
+    const t = totalSteps <= 1 ? 0 : i / (totalSteps - 1);
+    const r = Math.round(207 - t * 165), g = Math.round(227 - t * 116), b = Math.round(247 + t * 0);
+    svg.appendChild(cellRect(x, y, "rgb(" + r + "," + g + "," + b + ")"));
+    if (i === index) {
+      const [cx, cy] = TRACE.steps[index];
+      svg.appendChild(cellRect(cx, cy, "#d62728"));
+    }
+  }
+  if (index >= totalSteps - 1 && TRACE.path.length) {
+    for (const [x, y] of TRACE.path) svg.appendChild(cellRect(x, y, "#2ca02c", "opacity:0.75"));
+  }
+  const [sx0, sy0] = TRACE.start, [gx0, gy0] = TRACE.goal;
+  svg.appendChild(cellRect(sx0, sy0, "#ff9f1c"));
+  svg.appendChild(cellRect(gx0, gy0, "#ff9f1c", "opacity:0.55"));
+  const done = index >= totalSteps - 1;
+  status.textContent = "展开第 " + Math.min(index + 1, totalSteps) + "/" + totalSteps +
+    " 个；当前：" + TRACE.steps[Math.min(index, totalSteps - 1)].join(",") +
+    (done ? "；已到终点，绿色为最终路径" : "");
+}
+
+const speedSel = document.getElementById("speed");
+const playBtn = document.getElementById("play");
+let index = 0;
+let timer = null;
+
+function stopTimer() { if (timer) { clearInterval(timer); timer = null; playBtn.textContent = "播放"; } }
+document.getElementById("next").addEventListener("click", () => {
+  stopTimer(); if (index < TRACE.steps.length - 1) index += 1; draw(index);
+});
+document.getElementById("prev").addEventListener("click", () => {
+  stopTimer(); if (index > 0) index -= 1; draw(index);
+});
+document.getElementById("finish").addEventListener("click", () => {
+  stopTimer(); index = TRACE.steps.length - 1; draw(index);
+});
+playBtn.addEventListener("click", () => {
+  if (timer) { stopTimer(); return; }
+  playBtn.textContent = "暂停";
+  timer = setInterval(() => {
+    if (index >= TRACE.steps.length - 1) { stopTimer(); return; }
+    index += 1; draw(index);
+  }, Number(speedSel.value));
+});
+speedSel.addEventListener("change", () => { if (timer) { stopTimer(); playBtn.click(); } });
+draw(0);
+</script>
+</section>
+<section id="repro" class="sw-panel"><h3 style="margin:4px 0 6px;font-size:15px">怎么自己跑</h3><ul><li><kbd>run.bat</kbd>：三步（测试 → demo（生成 build\plan.html）→ 展示页新鲜度）。</li><li><kbd>python demo.py</kbd>：六段演示；打开 build\plan.html 点「播放」看搜索怎么展开。</li><li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li></ul><p style="margin:6px 0 2px">第 3 段对比表（32×24 种子图；耗时列已规范化为 &lt;当场&gt;）：</p><table class="sw-t"><tr><th>配置</th><th>代价</th><th>扩展</th></tr><tr><td>Dijkstra（4 邻域）</td><td>56.000</td><td>517</td></tr><tr><td>A* 曼哈顿（4 邻域）</td><td>56.000</td><td>211</td></tr><tr><td>Dijkstra（8 邻域）</td><td>50.142</td><td>515</td></tr><tr><td>A* 对角（8 邻域）</td><td>50.142</td><td>218</td></tr><tr><td>A* 欧氏（8 邻域）</td><td>50.142</td><td>246</td></tr></table><details><summary style="cursor:pointer;color:#1d4ed8">六段演示原文</summary><pre>B34-path-planner 演示：栅格 A* / Dijkstra / BFS 同源对拍（无人系统）
+
+==============================================================================
+  1) 手算基准：小地图与直走廊
+==============================================================================
+  1×4 走廊代价（手算 3）            3.0
+   地图（# 障碍，* 路径，S/G 起终点）：
+   S*******
+   ..#....*
+   ..#....*
+   ..#..#.*
+   .....#.*
+   .......G
+  A* 代价 / 路径长度              12.0 / 13 格
+  路径合法性检查                   通过
+
+==============================================================================
+  2) 对拍摘要：A* == Dijkstra 的代价，且扩展更少
+==============================================================================
+  4 邻域 30 图代价一致             30/30
+  10 图扩展数（Dijkstra → A*）    2380 → 1664
+  8 邻域 30 图代价一致（octile）     29/30
+  无权图上 BFS 等价               True/20 图
+
+==============================================================================
+  3) 对比表：代价 / 扩展数 / 耗时【实测】（一张 32×24 种子图）
+==============================================================================
+   配置                           代价     扩展      耗时[实测]
+   Dijkstra（4 邻域）           56.000    517       &lt;当场&gt; ms
+   A* 曼哈顿（4 邻域）             56.000    211       &lt;当场&gt; ms
+   Dijkstra（8 邻域）           50.142    515       &lt;当场&gt; ms
+   A* 对角（8 邻域）              50.142    218       &lt;当场&gt; ms
+   A* 欧氏（8 邻域）              50.142    246       &lt;当场&gt; ms
+
+==============================================================================
+  4) 可采纳性是量出来的：max(h - 真实距离) ≤ 0
+==============================================================================
+  4 邻域 × 曼哈顿                slack = +0.000
+  8 邻域 × 对角(octile)         slack = +0.000
+  8 邻域 × 欧氏                 slack = +0.000
+  8 邻域 × 曼哈顿（故意撒谎）          slack = +4.686
+
+==============================================================================
+  5) 反例：不可采纳的启发式给出次优路径（种子图 seed=3）
+==============================================================================
+  Dijkstra 最优代价             14.242641（= 10 + 3√2）
+  A* 曼哈顿×8邻域 代价             14.828427（= 10 + 4√2，多贪一步直路）
+  差值                        0.585786（恰好 2-√2）
+  结论                        启发式一撒谎，A* 的最优性保证就没了——这是它的前提条件
+
+==============================================================================
+  6) 无解与退化 + 搜索展开动画（自包含 HTML）
+==============================================================================
+  目标被围死                     found=False；原因：dijkstra: 目标不可达（开放表耗尽）
+  起点=终点                     found=True；代价 0.0；路径 [(0, 0)]
+  动画页产物                     build/plan.html（10179 字节，展开 218 步）
+  node --check              退出码 0
+
+==============================================================================
+用户验收（我不代勾）：打开 build\plan.html，点「播放」看搜索怎么展开——
+冷色越深展开越晚、红色是当前格、到终点后绿色高亮最终路径；切换速度看节奏。</pre></details></section>
+<div class="sw-footer"><p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。动画页由本项目既有生成器产出（BFS 展开的逐步记录）。</p></div>
+</body>
+</html>

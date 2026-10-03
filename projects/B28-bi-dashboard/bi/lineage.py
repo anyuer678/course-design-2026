@@ -121,4 +121,10 @@ def problems(g: G27.KnowledgeGraph | None = None) -> list[str]:
 
 
 def render(title: str = "B28 指标血缘（数据 → 清洗 → 表 → 指标 → 面板）") -> str:
-    return V27.render_html(build(), title)
+    # 来源说明必须如实：本页数据是 lineage.NODES/EDGES，不是 B27 的课程 CSV——
+    # 原先复用 B27 渲染器的默认 hint（"数据来源：data/courses.csv…"）是错误归属，
+    # 2026-10-03 展示层批次⑨ 抓出后由渲染器参数化修正。
+    return V27.render_html(
+        build(), title,
+        source_note="数据来源：bi/lineage.py 的 NODES/EDGES 定义（数据 → 清洗 → 表 → 指标 → 面板；"
+                    "分层 SVG 渲染复用 B27 的 kg/viz）。本页为自包含文件：{n} 个节点、{m} 条边。")

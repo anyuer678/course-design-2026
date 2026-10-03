@@ -28,13 +28,18 @@ build\export_trace.exe build\traces
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/3] unit tests (11: trace fidelity vs independent replay / page structure / JS syntax)
+echo [2/4] unit tests (18: trace fidelity vs independent replay / page structure / JS syntax / showcase)
 python -u -m unittest discover -s tests
 if errorlevel 1 exit /b 1
 
 echo.
-echo [3/3] demo (export, replay check, HTML build, node syntax check)
+echo [3/4] demo (export, replay check, HTML build, node syntax check)
 python -u demo.py
+if errorlevel 1 exit /b 1
+
+echo.
+echo [4/4] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
 if errorlevel 1 exit /b 1
 
 echo.

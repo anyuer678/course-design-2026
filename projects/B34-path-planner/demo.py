@@ -101,7 +101,7 @@ def main() -> int:
         print(f"   {name:<22}{res.cost:>9.3f}{res.expanded_count:>7}{ms:>10.1f} ms")
 
     # ------------------------------------------------------------------ 4
-    section(4, "可采纳性是量出来的：max(h − 真实距离) ≤ 0")
+    section(4, "可采纳性是量出来的：max(h - 真实距离) ≤ 0")
     g16 = G.random_grid(16, 12, 0.25, seed=5)
     g16d = G.random_grid(16, 12, 0.25, seed=5, allow_diagonal=True)
     show("4 邻域 × 曼哈顿", f"slack = {S.max_admissibility_slack(g16, (15, 11), H.manhattan):+.3f}")
@@ -116,7 +116,7 @@ def main() -> int:
     a = S.astar(gce, (0, 0), (9, 7), H.manhattan)
     show("Dijkstra 最优代价", f"{d.cost:.6f}（= 10 + 3√2）")
     show("A* 曼哈顿×8邻域 代价", f"{a.cost:.6f}（= 10 + 4√2，多贪一步直路）")
-    show("差值", f"{a.cost - d.cost:.6f}（恰好 2−√2）")
+    show("差值", f"{a.cost - d.cost:.6f}（恰好 2-√2）")
     show("结论", "启发式一撒谎，A* 的最优性保证就没了——这是它的前提条件")
 
     # ------------------------------------------------------------------ 6
@@ -146,7 +146,7 @@ def main() -> int:
         show("node 不可用", "跳过语法体检")
 
     print("\n" + "=" * 78)
-    print("用户验收（我不代勾）：打开 build\\plan.html，点「▶ 播放」看搜索怎么展开——")
+    print("用户验收（我不代勾）：打开 build\\plan.html，点「播放」看搜索怎么展开——")
     print("冷色越深展开越晚、红色是当前格、到终点后绿色高亮最终路径；切换速度看节奏。")
     return 0
 

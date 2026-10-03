@@ -17,7 +17,7 @@ FAILS = []
 
 
 def check(cond, msg):
-    print(f"    {'✔' if cond else '✘'} {msg}")
+    print(f"    {'[ok]' if cond else '[fail]'} {msg}")
     if not cond:
         FAILS.append(msg)
 
@@ -109,9 +109,9 @@ def main() -> int:
     if FAILS:
         print(f"演示存在 {len(FAILS)} 处失败：")
         for f in FAILS:
-            print(f"  ✘ {f}")
+            print(f"  [fail] {f}")
         return 1
-    print("四段演示全部通过 ✔（临时 HTML 已清理）")
+    print("四段演示全部通过 [ok]（临时 HTML 已清理）")
     return 0
 
 

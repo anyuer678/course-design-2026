@@ -110,7 +110,7 @@ def gmv(conn: sqlite3.Connection, data: dict, filters: dict) -> dict:
         data["clean_rows"], data["orders"], filters)), 2)
     return {"id": "gmv", "名称": "成交总额", "unit": "元",
             "口径": "只计 status=DONE；金额=Σ(单价×数量)；按**完成月**归集；"
-                    "退货单（负额）已在清洗链剔除 ⇒ 这是不含退货的成交额；"
+                    "退货单（负额）已在清洗链剔除 → 这是不含退货的成交额；"
                     "品类筛选作用于明细行",
             "sql": (sql[0][0] if sql and sql[0][0] is not None else 0.0), "py": py,
             # 上一版这条没有 equal 字段，而 mismatches() 用的是 `row.get("equal", True)`——

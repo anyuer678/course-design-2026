@@ -17,33 +17,38 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/6] environment check
+echo [1/7] environment check
 python --version
 python -c "import sqlite3, sys; from bi import warehouse; from bi import sql_policy; from mining import clean; from kg import viz; from sec32 import audit; print('      Python', sys.version.split()[0], '| SQLite', sqlite3.sqlite_version); print('      reuse B26 mining + B27 kg + B32 sec32.audit')"
 if errorlevel 1 exit /b 1
 
 echo.
-echo [2/6] unit tests via unittest discover
+echo [2/7] unit tests via unittest discover (42: 34 core + 8 showcase)
 python -m unittest discover -s tests
 if errorlevel 1 exit /b 1
 
 echo.
-echo [3/6] unit tests via direct file run (dual entry, same count expected)
+echo [3/7] core suite via direct file run (34; discover above = 34 + 8 showcase)
 python tests\test_b28.py
 if errorlevel 1 exit /b 1
 
 echo.
-echo [4/6] policy checks: SQL concat sites, metric lineage, reconciliation
+echo [4/7] policy checks: SQL concat sites, metric lineage, reconciliation
 python -c "from bi import sql_policy as P, lineage as L, metrics as M, warehouse as W; c, d = W.build(); r = M.compute(c, d); print('      unregistered SQL concat sites:', P.problems() or 'none'); print('      lineage problems:', L.problems() or 'none'); print('      metric reconciliation:', M.mismatches(r) or 'all equal'); print('      scanner has teeth:', P.prove_scanner_has_teeth())"
 if errorlevel 1 exit /b 1
 
 echo.
-echo [5/6] demo: six sections, numbers computed live
+echo [5/7] demo: six sections, numbers computed live
 python demo.py
 if errorlevel 1 exit /b 1
 
 echo.
-echo [6/6] manual walkthrough list, then the local server
+echo [6/7] showcase page is fresh (web/showcase.html == recompute)
+python tools\showcase.py --check
+if errorlevel 1 exit /b 1
+
+echo.
+echo [7/7] manual walkthrough list, then the local server
 echo       pass no-server to stop before starting it
 python step6.py %*
 if errorlevel 1 exit /b 1

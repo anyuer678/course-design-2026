@@ -20,10 +20,11 @@ Streaming、真集群、UDF/性能调参。
 ## 运行
 
 ```
-run.bat                                          # 两步：17 项测试 → 六段演示（约 2.5 分钟，Spark 起停占大头）
-python -m unittest discover -s tests             # 17 项（单会话复用，约 45s）
-python tests\test_spark.py                       # 同上（双入口同数）
+run.bat                                          # 三步：25 项测试 → 六段演示 → 展示页新鲜度（约 3.5 分钟，Spark 起停占大头）
+python -m unittest discover -s tests             # 25 项（17 核心 + 8 展示页；核心约 45s）
+python tests\test_spark.py                       # 17 项核心（直跑入口）
 python demo.py                                   # 六段；数据写在 build\
+python tools\showcase.py --write                 # 重生展示页 web\showcase.html（--check 过期即红）
 python tools\logdiff.py a.log b.log              # 两次 run.bat 日志的规范化比对（见下"日志怎么比"）
 ```
 
@@ -40,7 +41,7 @@ python tools\logdiff.py a.log b.log              # 两次 run.bat 日志的规�
 | `tests/test_spark.py` | 17 项测试（账本对账 / 逐行对拍 / 手工六行样例 / 空输入 / 倾斜正确性） |
 | `tools/logdiff.py` | 日志规范化比对器（时间戳 / 清理播报 / 计时数字三类噪声，规范统计可审计） |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -56,7 +57,8 @@ python tools\logdiff.py a.log b.log              # 两次 run.bat 日志的规�
 
 ## 实测（2026-10-02，首次交付；数字均为本轮现算）
 
-- 测试：**17 项全过、双入口同数**（`discover` 与直跑都是 `Ran 17 tests`，约 45s——Spark 会话只起一次）。
+- 测试：**25 项全过（17 核心 + 8 展示页）**；discover 25 = 直跑 17 + 展示页 8
+  （核心约 45s——Spark 会话只起一次；展示页测试每次 collect 真跑一遍约 30 秒的演示，这是设计成本）。
 - 数据：40 万行 / 23.1MB；账本 {bad_timestamp 40, bad_level 32, missing_field 24, bad_code 16}，
   Spark 分类计数逐类相等、清洗后 399,888 行 == 真值。
 - 对拍：device×level 24 行、每小时 24 行、top 错误码 [(404,118),(500,113),(503,101)]——
@@ -73,6 +75,16 @@ python tools\logdiff.py a.log b.log              # 两次 run.bat 日志的规�
 Windows taskkill 的进程清理播报（出现位置与 PID 不稳定）、实时测量值（计时）。
 比对前用 `tools/logdiff.py` 规范化，它会把"规范掉了哪几类、各几行"打印出来供审计；
 除这三类外必须逐字相同。这是把"声明式免责"换成"机制化核对"（同 B8 的去计时行做法）。
+
+## 展示页（2026-10-03 展示层批次⑨）
+
+`web/showcase.html` 由 `tools/showcase.py` 真跑 `demo.py` 现算——**只取 stdout**（Spark 的 JVM 日志
+在 stderr，天然不进页面）；**四条规范化**：warehouse 临时目录→`<临时目录>`、生成 40 万行用时→
+`<当场>`、第 6 段耗时列→`<当场>`、JVM 退出清理行（含 PID，每次必不同）整行移除并留计数说明。
+页内三个页签：六段原文 / 清洗对账账本（逐行读数表）/ 倾斜实验（分布读数 + 读法说明）。
+**25 项（17 核心 + 8 展示页）全过**；三步 run.bat 两跑退出码 0/0、logdiff 规范化后逐字相同
+（原始各 94 行→规范后 88 行；规范项两侧对称：JVM 时间戳 4 / 进程清理播报 6 / 单测计时 1 /
+warehouse 临时名 1 / 生成耗时 1 / 实测耗时 1）。
 
 ## 坑（都留了钉子）
 

@@ -64,9 +64,9 @@ _TEMPLATE_HEAD = """<!DOCTYPE html>
     <h2>堆排序（min-heap：建堆 + 逐个取顶）</h2>
     <div id="sort-bars" class="bars"></div>
     <div class="controls">
-      <button id="sort-prev">◀ 上一步</button>
-      <button id="sort-play">▶ 播放</button>
-      <button id="sort-next">下一步 ▶</button>
+      <button id="sort-prev">上一步</button>
+      <button id="sort-play">播放</button>
+      <button id="sort-next">下一步</button>
       <span id="sort-status" class="status"></span>
       <label>速度 <select id="sort-speed">
         <option value="1000">0.5×</option>
@@ -88,9 +88,9 @@ _TEMPLATE_HEAD = """<!DOCTYPE html>
     </div>
     <svg id="graph" viewBox="0 0 540 360" aria-label="图遍历动画"></svg>
     <div class="controls">
-      <button id="graph-prev">◀ 上一步</button>
-      <button id="graph-play">▶ 播放</button>
-      <button id="graph-next">下一步 ▶</button>
+      <button id="graph-prev">上一步</button>
+      <button id="graph-play">播放</button>
+      <button id="graph-next">下一步</button>
       <span id="graph-status" class="status"></span>
       <label>速度 <select id="graph-speed">
         <option value="1000">0.5×</option>
@@ -120,14 +120,14 @@ function makeAnimator(total, delayFn, render) {
     next() { clamp(); if (index < total - 1) index += 1; draw(); },
     prev() { clamp(); if (index > 0) index -= 1; draw(); },
     play(btn) {
-      if (timer) { clearInterval(timer); timer = null; btn.textContent = "▶ 播放"; return; }
-      btn.textContent = "⏸ 暂停";
+      if (timer) { clearInterval(timer); timer = null; btn.textContent = "播放"; return; }
+      btn.textContent = "暂停";
       timer = setInterval(() => {
-        if (index >= total - 1) { clearInterval(timer); timer = null; btn.textContent = "▶ 播放"; return; }
+        if (index >= total - 1) { clearInterval(timer); timer = null; btn.textContent = "播放"; return; }
         index += 1; draw();
       }, delayFn());
     },
-    stop(btn) { if (timer) { clearInterval(timer); timer = null; btn.textContent = "▶ 播放"; } },
+    stop(btn) { if (timer) { clearInterval(timer); timer = null; btn.textContent = "播放"; } },
     setSpeed() { if (timer) { clearInterval(timer); timer = null;
       return true; } return false; },
     draw, get index() { return index; }

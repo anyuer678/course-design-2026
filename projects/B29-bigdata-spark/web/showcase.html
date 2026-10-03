@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>B29-bigdata-spark · Spark 日志清洗与倾斜实验（课设作品集）</title>
+<style>
+:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f7f8fa;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f;--warn:#8a5a00}
+*{box-sizing:border-box}
+body{margin:0;padding:1.4rem 1.1rem 3rem;background:var(--bg);color:var(--ink);font:16px/1.7 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+main{max-width:71rem;margin:0 auto}
+h1{font-size:1.5rem;margin:.2rem 0}h2{font-size:1.05rem;margin:1.6rem 0 .5rem}
+p.note,span.note{color:var(--muted);font-size:.87rem}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(15rem,1fr));gap:.7rem;margin:.6rem 0}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.7rem .9rem}
+.card b{display:block;font-size:.8rem;color:var(--muted);font-weight:600;margin-bottom:.15rem}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.9rem 1rem;margin:.8rem 0}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.4rem 0 .8rem}
+.chip{font:inherit;font-size:.87rem;padding:.28rem .7rem;border:1px solid var(--line);border-radius:999px;background:#fff;cursor:pointer}
+.chip.active{background:var(--accent);border-color:var(--accent);color:#fff}
+pre.code{margin:.6rem 0 0;padding:.8rem .9rem;background:#0f1115;color:#e6e9ef;border-radius:8px;overflow:auto;font:13px/1.55 ui-monospace,Consolas,monospace}
+pre.code.wrap{white-space:pre-wrap;word-break:break-word}
+table.plain{border-collapse:collapse;font-size:.88rem;margin:.5rem 0;width:100%}
+table.plain th,table.plain td{border:1px solid var(--line);padding:.3rem .7rem;text-align:left;vertical-align:top}
+td.ok{color:var(--ok)}
+footer{color:var(--muted);font-size:.85rem;margin-top:2.2rem}
+kbd{font-family:ui-monospace,Consolas,monospace;font-size:.85em;border:1px solid var(--line);border-radius:4px;padding:0 .3rem;background:#fff}
+</style>
+</head>
+<body data-showcase="B29-bigdata-spark">
+<main>
+<p class="note"><a href="../../../showcase/index.html">← 作品集总入口</a>（本页双击即看，零网络依赖）</p>
+<h1>B29-bigdata-spark · 工业日志的清洗 / 聚合 / Spark SQL / 倾斜实验</h1>
+<p class="note">用户画像与大数据分析 · 本机装好的 pyspark 4.2.0（local[2]）真跑 40 万行合成日志：
+清洗链与账本对账、DataFrame 与纯 Python 参照逐行对拍、Spark SQL 第二种说法、salting 两阶段倾斜实验。
+<b>数据是固定种子合成的，结论不外推</b>。下面全部来自刚跑完的现场输出（只取 stdout——
+Spark 的 JVM 日志在 stderr，天然不进页面；三处现场值已按规则规范化）。</p>
+
+<h2>实测数字（本页现算）</h2>
+<section id="facts" class="cards"><div class="card"><b>测试</b><span>25 项（17 核心 + 8 展示页自测）</span></div><div class="card"><b>环境（本机实测落实）</b><span>pyspark 4.2.0；master local[2]；worker 解释器显式指向完整 Python（`python3` 是商店占位桩，不落实 Spark 起不来）</span></div><div class="card"><b>合成日志</b><span>40 万行 / 23.1 MB；四类缺陷按账本注入 {'bad_timestamp': 40, 'bad_level': 32, 'missing_field': 24, 'bad_code': 16}；应通过清洗（真值）399888</span></div><div class="card"><b>清洗三方对账</b><span>小样本 Python==账本 True、Spark==账本 True；40 万行分类计数与账本一致 True</span></div><div class="card"><b>聚合对拍</b><span>device×level 24（相等：True）；每小时 24（相等：True）；top 错误码 [('404', 118), ('500', 113), ('503', 101)]（相等：True）</span></div><div class="card"><b>倾斜实验</b><span>同键同分区倾斜比（确定性）2.51；随机分区摊平后 1.00；salting == 直接 groupBy True；热键 dev-01 计数 207159</span></div></section>
+
+<h2>展示区</h2>
+<section id="demo" class="panel">
+  <div class="chips" data-tabs="panels">
+    <button class="chip" data-tab="raw">演示 · 六段原文</button>
+    <button class="chip" data-tab="ledger">清洗对账账本</button>
+    <button class="chip" data-tab="skew">倾斜实验</button>
+  </div>
+  <div data-pane="panels">
+    <div data-pane-id="raw">
+      <p class="note">`python demo.py` 的完整 stdout 现场输出（三处现场值：warehouse 临时目录 /
+      生成用时 / 第 6 段耗时——已替换成 &lt;当场&gt;/&lt;临时目录&gt;）。</p>
+      <pre class="code wrap">B29-bigdata-spark 演示：工业日志的清洗 / 聚合 / Spark SQL / 倾斜实验（local 模式）
+
+==============================================================================
+  1) 环境：Spark 版本与 Windows 三条坑的落实
+==============================================================================
+  pyspark 版本                  4.2.0
+  worker 解释器（已落实）             C:\Users\30816\AppData\Local\Programs\Python\Python312\python.exe
+  为什么必须显式设它                   本机 python3 是 Microsoft Store 占位桩，worker 会起不来
+    与当前解释器一致                  True
+  Spark 版本 / master           4.2.0 / local[2]
+  warehouse 位置                &lt;临时目录&gt;
+  shuffle 分区数（对数据规模说话）        4
+
+==============================================================================
+  2) 合成日志：40 万行 + 四类缺陷按账本注入 + 键倾斜 45%
+==============================================================================
+  生成 40 万行用时 &lt;当场&gt;
+  文件大小                        23.1 MB
+  注入账本                        {&#x27;bad_timestamp&#x27;: 40, &#x27;bad_level&#x27;: 32, &#x27;missing_field&#x27;: 24, &#x27;bad_code&#x27;: 16}
+  应通过清洗（真值）                   399888
+
+==============================================================================
+  3) 清洗对账：Spark == 账本 == 纯 Python（小样本逐行 + 大样本计数）
+==============================================================================
+  纯 Python 隔离计数               {&#x27;bad_level&#x27;: 4, &#x27;missing_field&#x27;: 3, &#x27;bad_timestamp&#x27;: 5, &#x27;bad_code&#x27;: 2}
+  账本                          {&#x27;bad_timestamp&#x27;: 5, &#x27;bad_level&#x27;: 4, &#x27;missing_field&#x27;: 3, &#x27;bad_code&#x27;: 2}
+  对账（Python==账本）              True
+  对账（Spark==账本）               True
+  40 万行：Spark 分类计数            {&#x27;ok&#x27;: 399888, &#x27;bad_timestamp&#x27;: 40, &#x27;bad_level&#x27;: 32, &#x27;missing_field&#x27;: 24, &#x27;bad_code&#x27;: 16}
+  40 万行：与账本一致                 True
+
+==============================================================================
+  4) 聚合对拍：Spark（DataFrame）vs 纯 Python 参照，逐行相等
+==============================================================================
+  device×level 行数             24（相等：True）
+    样例                        [(&#x27;dev-01&#x27;, &#x27;ERROR&#x27;, 47), (&#x27;dev-01&#x27;, &#x27;INFO&#x27;, 146), (&#x27;dev-01&#x27;, &#x27;WARN&#x27;, 68)]
+  每小时错误行数                     24（相等：True）
+  top 错误码                     [(&#x27;404&#x27;, 118), (&#x27;500&#x27;, 113), (&#x27;503&#x27;, 101)]（相等：True）
+
+==============================================================================
+  5) Spark SQL：同一批查询的第二种说法
+==============================================================================
+  SQL 三查询 == DataFrame        True / True / True
+  SQL 与纯 Python 参照            True / True / True
+  示例 SQL（每小时错误）               SELECT substr(ts,12,2) h, COUNT(*) FROM logs WHERE kind=&#x27;ok&#x27; AND level=&#x27;ERROR&#x27; GROUP BY h
+
+==============================================================================
+  6) 倾斜实验：同键同分区 vs salting 两阶段（耗时是实测，有波动）
+==============================================================================
+  清洗后行数（缓存）                   399888
+  按 device 重分区后的行数分布          [55080, 82514, 55135, 207159]
+    倾斜比 max/中位（确定性）           2.51
+  随机重分区对照（摊平）                 [99971, 99973, 99972, 99972] → 比值 1.00
+  salting 结果 == 直接 groupBy    True
+    dev-01 计数（热键）             207159
+  耗时（3 次取中——单次实测） plain &lt;当场&gt; ms / salted &lt;当场&gt; ms
+  怎么读这组数                      本地 MB 级数据上耗时差落在噪声里；倾斜危害看上面的分布读数
+
+==============================================================================
+完成：6 段演示全部跑通。第 6 段耗时是实时测量（两次运行会有波动）；
+其余段落用固定种子，可复现（python demo.py &gt; a.txt 跑两遍 diff 自证）。
+（Spark JVM 退出清理日志 3 行已按规则移除：含 PID，每次运行必不同。）</pre>
+    </div>
+    <div data-pane-id="ledger" hidden>
+      <p class="note">第 3 段清洗对账的逐行读数（纯 Python 隔离计数 vs 账本 vs 40 万行 Spark 计数）：</p>
+      <table class="plain"><tr><td>纯 Python 隔离计数</td><td>{&#x27;bad_level&#x27;: 4, &#x27;missing_field&#x27;: 3, &#x27;bad_timestamp&#x27;: 5, &#x27;bad_code&#x27;: 2}</td></tr><tr><td>账本</td><td>{&#x27;bad_timestamp&#x27;: 5, &#x27;bad_level&#x27;: 4, &#x27;missing_field&#x27;: 3, &#x27;bad_code&#x27;: 2}</td></tr><tr><td>对账（Python==账本）</td><td>True</td></tr><tr><td>对账（Spark==账本）</td><td>True</td></tr><tr><td>40 万行：Spark 分类计数</td><td>{&#x27;ok&#x27;: 399888, &#x27;bad_timestamp&#x27;: 40, &#x27;bad_level&#x27;: 32, &#x27;missing_field&#x27;: 24, &#x27;bad_code&#x27;: 16}</td></tr><tr><td>40 万行：与账本一致</td><td>True</td></tr></table>
+      <p class="note">SQL 的第二种说法（第 5 段）：三查询 == DataFrame == 纯 Python 参照（True/True/True）。示例：</p>
+      <pre class="code wrap">SELECT substr(ts,12,2) h, COUNT(*) FROM logs WHERE kind=&#x27;ok&#x27; AND level=&#x27;ERROR&#x27; GROUP BY h</pre>
+    </div>
+    <div data-pane-id="skew" hidden>
+      <p class="note">第 6 段倾斜实验的逐行读数。读法：本地 MB 级数据上耗时差落在噪声里（故页面不冻结计时），
+      <b>倾斜危害看分布读数</b>——同键同分区 max/中位 = 2.51，随机重分区摊平到 1.00，salting 结果与直接 groupBy 相等。</p>
+      <table class="plain"><tr><td>清洗后行数（缓存）</td><td>399888</td></tr><tr><td>按 device 重分区后的行数分布</td><td>[55080, 82514, 55135, 207159]</td></tr><tr><td>倾斜比 max/中位（确定性）</td><td>2.51</td></tr><tr><td>随机重分区对照（摊平）</td><td>[99971, 99973, 99972, 99972] → 比值 1.00</td></tr><tr><td>salting 结果 == 直接 groupBy</td><td>True</td></tr><tr><td>dev-01 计数（热键）</td><td>207159</td></tr><tr><td>怎么读这组数</td><td>本地 MB 级数据上耗时差落在噪声里；倾斜危害看上面的分布读数</td></tr></table>
+    </div>
+  </div>
+</section>
+
+<h2>怎么自己跑</h2>
+<section id="repro" class="panel">
+  <ul>
+    <li><kbd>run.bat</kbd>：三步（测试 → 六段演示 → 展示页新鲜度）；首次运行前需本机已有 pyspark（零新下载）。</li>
+    <li><kbd>python demo.py</kbd>：六段演示（约 30 秒，Spark 启动与 shuffle 都在里面）。</li>
+    <li><kbd>python tools\showcase.py --write</kbd>：重新生成本页；<kbd>--check</kbd> 重算比对、过期即红。</li>
+  </ul>
+  <p class="note">本页是生成物：数据由上面这条命令真跑 demo.py 现算（只取 stdout；三处现场值按规则
+  规范化，规则写在生成器文档串里）。</p>
+</section>
+
+<footer>
+  <p>生成物：python tools/showcase.py --write（口径见 showcase/SPEC.md；仓库级校验 python showcase/check.py）。</p>
+</footer>
+</main>
+<script>
+(function(){
+  "use strict";
+  function activate(group, id){
+    var chips = document.querySelectorAll('[data-tabs="' + group + '"] [data-tab]');
+    for (var i = 0; i < chips.length; i++){
+      var on = chips[i].getAttribute("data-tab") === id;
+      chips[i].className = on ? "chip active" : "chip";
+    }
+    var panes = document.querySelectorAll('[data-pane="' + group + '"] [data-pane-id]');
+    for (var j = 0; j < panes.length; j++){
+      panes[j].hidden = panes[j].getAttribute("data-pane-id") !== id;
+    }
+  }
+  var lines = document.querySelectorAll("[data-tabs]");
+  for (var k = 0; k < lines.length; k++){
+    (function(line){
+      var group = line.getAttribute("data-tabs");
+      var chips = line.querySelectorAll("[data-tab]");
+      for (var c = 0; c < chips.length; c++){
+        chips[c].addEventListener("click", function(){
+          activate(group, this.getAttribute("data-tab"));
+        });
+      }
+      if (chips.length) activate(group, chips[0].getAttribute("data-tab"));
+    })(lines[k]);
+  }
+})();
+</script>
+</body>
+</html>

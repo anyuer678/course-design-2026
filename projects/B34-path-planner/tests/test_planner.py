@@ -3,7 +3,7 @@
 纪律（和本仓库其它项目一致）：
   1. 期望值来自手算或独立参照：走廊/小图的手算代价写进注释，随机图用
      **Dijkstra 当参照**（h≡0 的 A* 自身又有 BFS 一侧做锚）；
-  2. "启发式可采纳"是**量出来**的：max(h − 真实距离) ≤ 0，用从目标回溯的
+  2. "启发式可采纳"是**量出来**的：max(h - 真实距离) ≤ 0，用从目标回溯的
      Dijkstra 直接算真实距离；
   3. 教学反例要**真的撞得到**：曼哈顿 × 8 邻域在种子搜索里找出次优实例并钉住；
   4. 页面/记录：搜索过程可回放、可构建、可 node --check（同 B33 分界）。
@@ -179,7 +179,7 @@ class TestHeuristics(unittest.TestCase):
         self.assertIsNotNone(found, "50 个种子里没找到反例——应该至少撞到一个")
         seed, best, greedy = found
         self.assertAlmostEqual(best, 14.242640687119286, msg=f"seed={seed}")  # 10 + 3√2
-        self.assertAlmostEqual(greedy, 14.828427124746190, msg=f"seed={seed}")  # 差 2−√2
+        self.assertAlmostEqual(greedy, 14.828427124746190, msg=f"seed={seed}")  # 差 2-√2
 
 
 class TestViz(unittest.TestCase):

@@ -238,9 +238,9 @@
    "course": "知识图谱与知识工程",
    "title": "课程先修知识图谱（自包含交互 HTML 生成器）",
    "batch": 9,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B27-course-kg/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": "生成器已有，产物临时目录；提升为提交物"
   },
   {
@@ -248,9 +248,9 @@
    "course": "数据分析与商务智能",
    "title": "商务智能看板：SQL/纯 Python 双路对拍",
    "batch": 9,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B28-bi-dashboard/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": "已有手写 SVG 看板产物"
   },
   {
@@ -258,9 +258,9 @@
    "course": "工业大数据处理技术",
    "title": "PySpark 日志清洗/聚合/倾斜实验",
    "batch": 9,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B29-bigdata-spark/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": ""
   },
   {
@@ -268,9 +268,9 @@
    "course": "可视化技术",
    "title": "算法可视化：B2 追踪导出 + 回放动画",
    "batch": 9,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B33-viz-algo/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": "自包含动画生成器已有，产物 build/ 不进仓库"
   },
   {
@@ -278,9 +278,9 @@
    "course": "无人系统",
    "title": "栅格 A*/Dijkstra/BFS + 搜索动画",
    "batch": 9,
-   "status": "todo",
-   "page": null,
-   "generator": null,
+   "status": "done",
+   "page": "projects/B34-path-planner/web/showcase.html",
+   "generator": "tools/showcase.py",
    "note": "自包含动画生成器已有，产物 build/ 不进仓库"
   },
   {

@@ -28,7 +28,9 @@ def _layers(g: KnowledgeGraph) -> dict[str, int]:
     return layer
 
 
-def render_html(g: KnowledgeGraph, title: str = "课程先修知识图谱") -> str:
+def render_html(g: KnowledgeGraph, title: str = "课程先修知识图谱",
+                source_note: str = "数据来源：data/courses.csv 与 data/prereqs.csv（PLAN §3 依赖表转写）。"
+                                   "本页为自包含文件：{n} 个任务节点、{m} 条关系边。") -> str:
     layers = _layers(g)
     by_layer: dict[int, list[str]] = {}
     for t, lv in layers.items():
@@ -138,6 +140,5 @@ document.querySelectorAll('.node').forEach(node => {{
   }});
 }});
 </script>
-<p class="hint">数据来源：data/courses.csv 与 data/prereqs.csv（PLAN §3 依赖表转写）。
-本页为自包含文件：{len(g.nodes)} 个任务节点、{len(g.edges)} 条关系边。</p>
+<p class="hint">{source_note.format(n=len(g.nodes), m=len(g.edges))}</p>
 </body></html>"""

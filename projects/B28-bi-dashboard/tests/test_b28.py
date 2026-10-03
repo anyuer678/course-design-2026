@@ -158,7 +158,7 @@ class TestCaliber(unittest.TestCase):
                                round(sum(r["amount"] for r in data["clean_rows"]), 2), 2)
 
     def test_returns_are_removed_not_netted(self):
-        """退货在清洗链剔除 ⇒ 明细里不该有任何负额行；口径文字也必须说清这一点。"""
+        """退货在清洗链剔除 → 明细里不该有任何负额行；口径文字也必须说清这一点。"""
         self.assertTrue(all(r["amount"] > 0 for r in setUpModule.data["clean_rows"]))
         text = M.compute(setUpModule.conn, setUpModule.data)["gmv"]["口径"]
         self.assertIn("退货", text)
@@ -225,7 +225,7 @@ class TestFilterPolicy(unittest.TestCase):
     def test_params_order_is_independent_of_dict_order(self):
         a = W.where_for({"region": "东区", "month_from": "2026-05", "category": "配件"})
         b = W.where_for({"category": "配件", "month_from": "2026-05", "region": "东区"})
-        self.assertEqual(a, b, "参数顺序随字典插入顺序变 ⇒ 绑定值会串位")
+        self.assertEqual(a, b, "参数顺序随字典插入顺序变 → 绑定值会串位")
 
 
 class TestSqlPolicy(unittest.TestCase):

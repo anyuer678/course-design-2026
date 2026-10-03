@@ -20,10 +20,10 @@ JS 语法"。
 ## 运行
 
 ```
-run.bat                                          # 三步：编译导出器+导出 → 11 项测试 → demo（生成 build\viz.html）
+run.bat                                          # 四步：编译导出器+导出 → 18 项测试 → demo（生成 build\viz.html）→ 展示页新鲜度
 g++ -std=c++17 -O2 -Wall -Wextra -static -I../B2-datastruct-lab/include tools/export_trace.cpp -o build/export_trace.exe
 build\export_trace.exe build\traces              # 三份 JSON：sort / bfs / dfs
-python -m unittest discover -s tests             # 11 项（双入口同数）
+python -m unittest discover -s tests             # 18 项（11 核心 + 7 展示页）
 python demo.py                                   # 导出 + 回放核对 + 生成页面 + node --check
 ```
 
@@ -39,7 +39,7 @@ python demo.py                                   # 导出 + 回放核对 + 生�
 | `tests/test_viz.py` | 11 项测试（记录保真 / 负面自证 / 页面结构 / 内嵌数据 / 确定性 / node --check） |
 | `demo.py` | 演示：导出 → 保真核对 → 生成页面 → 语法体检 → 用户验收指引 |
 
-## 知识点 ↔ 实现 ↔ 怎么被验证
+## 知识点 · 实现 · 怎么被验证
 
 | 课程知识点 | 代码 | 验证方式 |
 |---|---|---|
@@ -52,15 +52,24 @@ python demo.py                                   # 导出 + 回放核对 + 生�
 
 ## 实测（2026-10-02，首次交付；数字均为本轮现算）
 
+- 测试：**18 项全过（11 核心 + 7 展示页）**；discover 18 = 直跑 11 + 展示页 7。
 - 记录：sort 20 事件（1 build + 10 swap + 8 pop + 1 收尾）、BFS 7 步、DFS 7 步；
   JSON 字节数 {sort: 1274, bfs: 393, dfs: 396}。
 - 保真：排序**逐步回放 0 失败**、终态 == `sorted(input)`；BFS/DFS 与独立 Python 参照
   **逐步相等**；负面自证（反转一条 swap 快照）回放器**必须报红**（测试钉住）。
-- 页面：`build/viz.html` **13641 字节**（内嵌数据 2080 字节），`node --check` 退出码 **0**；
+- 页面：`build/viz.html` **13601 字节**（内嵌数据 2080 字节），`node --check` 退出码 **0**；
   两遍构建字节相同。
 - `run.bat` 连跑两次退出码 **0**、`build/` 之外无新增、`not recognized` 0，
-  两次日志差异只有 1 行 unittest 计时；**B2 侧复核**：428 项断言 0 失败、run.bat 两次
-  日志逐字相同（trace 增补零行为影响）。
+  两次日志差异只有 1 行 unittest 计时（2026-10-03 批次⑨后按四步重测：各 56 行，规范化后逐字相同）；
+  **B2 侧复核**：428 项断言 0 失败、run.bat 两次日志逐字相同（trace 增补零行为影响）。
+
+## 展示页（2026-10-03 展示层批次⑨）
+
+`web/showcase.html` 由 `tools/showcase.py` 把动画页**原位提升**为提交物——条形图/图遍历 SVG/
+播放·单步·速度控制与内嵌记录分毫未动（记录保真由本项目测试钉住），页首加现算数字卡
+（20 事件 / 回放 0 失败 / BFS·DFS 7 步 / 页面 13601 字节含内嵌数据 2080）、页尾加运行方式。
+**18 项（11 核心 + 7 展示页）全过**；四步 run.bat 两跑退出码 0/0、规范化日志逐字相同
+（各 56 行——规范项=单测计时）。动画观感仍归你实跑验收。
 
 ## 坑（都留了钉子）
 
@@ -70,12 +79,12 @@ python demo.py                                   # 导出 + 回放核对 + 生�
    解析到 `.\node`），demo 跑到 node --check 时报 `WinError 193（不是有效的 Win32 程序）`。
    教训升级版：垃圾文件不只是垃圾，还能**劫持 PATH 上的同名可执行文件**；
    已改逗号分隔，并给 demo/test 的 node 调用加 OSError 兜底（查明原因、如实跳过）。
-2. **回放协议必须"读源码得来"**：`Heap::pop` 里"根↔尾交换 + 丢尾"这步是**未记录**的，
+2. **回放协议必须"读源码得来"**：`Heap::pop` 里"根<->尾交换 + 丢尾"这步是**未记录**的，
    回放模型第一版没补它 → 16/20 步红；第二版把收缩挂在 pop 后 → 仍错（收缩发生在
    **build/pop 事件之后、下一轮取出开头**）；第三版照源码逐步对齐才 0 失败。
    教训：对拍红的时候，先把对方的**真实协议**抄清楚再修模型。
 3. **"每帧长度都等于 n"是假假设**：取出过程中有一帧"在途"（元素已离开堆、还没进前缀），
-   长度 n−1——断言要写精确相等（`回放 == 快照`）而不是加不该有的整齐假设。
+   长度 n-1——断言要写精确相等（`回放 == 快照`）而不是加不该有的整齐假设。
 4. **跨项目 include 用正斜杠**：`-I..\B2-datastruct-lab\include` 里的反斜杠会被 bash 当转义吃掉，
    g++ 报头文件找不到；`-I../B2-datastruct-lab/include` 稳定（cmd/POSIX 两界都认）。
 

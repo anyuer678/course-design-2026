@@ -43,10 +43,10 @@ _HEAD = """<!DOCTYPE html>
   <div id="meta" class="sub"></div>
   <svg id="scene" viewBox="0 0 960 560" aria-label="搜索展开动画"></svg>
   <div class="controls">
-    <button id="prev">◀ 上一步</button>
-    <button id="play">▶ 播放</button>
-    <button id="next">下一步 ▶</button>
-    <button id="finish">⏭ 直接看结果</button>
+    <button id="prev">上一步</button>
+    <button id="play">播放</button>
+    <button id="next">下一步</button>
+    <button id="finish">直接看结果</button>
     <span id="status" class="status"></span>
     <label>速度 <select id="speed">
       <option value="400">0.5×</option>
@@ -135,7 +135,7 @@ const playBtn = document.getElementById("play");
 let index = 0;
 let timer = null;
 
-function stopTimer() { if (timer) { clearInterval(timer); timer = null; playBtn.textContent = "▶ 播放"; } }
+function stopTimer() { if (timer) { clearInterval(timer); timer = null; playBtn.textContent = "播放"; } }
 document.getElementById("next").addEventListener("click", () => {
   stopTimer(); if (index < TRACE.steps.length - 1) index += 1; draw(index);
 });
@@ -147,7 +147,7 @@ document.getElementById("finish").addEventListener("click", () => {
 });
 playBtn.addEventListener("click", () => {
   if (timer) { stopTimer(); return; }
-  playBtn.textContent = "⏸ 暂停";
+  playBtn.textContent = "暂停";
   timer = setInterval(() => {
     if (index >= TRACE.steps.length - 1) { stopTimer(); return; }
     index += 1; draw(index);

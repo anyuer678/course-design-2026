@@ -120,7 +120,7 @@ def true_distances_to(grid: Grid, goal) -> dict:
 
 
 def max_admissibility_slack(grid: Grid, goal, heuristic) -> float:
-    """max over 可达格子 (h(格子→goal) − 真实距离)。≤ 0 才算可采纳；> 0 的量就是"撒谎幅度"。"""
+    """max over 可达格子 (h(格子→goal) - 真实距离)。≤ 0 才算可采纳；> 0 的量就是"撒谎幅度"。"""
     dist = true_distances_to(grid, goal)
     worst = -inf
     for cell, d in dist.items():
