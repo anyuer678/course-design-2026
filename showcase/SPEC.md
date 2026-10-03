@@ -143,12 +143,20 @@ python -m unittest discover -s showcase/tests
   `lab.js`、每页内联脚本与总入口两段内联脚本都过 `node --check`（校验器执行）。
 - **自证**：`python showcase/lab.py --selftest`（真起 B31 → 真发请求断言 201 → 真停；含
   overview 覆盖、B1 带 run + stop_run 动作（`bat=[]` 曾让整条动作消失的真回归）、"只有 B8 无动作"、
-  回环判定四项边界；2026-10-04 自检 **11/11 PASS**——另曾全服务冒烟 6/6：B31 `201 Created`
+  回环判定、重复启动快路径；2026-10-04 自检 **12/12 PASS**——另曾全服务冒烟 6/6：B31 `201 Created`
   （341B）、B38 `+PONG`、B35 `CONNACK 20 02 00 00`、B28 `200 OK`（5719B）、dorm `200 OK`（6998B）、
   B11 `HTTP/1.1 404`（真服务的正确回答）；B7 的 run.bat 动作经 API 活体跑通（~10.1s / 52 行 /
   尾行 "Done."）；**长任务中止带负面对照的受控实测**：tick.bat 探针（cmd 外壳→python 子进程每秒 5 行）——
   旧 terminate 只杀外壳后 tick 继续增长（缺陷复现），新 `_stop`（taskkill /T）后 tick 稳态零增长；
   B1 run.bat 经 API 全跑通（8.2s / 65 行 / 尾行 "Done."）；B2 run.bat 中途中止（命中活进程 →
-  停止后输出不再增长 → 残留进程 0））；`--lan` 边界活体实测（2026-10-04 凌晨）：回环 ping/overview/静态页
+  停止后输出不再增长 → 残留进程 0））；**动作形式覆盖抽查（2026-10-04）**：`run+参数`形式——
+  B14 `run.bat no-gui` 经 hub 跑完（10.2s / 30 行 / "[5/5] skipped on purpose (no-gui)" + "Done."，
+  build 落 TEMP 不写仓库）；`demo` 形式按"生成器是否真跑 demo.py"分账（grep 全部 33 个生成器逐一判定，
+  用同行调用形态、防把页面提示文字误认成调用）：15 家的生成器每次 --check 都真跑 demo.py
+  （校验器 33/33 全绿时即热验证——B11/B24/B27/B28/B29/B31/B32/B33/B34/B35/B37/B39/B40/B41/dorm），
+  **另 10 家的生成器是进程内 import 计算、不跑 demo.py**（B3/B4/B10/B12/B13/B23/B25/B26/B30/B38）——
+  这 10 家全部逐一经 hub 真跑（1.0-78.3s / 46-245 行、正常收尾；B23 训练重 78.3s）；`tests`
+  形式抽查——B13 "Ran 94 tests / OK"、B3 "Ran 45 tests / OK"；跑完仓库零新增；
+  `--lan` 边界活体实测（2026-10-04 凌晨）：回环 ping/overview/静态页
   `200`，局域网 IP（100.64.32.153）overview/POST `403`、静态页 `200`。
 
