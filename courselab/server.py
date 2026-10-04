@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import re
+import socket
 import subprocess
 import sys
 import tempfile
@@ -146,7 +147,11 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json({"ok": False, "error": message, "code": err_code}, code)
 
     def _body(self) -> dict:
-        n = int(self.headers.get("Content-Length") or 0)
+        try:
+            n = int(self.headers.get("Content-Length") or 0)
+        except (TypeError, ValueError):
+            n = 0
+        n = max(0, min(n, 1 << 20))     # 畸形/超长 Content-Length 不当异常路径
         raw = self.rfile.read(n) if n else b"{}"
         try:
             data = json.loads(raw.decode("utf-8"))
@@ -503,19 +508,18 @@ class Handler(SimpleHTTPRequestHandler):
         cid = unquote(path[len("/api/admin/courses/"):-len("/meta")]).strip("/")
         kwargs = {}
         if "published" in data:
-            kwargs["published"] = bool(data.get("published"))
+            kwargs["published"] = data.get("published")
         if "sort" in data:
             try:
                 kwargs["sort"] = int(data.get("sort") or 0)
             except (TypeError, ValueError):
                 return self.send_error_json(400, "排序值必须是整数")
         if "teacher_id" in data:
-            t = data.get("teacher_id")
-            kwargs["teacher_id"] = None if t in (None, "", 0) else int(t)
+            kwargs["teacher_id"] = data.get("teacher_id")
         if "summary" in data:
-            kwargs["summary"] = str(data.get("summary") or "")
+            kwargs["summary"] = data.get("summary")
         if "outline" in data:
-            kwargs["outline"] = str(data.get("outline") or "")
+            kwargs["outline"] = data.get("outline")
         row = admin.set_course_meta(self.db, cid, user["id"], **kwargs)
         return self.send_json({"ok": True, "meta": row})
 
@@ -592,11 +596,11 @@ class Handler(SimpleHTTPRequestHandler):
             return self.send_error_json(403, "只能维护绑定给自己的课程", "FORBIDDEN")
         kwargs = {}
         if "published" in data:
-            kwargs["published"] = bool(data.get("published"))
+            kwargs["published"] = data.get("published")
         if "summary" in data:
-            kwargs["summary"] = str(data.get("summary") or "")
+            kwargs["summary"] = data.get("summary")
         if "outline" in data:
-            kwargs["outline"] = str(data.get("outline") or "")
+            kwargs["outline"] = data.get("outline")
         if not kwargs:
             return self.send_error_json(400, "没有要修改的字段", "EMPTY")
         row = admin.set_course_meta(self.db, cid, user["id"], **kwargs)
@@ -1127,6 +1131,29 @@ def selftest(port: int = 7901) -> int:
                            {"summary": "管理员补写：面向全平台"}, cookie=acookie)
     check("管理端 meta 接口也接受 summary/outline", status == 200
           and data["meta"]["summary"] == "管理员补写：面向全平台")
+
+    # -- 健壮性：畸形输入必须 4xx（探针抓出 teacher_id 非整数曾 500 崩线程）（M10）
+    status, data, _ = post("/api/admin/courses/B11-net-lab/meta",
+                           {"teacher_id": "abc"}, cookie=acookie)
+    check("绑定教师编号非整数 400（修复前崩请求线程）",
+          status == 400 and data["code"] == "BAD_TEACHER_ID")
+    status, data, _ = post("/api/admin/courses/B11-net-lab/meta",
+                           {"published": []}, cookie=acookie)
+    check("published 非布尔 400", status == 400 and data["code"] == "BAD_PUBLISHED")
+    status, data, _ = post("/api/admin/courses/B11-net-lab/meta",
+                           {"summary": []}, cookie=acookie)
+    check("summary 非文本 400", status == 400 and data["code"] == "BAD_SUMMARY")
+    status, data, _ = post("/api/teacher/course/meta",
+                           {"course": "B11-net-lab", "published": "xx"}, cookie=tcookie)
+    check("教师端 published 非布尔 400", status == 400)
+    sk = socket.create_connection(("127.0.0.1", port), timeout=5)
+    sk.sendall(b"POST /api/auth/login HTTP/1.1\r\nHost: probe\r\n"
+               b"Content-Length: abc\r\nContent-Type: application/json\r\n\r\n")
+    resp = sk.recv(200)
+    sk.close()
+    line1 = resp.split(b"\r\n", 1)[0]
+    check("畸形 Content-Length 不崩（按空 body 处理 → 401）", b" 401" in line1,
+          line1.decode("latin-1"))
 
     # -- 访问量（F15）+ 日志保留（F18）+ 本课实验排行（F11）（M9 对账补全）
     log_dir = Path(tmp.name) / "logs"

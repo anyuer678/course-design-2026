@@ -72,21 +72,35 @@ def set_course_meta(db, cid: str, actor_id: int = 0, published=None, sort=None,
                     teacher_id=_UNSET, summary=None, outline=None) -> dict:
     if courses.course_detail(cid) is None:
         raise AdminError("NO_COURSE", "课程不存在", 404)
+    # 类型校验（判定唯一源）：畸形输入一律 4xx，不把异常打穿到请求线程
+    if published is not None and not isinstance(published, bool):
+        raise AdminError("BAD_PUBLISHED", "published 必须是 true/false")
+    if summary is not None and not isinstance(summary, str):
+        raise AdminError("BAD_SUMMARY", "补充简介必须是文本")
+    if outline is not None and not isinstance(outline, str):
+        raise AdminError("BAD_OUTLINE", "大纲必须是文本")
     row = _meta_rows(db).get(cid)
     pub = (row["published"] if row else 1) if published is None else (1 if published else 0)
     srt = (row["sort"] if row else 0) if sort is None else int(sort)
-    tid = (row["teacher_id"] if row else None) if teacher_id is _UNSET else teacher_id
-    summ = ((row["summary"] if row else "") or "") if summary is None else str(summary or "").strip()
-    outl = ((row["outline"] if row else "") or "") if outline is None else str(outline or "").strip()
+    if teacher_id is _UNSET:
+        tid = row["teacher_id"] if row else None
+    elif teacher_id in (None, "", 0):
+        tid = None
+    else:
+        try:
+            tid = int(teacher_id)
+        except (TypeError, ValueError):
+            raise AdminError("BAD_TEACHER_ID", "绑定教师编号必须是整数")
+    summ = ((row["summary"] if row else "") or "") if summary is None else summary.strip()
+    outl = ((row["outline"] if row else "") or "") if outline is None else outline.strip()
     if len(summ) > SUMMARY_MAX:
         raise AdminError("BAD_SUMMARY", f"补充简介最长 {SUMMARY_MAX} 字")
     if len(outl) > OUTLINE_MAX:
         raise AdminError("BAD_OUTLINE", f"大纲最长 {OUTLINE_MAX} 字")
     if tid is not None:
-        t = db.one("SELECT role FROM users WHERE id = ?", (int(tid),))
+        t = db.one("SELECT role FROM users WHERE id = ?", (tid,))
         if t is None or t["role"] not in ("teacher", "admin"):
             raise AdminError("BAD_TEACHER", "绑定对象必须是教师或管理员")
-        tid = int(tid)
     db.execute(
         "INSERT INTO course_meta(course, published, sort, teacher_id, summary, outline)"
         " VALUES(?,?,?,?,?,?)"
