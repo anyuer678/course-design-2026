@@ -1,0 +1,110 @@
+/* CourseLab 共享样式（零依赖，kb 风格 token） */
+:root{--primary:#3b82f6;--primary-deep:#2563eb;--ink:#0f172a;--muted:#475569;--faint:#94a3b8;
+--line:#e2e8f0;--card:#fff;--bg:#f8fafc;--ok:#047857;--okbg:#ecfdf5;--okline:#a7f3d0;
+--warn:#b45309;--warnbg:#fffbeb;--warnline:#fde68a;--err:#b91c1c;--errbg:#fef2f2}
+*{box-sizing:border-box}
+body{margin:0;padding:0 0 3rem;background:var(--bg);color:var(--ink);
+font:16px/1.7 system-ui,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
+body::before{content:"";display:block;height:4px;
+background:linear-gradient(90deg,#3b82f6,#6366f1 55%,#8b5cf6)}
+a{color:var(--primary-deep);text-decoration:none}a:hover{text-decoration:underline}
+main{max-width:68rem;margin:0 auto;padding:0 1.2rem}
+
+/* 顶栏 */
+.topbar{max-width:68rem;margin:0 auto;padding:.9rem 1.2rem;display:flex;align-items:center;gap:1rem}
+.brand{font-weight:700;font-size:1.05rem;color:var(--ink)}
+.navlinks{display:flex;gap:.9rem;font-size:.92rem}
+.navauth{margin-left:auto;display:flex;gap:.5rem;align-items:center;font-size:.9rem}
+.me-link{color:var(--ink);font-weight:600}
+
+/* 按钮与标签 */
+.btn{font:inherit;font-size:.9rem;padding:.42rem .95rem;border:1px solid var(--primary);
+border-radius:8px;background:var(--primary);color:#fff;cursor:pointer;
+transition:all .2s ease;display:inline-block}
+.btn:hover{background:var(--primary-deep);border-color:var(--primary-deep);text-decoration:none}
+.btn-ghost{background:#fff;color:var(--primary-deep);border-color:var(--line)}
+.btn-ghost:hover{background:#eff6ff;color:var(--primary-deep)}
+.tag{font-size:.78rem;padding:.08rem .55rem;border-radius:999px;border:1px solid var(--line);
+background:#f8fafc;color:var(--muted)}
+.tag.ok{color:var(--ok);border-color:var(--okline);background:var(--okbg)}
+.tag.warn{color:var(--warn);border-color:var(--warnline);background:var(--warnbg)}
+
+/* 卡片与网格 */
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:1rem 1.15rem;
+margin:.7rem 0;box-shadow:0 1px 2px rgb(15 23 42 / 6%)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(19rem,1fr));gap:.8rem;margin:.6rem 0}
+a.card{cursor:pointer;transition:border-color .2s ease,box-shadow .2s ease,transform .2s ease}
+a.card:hover{border-color:#bfdbfe;box-shadow:0 4px 12px rgb(15 23 42 / 10%);transform:translateY(-1px);
+text-decoration:none;color:inherit}
+.card h3{margin:.1rem 0 .2rem;font-size:1.02rem}
+.meta{color:var(--muted);font-size:.85rem}
+.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+color:var(--muted);font-size:.88rem;margin:.35rem 0 .2rem}
+
+/* 工具行 */
+.toolbar{display:flex;gap:.6rem;align-items:center;flex-wrap:wrap;margin:.8rem 0}
+.toolbar input{flex:1;min-width:15rem;font:inherit;font-size:.95rem;padding:.5rem .85rem;
+border:1px solid var(--line);border-radius:10px;background:#fff}
+.toolbar input:focus{outline:2px solid #bfdbfe;border-color:var(--primary)}
+.chips{display:flex;gap:.4rem;flex-wrap:wrap;margin:.2rem 0 .4rem}
+.chip{font:inherit;font-size:.82rem;padding:.22rem .75rem;border:1px solid var(--line);
+border-radius:999px;background:#fff;cursor:pointer;color:var(--muted);transition:all .2s ease}
+.chip:hover{border-color:var(--primary);color:var(--primary)}
+.chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
+
+/* 统计与页头 */
+.stats{display:flex;gap:.6rem;flex-wrap:wrap;margin:.7rem 0}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.5rem .9rem;
+font-size:.9rem;color:var(--muted);box-shadow:0 1px 2px rgb(15 23 42 / 6%)}
+.stat b{color:var(--ink);font-size:1.05rem}
+h1{font-size:1.5rem;margin:.3rem 0;font-weight:650;letter-spacing:-.01em}
+h2{font-size:1.05rem;margin:1.2rem 0 .4rem;font-weight:650}
+.crumb{color:var(--faint);font-size:.86rem;margin:.7rem 0 .1rem}
+.crumb a{color:var(--faint)}
+
+/* 表单 */
+.form{max-width:26rem}
+.field{margin:.7rem 0}
+.field label{display:block;font-size:.88rem;color:var(--muted);margin-bottom:.25rem}
+.field input{width:100%;font:inherit;padding:.5rem .8rem;border:1px solid var(--line);
+border-radius:8px;background:#fff}
+.field input:focus{outline:2px solid #bfdbfe;border-color:var(--primary)}
+.form .btn{margin-top:.5rem;width:100%}
+.msg{padding:.55rem .8rem;border-radius:8px;font-size:.9rem;margin:.6rem 0}
+.msg.err{background:var(--errbg);border:1px solid #fecaca;color:var(--err)}
+.msg.ok{background:var(--okbg);border:1px solid var(--okline);color:var(--ok)}
+.note{color:var(--muted);font-size:.88rem}
+.hint{background:var(--warnbg);border:1px solid var(--warnline);color:var(--warn);
+border-radius:8px;padding:.55rem .8rem;font-size:.9rem;margin:.6rem 0}
+
+/* 表格（知识点） */
+table.kb{width:100%;border-collapse:collapse;font-size:.9rem;margin:.4rem 0;
+background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+table.kb th,table.kb td{padding:.45rem .7rem;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+table.kb th{background:#f1f5f9;color:var(--muted);font-weight:600}
+table.kb tr:last-child td{border-bottom:none}
+
+/* 列表 */
+ul.plain{list-style:none;padding:0;margin:.3rem 0}
+ul.plain li{padding:.35rem 0;border-bottom:1px dashed var(--line);font-size:.92rem}
+ul.plain li:last-child{border-bottom:none}
+.from{color:var(--faint);font-size:.8rem;margin-left:.4rem}
+
+/* 页签 */
+.tabs{display:flex;gap:.4rem;border-bottom:1px solid var(--line);margin:1rem 0 0}
+.tab{font:inherit;font-size:.92rem;padding:.45rem 1rem;border:1px solid transparent;
+border-bottom:none;background:none;cursor:pointer;color:var(--muted);border-radius:8px 8px 0 0}
+.tab:hover{color:var(--primary)}
+.tab.active{background:#fff;border-color:var(--line);color:var(--ink);font-weight:600}
+.pane{display:none;background:#fff;border:1px solid var(--line);border-top:none;
+border-radius:0 0 12px 12px;padding:1rem 1.15rem}
+.pane.active{display:block}
+iframe.demo{width:100%;height:72vh;border:1px solid var(--line);border-radius:10px;background:#fff}
+
+/* 键值对 */
+.kv{display:grid;grid-template-columns:6.5rem 1fr;gap:.35rem .8rem;font-size:.92rem}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0}
+
+footer{color:var(--faint);font-size:.85rem;max-width:68rem;margin:2.5rem auto 0;padding:1rem 1.2rem 0;
+border-top:1px solid var(--line)}

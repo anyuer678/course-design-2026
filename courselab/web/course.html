@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>课程工作区 · 课程工坊 CourseLab</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main>
+<div class="crumb"><a href="/">课程目录</a> / <span id="crumb-name">…</span></div>
+<h1 id="title">正在加载…</h1>
+<div class="meta" id="meta"></div>
+
+<h2>一句话</h2>
+<div class="card" id="summary">…</div>
+
+<h2>知识点速览</h2>
+<div id="knowledge"></div>
+
+<h2 id="tasks-title">练习任务</h2>
+<div id="tasks"></div>
+
+<h2 id="pits-title">踩坑清单</h2>
+<ul class="plain" id="pits"></ul>
+
+<h2>资料</h2>
+<ul class="plain" id="materials"></ul>
+
+<h2>演示与实验</h2>
+<div class="card">
+  <p style="margin:.2rem 0">进入项目页看<b>在线演示</b>（自包含展示页），实验入口也在那里。</p>
+  <p style="margin:.4rem 0"><a class="btn" id="to-project" href="#">进入项目页</a></p>
+</div>
+</main>
+<footer>内容现算自仓库 README 与 g2 卡片；平台不维护第二份。</footer>
+<script src="/assets/app.js"></script>
+<script>
+"use strict";
+CL.navbar();
+var cid = CL.param("id");
+if (!cid) document.getElementById("title").textContent = "缺少课程参数 ?id=";
+else {
+  CL.api("/api/courses/" + encodeURIComponent(cid)).then(function (res) {
+    if (!res.data || !res.data.ok) {
+      document.getElementById("title").textContent = "课程不存在：" + cid;
+      return;
+    }
+    var c = res.data.course;
+    document.title = c.course + " · 课程工坊 CourseLab";
+    document.getElementById("crumb-name").textContent = c.course;
+    document.getElementById("title").textContent = c.course;
+    document.getElementById("meta").textContent =
+      c.id + " · " + c.title + " · 批次 " + c.batch;
+    document.getElementById("summary").textContent = c.summary || "（该课暂无一句话摘要）";
+
+    var kb = document.getElementById("knowledge");
+    if (c.knowledge && c.knowledge.length) {
+      var t = CL.el("table", "kb");
+      var thead = CL.el("tr");
+      ["知识点", "代码", "验证方式"].forEach(function (h) {
+        var th = CL.el("th", null, h); thead.appendChild(th);
+      });
+      t.appendChild(thead);
+      c.knowledge.forEach(function (row) {
+        var tr = CL.el("tr");
+        row.forEach(function (cell) { tr.appendChild(CL.el("td", null, cell)); });
+        t.appendChild(tr);
+      });
+      kb.appendChild(t);
+    } else {
+      kb.appendChild(CL.el("p", "note", "（该课暂无知识点表）"));
+    }
+
+    document.getElementById("tasks-title").textContent = "练习任务（" + c.tasks.length + " 条）";
+    var box = document.getElementById("tasks");
+    if (c.tasks.length) {
+      var ul = CL.el("ul", "plain");
+      c.tasks.forEach(function (t) {
+        var li = CL.el("li", null, t.text);
+        if (t.from) li.appendChild(CL.el("span", "from", "（" + t.from + "）"));
+        ul.appendChild(li);
+      });
+      box.appendChild(ul);
+      box.appendChild(CL.el("p", "note", "任务领取与完成记录在 M4 里程碑接入（当前照卡片自练即可）。"));
+    } else {
+      box.appendChild(CL.el("p", "note", "（该课暂无练习卡）"));
+    }
+
+    document.getElementById("pits-title").textContent = "踩坑清单（" + c.pits.length + " 条）";
+    var pits = document.getElementById("pits");
+    c.pits.slice(0, 5).forEach(function (p) { pits.appendChild(CL.el("li", null, p)); });
+    if (c.pits.length > 5) pits.appendChild(CL.el("li", "note", "……共 " + c.pits.length + " 条，全文见项目 README。"));
+
+    var mats = document.getElementById("materials");
+    c.materials.forEach(function (m) {
+      var li = CL.el("li");
+      if (m.url) {
+        var a = CL.el("a", null, m.path);
+        a.href = m.url; a.target = "_blank"; a.rel = "noopener";
+        li.appendChild(a);
+      } else {
+        li.textContent = m.path + (m.kind === "dir" ? "（目录）" : "（未生成）");
+      }
+      mats.appendChild(li);
+    });
+
+    document.getElementById("to-project").href = "/project.html?id=" + encodeURIComponent(c.id);
+  });
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>我的 · 课程工坊 CourseLab</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main>
+<h1>我的</h1>
+<div id="box"></div>
+</main>
+<footer>会话为服务端会话表 + HttpOnly Cookie；登出即失效。</footer>
+<script src="/assets/app.js"></script>
+<script>
+"use strict";
+CL.navbar();
+var box = document.getElementById("box");
+
+CL.api("/api/me").then(function (res) {
+  var user = res.data && res.data.user;
+  if (!user) {
+    var card = CL.el("div", "card");
+    card.appendChild(CL.el("p", null, "你还没有登录。"));
+    var p = CL.el("p");
+    var lg = CL.el("a", "btn", "登录");
+    lg.href = "/login.html?next=/me.html";
+    var rg = CL.el("a", "btn btn-ghost", "注册");
+    rg.href = "/register.html";
+    p.appendChild(lg);
+    p.appendChild(document.createTextNode("　"));
+    p.appendChild(rg);
+    card.appendChild(p);
+    box.appendChild(card);
+    return;
+  }
+  var card = CL.el("div", "card");
+  var dl = CL.el("dl", "kv");
+  kv(dl, "昵称", user.display_name);
+  kv(dl, "用户名", user.username);
+  kv(dl, "角色", CL.roleName(user.role));
+  kv(dl, "注册时间", user.created_at || "—");
+  kv(dl, "上次登录", user.last_login || "—");
+  kv(dl, "在线实验权限", res.data.can.lab_run ? "可用（M3 上线后开放操作）" : "不可用");
+  card.appendChild(dl);
+  var out = CL.el("button", "btn btn-ghost", "退出登录");
+  out.style.marginTop = ".8rem";
+  out.addEventListener("click", function () {
+    CL.api("/api/auth/logout", { method: "POST", body: {} }).then(function () { location.href = "/"; });
+  });
+  card.appendChild(out);
+  box.appendChild(card);
+
+  var later = CL.el("div", "card");
+  later.appendChild(CL.el("p", "note",
+    "我的任务与实验记录在 M3/M4 里程碑接入（任务领取、运行历史）；变更口令在 M6 的账号设置里。"));
+  box.appendChild(later);
+});
+
+function kv(dl, k, v) {
+  dl.appendChild(CL.el("dt", null, k));
+  dl.appendChild(CL.el("dd", null, v));
+}
+</script>
+</body>
+</html>

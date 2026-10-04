@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>注册 · 课程工坊 CourseLab</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main>
+<h1>注册</h1>
+<div class="form">
+  <div class="msg err" id="msg" style="display:none"></div>
+  <div class="field">
+    <label for="username">用户名（3-32 位字母/数字/下划线）</label>
+    <input id="username" autocomplete="username" autofocus>
+  </div>
+  <div class="field">
+    <label for="display_name">昵称（可留空）</label>
+    <input id="display_name" autocomplete="nickname">
+  </div>
+  <div class="field">
+    <label for="password">口令（至少 8 位，含字母与数字）</label>
+    <input id="password" type="password" autocomplete="new-password">
+  </div>
+  <div class="field">
+    <label for="password2">再输一遍</label>
+    <input id="password2" type="password" autocomplete="new-password">
+  </div>
+  <button class="btn" id="submit">注册并登录</button>
+  <p class="note" style="margin-top:.8rem">已有账号？<a href="/login.html">直接登录</a></p>
+</div>
+</main>
+<script src="/assets/app.js"></script>
+<script>
+"use strict";
+CL.navbar();
+var msg = document.getElementById("msg");
+function show(text) { msg.textContent = text; msg.style.display = ""; }
+function submit() {
+  var username = document.getElementById("username").value.trim();
+  var displayName = document.getElementById("display_name").value.trim();
+  var password = document.getElementById("password").value;
+  var password2 = document.getElementById("password2").value;
+  if (password !== password2) { show("两次输入的口令不一致。"); return; }
+  CL.api("/api/auth/register", { method: "POST", body: { username: username, display_name: displayName, password: password } })
+    .then(function (res) {
+      if (res.data && res.data.ok) { location.href = "/me.html"; return; }
+      show((res.data && res.data.error) || "注册失败");
+    }).catch(function () { show("网络错误，请重试。"); });
+}
+document.getElementById("submit").addEventListener("click", submit);
+document.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });
+</script>
+</body>
+</html>

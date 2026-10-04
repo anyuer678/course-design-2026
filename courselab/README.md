@@ -6,22 +6,28 @@
 - 定位与里程碑：`docs/PLAN.md`（角色矩阵 / 功能面 / 架构 / 里程碑 M0–M6）
 - **详细设计（开工规格）**：`docs/DESIGN.md`（多端三端 / 18 个功能点 F1-F18 / 页面路由 /
   数据模型 / API 草案 / 部署设计）
-- 现状：**M0（方案书 + 可运行骨架）**
+- 现状：**M0 骨架 + M1 账号与会话 + M2 课程工作区与项目页**——已经"能用"：
+  注册/登录/登出（PBKDF2 + 会话表 + 失败限流）、33 门课程目录（搜索/批次筛选）、
+  课程工作区（一句话/知识点表/练习任务/踩坑/资料，全部现算自仓库）、
+  项目页三页签（详情 / 在线演示 iframe / 在线实验说明）。下一步 M3 在线实验。
 
 ## 运行
 
 ```
-双击 run.bat            # 起在 http://127.0.0.1:7900/ 并自动打开浏览器
+双击 run.bat            # 起在 http://127.0.0.1:7900/ 并自动打开浏览器（正式数据在 data/app.db）
 python server.py        # 同上（不开浏览器）
-python server.py --selftest   # 自检：health / 课程目录现算 / 首页 / 项目页可打开
+python server.py --db 某路径 --port 7930     # 换库/换端口
+python server.py --selftest   # 自检（临时库：账号全链路 + 页面 + 边界，26 项）
 ```
 
 ## 目录
 
 ```
 courselab/
-  server.py        标准库 HTTP 服务 + 自研路由 + 自检（零第三方依赖）
-  web/index.html   占位首页（列出仓库现算的 33 个项目）
+  server.py        标准库 HTTP 服务 + 路由 + 会话 + 自检（零第三方依赖）
+  app/             领域层：db（平台态库）/ auth（账号会话）/ courses（仓库现算）/ can（权限唯一源）
+  web/             学生端页面：门户/登录/注册/课程工作区/项目页/我的（原生 JS，零构建）
+  data/ logs/ backup/   运行期数据（不进 git）
   docs/PLAN.md     方案书（定位/里程碑/验收口径）
   docs/DESIGN.md   详细设计（多端/功能点 F1-F18/数据模型/API/部署）
   run.bat          启动脚本（纯 ASCII + CRLF）

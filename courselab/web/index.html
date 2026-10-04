@@ -2,81 +2,94 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
-<title>课程工坊 CourseLab</title>
-<style>
-:root{--primary:#3b82f6;--primary-deep:#2563eb;--ink:#0f172a;--muted:#475569;--faint:#94a3b8;
---line:#e2e8f0;--card:#fff;--bg:#f8fafc}
-*{box-sizing:border-box}body{margin:0;padding:2rem 1.2rem 4rem;background:var(--bg);color:var(--ink);
-font:16px/1.7 system-ui,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;-webkit-font-smoothing:antialiased}
-body::before{content:"";display:block;height:4px;margin:-2rem -1.2rem 1.6rem;
-background:linear-gradient(90deg,#3b82f6,#6366f1 55%,#8b5cf6)}
-main{max-width:62rem;margin:0 auto}
-h1{font-size:1.6rem;margin:.2rem 0;font-weight:650;letter-spacing:-.01em}
-p.note{color:var(--muted);font-size:.9rem;margin:.3rem 0 1rem}
-.stats{display:flex;gap:.6rem;flex-wrap:wrap;margin:.6rem 0 1rem}
-.stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.5rem .9rem;
-box-shadow:0 1px 2px rgb(15 23 42 / 6%);font-size:.9rem;color:var(--muted)}
-.stat b{color:var(--ink);font-size:1.05rem}
-ul{list-style:none;padding:0;margin:.2rem 0}
-li{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.6rem .95rem;margin:.45rem 0;
-display:flex;gap:.7rem;align-items:baseline;flex-wrap:wrap;
-box-shadow:0 1px 2px rgb(15 23 42 / 6%);transition:border-color .2s ease,box-shadow .2s ease}
-li:hover{border-color:#bfdbfe;box-shadow:0 4px 12px rgb(15 23 42 / 10%)}
-a{color:var(--primary-deep);text-decoration:none;font-weight:600}a:hover{text-decoration:underline}
-.course{color:var(--muted);font-size:.85rem}
-.badge{font-size:.78rem;padding:.1rem .55rem;border-radius:999px;border:1px solid var(--line);
-background:#f8fafc;color:var(--muted);margin-left:auto}
-footer{color:var(--faint);font-size:.85rem;margin-top:2.5rem;border-top:1px solid var(--line);padding-top:1rem}
-</style>
+<title>课程工坊 CourseLab · 课程目录</title>
+<link rel="stylesheet" href="/assets/app.css">
 </head>
 <body>
+<header class="topbar" id="topbar"></header>
 <main>
-<h1>课程工坊 CourseLab</h1>
-<p class="note">毕设工程 M0 骨架：每个课程各有一个小型项目平台——当前阶段先把仓库里的
-<strong>课程目录与项目</strong>现算出来；后续里程碑接账号、项目页、在线实验、练习任务与管理端（见
-<code>docs/PLAN.md</code>）。</p>
+<h1>课程项目平台</h1>
+<p class="note">每门课程一个工作区：课程内容、项目演示、练习任务都在这里。数据现算自仓库，不手工维护。</p>
 <div class="stats" id="stats"></div>
-<ul id="list"><li>正在现算课程目录…</li></ul>
-<footer>
-<p>数据现算自仓库 <code>showcase/manifest.json</code>（唯一出处）；页面为 CourseLab 前端（原生 JS，零依赖）。</p>
-</footer>
+<div class="toolbar">
+  <input id="q" type="search" autocomplete="off" placeholder="搜索：课程名 / 项目 / 关键词">
+</div>
+<div class="chips" id="chips"></div>
+<div class="grid" id="grid"></div>
 </main>
+<footer>CourseLab · M1+M2（账号 + 课程工作区 + 项目页）· 内容现算自 showcase/manifest.json 与 g2/cards.json</footer>
+<script src="/assets/app.js"></script>
 <script>
 "use strict";
+CL.navbar();
+
+var DATA = [];
 fetch("/api/courses").then(function (r) { return r.json(); }).then(function (data) {
-  var list = document.getElementById("list");
+  if (!data.ok) { document.getElementById("grid").textContent = "课程目录读取失败：" + (data.error || ""); return; }
+  DATA = data.courses;
   var stats = document.getElementById("stats");
-  if (!data.ok) {
-    list.textContent = "课程目录读取失败：" + (data.error || "未知");
-    return;
-  }
-  var byCourse = {};
-  data.courses.forEach(function (c) { byCourse[c.course] = (byCourse[c.course] || 0) + 1; });
+  stats.appendChild(stat(data.count + " 门课程"));
   stats.appendChild(stat(data.count + " 个项目"));
-  stats.appendChild(stat(Object.keys(byCourse).length + " 门课程"));
-  list.textContent = "";
-  data.courses.forEach(function (c) {
-    var li = document.createElement("li");
-    var a = document.createElement("a");
-    a.textContent = c.id;
-    if (c.page) { a.href = "/repo/" + c.page; a.target = "_blank"; a.rel = "noopener"; }
-    var span = document.createElement("span");
-    span.className = "course";
-    span.textContent = c.course + " · " + c.title;
-    var b = document.createElement("span");
-    b.className = "badge";
-    b.textContent = c.status === "done" ? "已交付" : "待补";
-    li.appendChild(a); li.appendChild(span); li.appendChild(b);
-    list.appendChild(li);
-  });
-}).catch(function (e) {
-  document.getElementById("list").textContent = "连接失败：" + e;
+  stats.appendChild(stat(data.cards + " 张练习卡"));
+  buildChips();
+  render("");
+  document.getElementById("q").addEventListener("input", function () { render(this.value.trim()); });
 });
+
 function stat(text) {
-  var d = document.createElement("span");
-  d.className = "stat";
+  var d = CL.el("span", "stat");
   d.textContent = text;
   return d;
+}
+
+var curBatch = "all";
+function buildChips() {
+  var box = document.getElementById("chips");
+  var batches = [];
+  DATA.forEach(function (c) { if (batches.indexOf(c.batch) < 0) batches.push(c.batch); });
+  batches.sort(function (a, b) { return Number(a) - Number(b); });
+  var all = CL.el("button", "chip active", "全部（" + DATA.length + "）");
+  all.addEventListener("click", function () { curBatch = "all"; mark(all); render(document.getElementById("q").value.trim()); });
+  box.appendChild(all);
+  batches.forEach(function (b) {
+    var n = DATA.filter(function (c) { return c.batch === b; }).length;
+    var chip = CL.el("button", "chip", "批次 " + b + "（" + n + "）");
+    chip.addEventListener("click", function () { curBatch = b; mark(chip); render(document.getElementById("q").value.trim()); });
+    box.appendChild(chip);
+  });
+  function mark(btn) {
+    Array.prototype.forEach.call(box.children, function (c) {
+      c.className = "chip" + (c === btn ? " active" : "");
+    });
+  }
+}
+
+function render(q) {
+  var grid = document.getElementById("grid");
+  grid.textContent = "";
+  var kw = q.toLowerCase();
+  var hit = DATA.filter(function (c) {
+    if (curBatch !== "all" && c.batch !== curBatch) return false;
+    if (!kw) return true;
+    return (c.course + " " + c.id + " " + c.title).toLowerCase().indexOf(kw) >= 0;
+  });
+  if (!hit.length) {
+    grid.appendChild(CL.el("p", "note", "没有匹配的课程。"));
+    return;
+  }
+  hit.forEach(function (c) {
+    var a = CL.el("a", "card");
+    a.href = "/course.html?id=" + encodeURIComponent(c.id);
+    a.appendChild(CL.el("h3", null, c.course));
+    a.appendChild(CL.el("div", "meta", c.id + " · " + c.title));
+    if (c.summary) a.appendChild(CL.el("p", "clamp", c.summary));
+    var foot = CL.el("div", "meta");
+    foot.style.marginTop = ".3rem";
+    var tag = CL.el("span", "tag ok", "批次 " + c.batch + " · 已交付");
+    foot.appendChild(tag);
+    a.appendChild(foot);
+    grid.appendChild(a);
+  });
 }
 </script>
 </body>
