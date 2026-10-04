@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
 import tempfile
 import threading
@@ -35,6 +36,37 @@ DEFAULT_DB = ROOT / "data" / "app.db"
 
 JSON_TYPE = "application/json; charset=utf-8"
 COOKIE_NAME = "cl_session"
+
+DEFAULT_CFG = {
+    "bind": "127.0.0.1",        # 部署到局域网/公网时改 0.0.0.0（配合注册审批与备份）
+    "port": 7900,
+    "data_dir": "data",         # 相对 courselab/ 或绝对路径（放库与未来上传）
+    "max_labs": 2,              # 在线实验并发上限
+    "task_timeout": 600,        # 单个实验超时（秒），到点整树杀
+    "session_hours": 12,        # 会话时长
+    "registration": "open",     # open=注册即用；approval=注册后待管理员审批
+    "public_mode": False,       # 公网部署提醒开关（只影响启动提示，不改边界）
+}
+
+
+def load_config(path=None) -> dict:
+    """读 config.json（默认 courselab/config.json，存在才读）；未知键与非法值直接拒绝启动。"""
+    cfg = dict(DEFAULT_CFG)
+    p = Path(path) if path else (ROOT / "config.json")
+    if p.is_file():
+        try:
+            data = json.loads(p.read_text(encoding="utf-8"))
+        except ValueError as exc:
+            raise SystemExit(f"[!] {p.name} 不是合法 JSON：{exc}")
+        if not isinstance(data, dict):
+            raise SystemExit(f"[!] {p.name} 顶层必须是对象")
+        unknown = sorted(k for k in data if k not in DEFAULT_CFG)
+        if unknown:
+            raise SystemExit(f"[!] {p.name} 有不认识的键：{unknown}")
+        if data.get("registration") not in (None, "open", "approval"):
+            raise SystemExit("[!] registration 只能是 open 或 approval")
+        cfg.update(data)
+    return cfg
 
 
 def _json_bytes(obj) -> bytes:
@@ -58,6 +90,10 @@ class Handler(SimpleHTTPRequestHandler):
     @property
     def labs(self) -> labs.Labs:
         return self.server.labs          # type: ignore[attr-defined]
+
+    @property
+    def cfg(self) -> dict:
+        return self.server.cfg           # type: ignore[attr-defined]
 
     def send_json(self, obj, code: int = 200, set_cookie: str | None = None):
         body = _json_bytes(obj)
@@ -410,35 +446,56 @@ class Handler(SimpleHTTPRequestHandler):
         return self.send_json(self.labs.stop(run_id))
 
     def _register(self, data):
+        status = "pending" if self.cfg.get("registration") == "approval" else "active"
         user = auth.register(self.db, str(data.get("username") or "").strip(),
                              str(data.get("display_name") or "").strip(),
-                             str(data.get("password") or ""))
+                             str(data.get("password") or ""), status=status)
+        if status == "pending":
+            return self.send_json({"ok": True, "user": user,
+                                   "notice": "注册成功，等待管理员审批后即可登录"})
         token = auth.create_session(self.db, user["id"], self._client_ip(),
-                                    self.headers.get("User-Agent", ""))
+                                    self.headers.get("User-Agent", ""),
+                                    self._hours())
         return self.send_json({"ok": True, "user": user},
                               set_cookie=self._cookie(token))
 
     def _login(self, data):
         user, token = auth.login(self.db, str(data.get("username") or "").strip(),
                                  str(data.get("password") or ""),
-                                 self._client_ip(), self.headers.get("User-Agent", ""))
+                                 self._client_ip(), self.headers.get("User-Agent", ""),
+                                 self._hours())
         return self.send_json({"ok": True, "user": user},
                               set_cookie=self._cookie(token))
+
+    def _hours(self):
+        try:
+            return float(self.cfg.get("session_hours", 12))
+        except (TypeError, ValueError):
+            return 12.0
 
     def _logout(self):
         auth.logout(self.db, self._token())
         return self.send_json({"ok": True}, set_cookie=f"{COOKIE_NAME}=; Path=/; Max-Age=0")
 
     def _cookie(self, token: str) -> str:
-        return f"{COOKIE_NAME}={token}; Path=/; HttpOnly; SameSite=Lax; Max-Age={auth.SESSION_HOURS * 3600}"
+        return (f"{COOKIE_NAME}={token}; Path=/; HttpOnly; SameSite=Lax; "
+                f"Max-Age={int(self._hours() * 3600)}")
 
 
-def serve(port: int, db: DB, open_browser: bool = False) -> int:
-    engine = labs.Labs(REPO, db)
-    httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
+def serve(port: int, db: DB, cfg: dict | None = None, open_browser: bool = False) -> int:
+    cfg = dict(cfg or DEFAULT_CFG)
+    engine = labs.Labs(REPO, db, max_labs=int(cfg.get("max_labs", 2)),
+                       task_timeout=float(cfg.get("task_timeout", 600)))
+    bind = str(cfg.get("bind", "127.0.0.1"))
+    httpd = ThreadingHTTPServer((bind, port), Handler)
     httpd.db = db            # type: ignore[attr-defined]
     httpd.labs = engine      # type: ignore[attr-defined]
+    httpd.cfg = cfg          # type: ignore[attr-defined]
     print(f"课程工坊已启动：http://127.0.0.1:{port}/（数据：{db.path}；Ctrl+C 结束）")
+    if bind != "127.0.0.1":
+        print(f"    监听 {bind}:{port}——局域网/公网可访问；注册模式：{cfg.get('registration')}")
+        if cfg.get("public_mode"):
+            print("    公网模式提醒：注册建议切 approval、定期备份 data 目录、实验并发保持小值（见 docs/DEPLOY.md）。")
     if open_browser:
         url = f"http://127.0.0.1:{port}/"
         print(f"    浏览器将在 2 秒后自动打开：{url}")
@@ -761,6 +818,64 @@ def selftest(port: int = 7901) -> int:
     status, data, _ = get("/api/teacher/course?course=B31-shorturl", cookie=tcookie)
     check("解绑后教师 403", status == 403)
 
+    # -- 部署与运维（M6）
+    cfg_path = Path(tmp.name) / "cfg.json"
+    cfg_path.write_text(json.dumps({"port": 7999, "max_labs": 5,
+                                    "registration": "approval"}), encoding="utf-8")
+    cfg = load_config(str(cfg_path))
+    check("配置加载（config.json 覆盖默认，缺省项保留）",
+          cfg["port"] == 7999 and cfg["max_labs"] == 5
+          and cfg["registration"] == "approval" and cfg["bind"] == "127.0.0.1")
+    bad_cfg = Path(tmp.name) / "bad.json"
+    bad_cfg.write_text("{not json", encoding="utf-8")
+    try:
+        load_config(str(bad_cfg))
+        bad_rejected = False
+    except SystemExit:
+        bad_rejected = True
+    check("坏配置拒绝启动（非法 JSON）", bad_rejected)
+    check("并发上限可配置（Labs 参数生效）",
+          labs.Labs(REPO, db, max_labs=5).active()["limit"] == 5)
+
+    pu = auth.register(db, "stu_pending", "待审样例", "pw123456", status="pending")
+    check("审批模式注册 -> pending", pu["status"] == "pending")
+    try:
+        auth.login(db, "stu_pending", "pw123456")
+        pending_blocked = False
+    except auth.AuthError as exc:
+        pending_blocked = (exc.code == "USER_PENDING")
+    check("pending 用户登录被拒（USER_PENDING）", pending_blocked)
+    status, data, _ = post(f"/api/admin/users/{pu['id']}/status", {"status": "active"},
+                           cookie=acookie)
+    check("管理员审批通过（pending -> active）",
+          status == 200 and data["user"]["status"] == "active")
+    status, data, _ = post("/api/auth/login", {"username": "stu_pending", "password": "pw123456"})
+    check("审批通过后可登录", status == 200)
+
+    tdb_path = Path(tmp.name) / "tool.db"
+    tdb = DB(tdb_path)
+    tdb.execute("INSERT INTO users(username, display_name, role, pwd_salt, pwd_hash, pwd_iter,"
+                " created_at) VALUES('u1','样例','student','s','h',1,'2026-01-01')")
+    tdb.close()
+    out_dir = Path(tmp.name) / "bk"
+    r1 = subprocess.run([sys.executable, str(ROOT / "tools" / "backup.py"),
+                         "--db", str(tdb_path), "--out", str(out_dir)],
+                        capture_output=True, text=True, encoding="utf-8")
+    backups = sorted(out_dir.glob("app-*.db")) if out_dir.is_dir() else []
+    check("备份工具：VACUUM INTO + 校验", r1.returncode == 0 and len(backups) == 1,
+          " / ".join((r1.stdout or "").strip().splitlines()[-1:]))
+    r2 = subprocess.run([sys.executable, str(ROOT / "tools" / "restore.py"),
+                         "--from", str(backups[0]) if backups else "missing",
+                         "--db", str(Path(tmp.name) / "restored.db")],
+                        capture_output=True, text=True, encoding="utf-8")
+    check("恢复工具：复制 + 校验行数", r2.returncode == 0,
+          " / ".join((r2.stdout or "").strip().splitlines()[-1:]))
+    r3 = subprocess.run([sys.executable, str(ROOT / "tools" / "bench.py"),
+                         "--url", base, "--n", "40", "--c", "4"],
+                        capture_output=True, text=True, encoding="utf-8")
+    check("压测工具跑通（40 请求 / 4 并发）", r3.returncode == 0,
+          " / ".join((r3.stdout or "").strip().splitlines()[-1:]))
+
     # -- 权限矩阵单元（负面为主）
     stu = {"role": "student"}
     check("can()：学生不可 admin / 可 lab_run；教师可 manage_course",
@@ -796,10 +911,17 @@ def selftest(port: int = 7901) -> int:
 
 # ---------------------------------------------------------------- 入口
 
+def _db_path(cfg: dict) -> Path:
+    d = Path(str(cfg.get("data_dir", "data")))
+    return (d if d.is_absolute() else ROOT / d) / "app.db"
+
+
 def main(argv) -> int:
     ap = argparse.ArgumentParser(description="课程工坊 CourseLab（课程项目平台）")
-    ap.add_argument("--port", type=int, default=7900)
-    ap.add_argument("--db", default=str(DEFAULT_DB), help="SQLite 路径（默认 courselab/data/app.db）")
+    ap.add_argument("--config", default=None, help="配置文件（默认 courselab/config.json，存在才读）")
+    ap.add_argument("--host", default=None, help="覆盖配置的 bind（如 0.0.0.0 供局域网访问）")
+    ap.add_argument("--port", type=int, default=None, help="覆盖配置的 port（默认 7900）")
+    ap.add_argument("--db", default=None, help="直接指定 SQLite 路径（默认 <data_dir>/app.db）")
     ap.add_argument("--open", action="store_true", help="启动后自动打开浏览器")
     ap.add_argument("--selftest", action="store_true")
     ap.add_argument("--promote", nargs=2, metavar=("USERNAME", "ROLE"),
@@ -807,12 +929,18 @@ def main(argv) -> int:
     args = ap.parse_args(argv[1:])
     if args.selftest:
         return selftest()
+    cfg = load_config(args.config)
+    if args.host:
+        cfg["bind"] = args.host
+    if args.port is not None:
+        cfg["port"] = args.port
+    db_path = Path(args.db) if args.db else _db_path(cfg)
     if args.promote:
         username, role = args.promote
         if role not in ("teacher", "admin"):
             print("[!] ROLE 只能是 teacher 或 admin")
             return 2
-        db = DB(Path(args.db))
+        db = DB(db_path)
         row = db.one("SELECT id FROM users WHERE username = ?", (username,))
         if row is None:
             print(f"[!] 没有用户 {username}——先在平台注册这个账号，再提升")
@@ -822,8 +950,8 @@ def main(argv) -> int:
         print(f"已把 {username} 设为 {role}（立即生效）")
         db.close()
         return 0
-    db = DB(Path(args.db))
-    return serve(args.port, db, open_browser=args.open)
+    db = DB(db_path)
+    return serve(int(cfg["port"]), db, cfg, open_browser=args.open)
 
 
 if __name__ == "__main__":

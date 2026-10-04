@@ -87,39 +87,45 @@ def _user_public(row) -> dict:
     }
 
 
-def register(db, username: str, display_name: str, password: str) -> dict:
+def register(db, username: str, display_name: str, password: str, status: str = "active") -> dict:
     validate_credentials(username, password)
     display_name = (display_name or "").strip() or username
     if len(display_name) > 32:
         raise AuthError("BAD_DISPLAY_NAME", "昵称最长 32 个字符")
+    if status not in ("active", "pending"):
+        raise AuthError("BAD_STATUS", "注册状态只能是 active / pending")
     if db.one("SELECT id FROM users WHERE username = ?", (username,)):
         raise AuthError("USER_EXISTS", "用户名已被占用", 409)
     salt, hsh, it = hash_password(password)
     cur = db.execute(
         "INSERT INTO users(username, display_name, role, pwd_salt, pwd_hash, pwd_iter, status, created_at)"
         " VALUES(?,?,?,?,?,?,?,?)",
-        (username, display_name, "student", salt, hsh, it, "active", now_str()))
+        (username, display_name, "student", salt, hsh, it, status, now_str()))
     return _user_public(db.one("SELECT * FROM users WHERE id = ?", (cur.lastrowid,)))
 
 
-def create_session(db, user_id: int, ip: str = "", ua: str = "") -> str:
+def create_session(db, user_id: int, ip: str = "", ua: str = "",
+                   hours: float = SESSION_HOURS) -> str:
     token = secrets.token_urlsafe(32)
-    expires = datetime.now() + timedelta(hours=SESSION_HOURS)
+    expires = datetime.now() + timedelta(hours=hours)
     db.execute("INSERT INTO sessions(token, user_id, created_at, expires_at, ip, ua) VALUES(?,?,?,?,?,?)",
                (token, user_id, now_str(), expires.strftime("%Y-%m-%d %H:%M:%S"), ip, (ua or "")[:200]))
     return token
 
 
-def login(db, username: str, password: str, ip: str = "", ua: str = "") -> tuple:
+def login(db, username: str, password: str, ip: str = "", ua: str = "",
+          hours: float = SESSION_HOURS) -> tuple:
     check_rate(username, ip)
     row = db.one("SELECT * FROM users WHERE username = ?", (username,))
     if row is None or not verify_password(password, row["pwd_salt"], row["pwd_hash"], row["pwd_iter"]):
         record_failure(username, ip)
         raise AuthError("BAD_CREDENTIALS", "用户名或口令不正确", 401)
+    if row["status"] == "pending":
+        raise AuthError("USER_PENDING", "账号待管理员审批（通过后即可登录）", 403)
     if row["status"] != "active":
-        raise AuthError("USER_DISABLED", "账号不可用（待审批或已封禁）", 403)
+        raise AuthError("USER_DISABLED", "账号已被封禁", 403)
     clear_failures(username, ip)
-    token = create_session(db, row["id"], ip, ua)
+    token = create_session(db, row["id"], ip, ua, hours)
     db.execute("UPDATE users SET last_login = ? WHERE id = ?", (now_str(), row["id"]))
     return _user_public(db.one("SELECT * FROM users WHERE id = ?", (row["id"],))), token
 

@@ -144,7 +144,8 @@ function loadUsers() {
       });
       roleTd.appendChild(sel);
       tr.appendChild(roleTd);
-      tr.appendChild(CL.el("td", null, u.status === "active" ? "正常" : "已封禁"));
+      tr.appendChild(CL.el("td", null,
+        u.status === "active" ? "正常" : (u.status === "pending" ? "待审批" : "已封禁")));
       tr.appendChild(CL.el("td", null, u.created_at || ""));
       tr.appendChild(CL.el("td", null, u.last_login || ""));
       var ops = CL.el("td");
@@ -159,14 +160,15 @@ function loadUsers() {
             loadUsers(); loadOverview();
           }).then(function () { save.disabled = false; });
       });
+      var nextStatus = u.status === "active" ? "banned" : "active";
       var toggle = CL.el("button", "btn btn-ghost btn-xs",
-                         u.status === "active" ? "封禁" : "解封");
+                         u.status === "pending" ? "通过" : (u.status === "active" ? "封禁" : "解封"));
       toggle.style.marginLeft = ".35rem";
       toggle.disabled = self;
       toggle.addEventListener("click", function () {
         toggle.disabled = true;
         CL.api("/api/admin/users/" + u.id + "/status",
-               { method: "POST", body: { status: u.status === "active" ? "banned" : "active" } })
+               { method: "POST", body: { status: nextStatus } })
           .then(function (r2) {
             if (!r2.data || !r2.data.ok) { alert((r2.data && r2.data.error) || "失败"); }
             loadUsers();

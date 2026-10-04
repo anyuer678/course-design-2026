@@ -6,11 +6,12 @@
 - 定位与里程碑：`docs/PLAN.md`（角色矩阵 / 功能面 / 架构 / 里程碑 M0–M6）
 - **详细设计（开工规格）**：`docs/DESIGN.md`（多端三端 / 18 个功能点 F1-F18 / 页面路由 /
   数据模型 / API 草案 / 部署设计）
-- 现状：**M0–M5 已交付**——账号与会话、课程工作区、项目页（详情/演示/实验）、练习任务闭环、
-  **管理端**。已经"能用"：注册/登录/登出（PBKDF2 + 会话表 + 失败限流）、课程目录（搜索/批次筛选、
-  上架/排序）、在线实验（跑演示/测试/服务，SSE 实时日志、并发限额、审计、强停）、
-  练习任务（领取/完成/进度）、教师台（布置/统计，按绑定授权）、管理端（平台看板手写 SVG、
-  用户角色与封禁、课程治理与教师绑定、实验审计与队列强停）。下一步 M6 部署与论文素材。
+- 现状：**M0–M6 全部交付——平台完整可用且可部署**。功能面：账号与会话、33 门课程工作区、
+  项目页（详情/演示/实验）、在线实验（SSE 日志/限额/审计/强停）、练习任务闭环（学生+教师）、
+  管理端（看板 SVG/用户/课程治理/审计/审批）。运维面：`config.json` 配置、注册审批流、
+  备份/恢复/压测工具、开机自启脚本（需在部署机以管理员执行）。
+- 文档：`docs/PLAN.md`（方案书）· `docs/DESIGN.md`（详细设计）· `docs/DEPLOY.md`（部署运维）·
+  `docs/SECURITY.md`（安全边界报告）· `docs/THESIS.md`（论文素材索引）
 
 ## 角色与管理员账号
 
@@ -23,22 +24,24 @@
 ## 运行
 
 ```
-双击 run.bat            # 起在 http://127.0.0.1:7900/ 并自动打开浏览器（正式数据在 data/app.db）
+双击 run.bat            # 起在 http://127.0.0.1:7900 并自动打开浏览器（正式数据在 data/app.db）
 python server.py        # 同上（不开浏览器）
-python server.py --db 某路径 --port 7930     # 换库/换端口
-python server.py --selftest   # 自检（临时库：账号全链路 + 页面 + 边界，26 项）
+python server.py --config 路径 --host 0.0.0.0 --port 8000   # 部署到局域网（见 docs/DEPLOY.md）
+python server.py --selftest   # 自检（临时库：账号/实验/任务/管理/工具 全链路 + 负面用例）
+python server.py --promote 用户名 admin    # 角色工具（先注册，再提升）
 ```
 
 ## 目录
 
 ```
 courselab/
-  server.py        标准库 HTTP 服务 + 路由 + 会话 + 自检（零第三方依赖）
-  app/             领域层：db（平台态库）/ auth（账号会话）/ courses（仓库现算）/ can（权限唯一源）
-  web/             学生端页面：门户/登录/注册/课程工作区/项目页/我的（原生 JS，零构建）
+  server.py        标准库 HTTP 服务 + 路由 + 会话 + SSE + 自检（零第三方依赖）
+  app/             领域层：db / auth / courses / tasks / labs / admin / can（判定唯一源）
+  web/             三端页面：学生（门户/登录/注册/课程/项目/我的任务/我的）· 教师台 · 管理端
+  tools/           运维工具：backup / restore / bench / install_autostart / uninstall_autostart
+  config.example.json  配置模板（复制为 config.json 生效；config.json 不进 git）
   data/ logs/ backup/   运行期数据（不进 git）
-  docs/PLAN.md     方案书（定位/里程碑/验收口径）
-  docs/DESIGN.md   详细设计（多端/功能点 F1-F18/数据模型/API/部署）
+  docs/            PLAN / DESIGN / DEPLOY / SECURITY / THESIS 五份文档
   run.bat          启动脚本（纯 ASCII + CRLF）
 ```
 

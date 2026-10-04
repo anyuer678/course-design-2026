@@ -112,7 +112,14 @@ HTTP 服务（标准库 ThreadingHTTPServer + 自研路由表）
   实验审计与队列（全部历史 + 运行中强停）。教师权限改为**按绑定授权**（管理员全量）。
   自检 77 项（含学生 403、自封拒绝、封禁登录 403、下架隐藏与详情 404、排序生效、
   绑定/解绑的教师侧 200/403、教师台课程列表=绑定集合）。
-  注：注册审批流（pending 状态）随 M6 的 public_mode 一起接。
+- **M6 · 部署与论文素材（已完成）**：`config.json` 配置化（bind/port/data_dir/max_labs/
+  task_timeout/session_hours/registration/public_mode，未知键拒绝启动）；**注册审批流**
+  （approval 模式 -> pending -> 管理端"通过"；pending 登录 403）；`tools/` 四件：
+  backup.py（VACUUM INTO + 完整性校验）、restore.py（校验来源 + 留底 + 校验目标）、
+  bench.py（标准库并发压测）、install/uninstall_autostart.bat（计划任务，check 模式无副作用；
+  本机非管理员注册被拒为预期路径）；三份文档：`docs/DEPLOY.md`（三场景/配置表/备份恢复/FAQ）、
+  `docs/SECURITY.md`（边界报告：网络/账号/权限/沙箱/注入/局限）、`docs/THESIS.md`
+  （论文四章素材索引）。自检 **87 项**。**至此 M0-M6 全部交付，平台可部署、可运维、有论文素材。**
 - **M5 · 管理端 + 统计看板**：课程/用户/审计/看板（手写 SVG）。
 - **M6 · 部署与论文素材**：一键部署、备份、压测与安全边界报告、
   需求/设计/测试/部署四章的论文素材整理。

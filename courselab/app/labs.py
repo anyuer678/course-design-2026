@@ -127,9 +127,12 @@ def _kill_tree(proc) -> None:
 
 
 class Labs:
-    def __init__(self, repo: Path, db) -> None:
+    def __init__(self, repo: Path, db, max_labs: int = MAX_CONCURRENT,
+                 task_timeout: float = TASK_TIMEOUT) -> None:
         self.repo = Path(repo)
         self.db = db
+        self.max_labs = int(max_labs)
+        self.task_timeout = float(task_timeout)
         self._lk = threading.Lock()
         self._runs: dict = {}
         atexit.register(self.shutdown)
@@ -154,7 +157,7 @@ class Labs:
             "seconds": round(time.time() - m["started"], 1),
             "port": m["port"],
         } for m in running]
-        return {"ok": True, "running": items, "limit": MAX_CONCURRENT}
+        return {"ok": True, "running": items, "limit": self.max_labs}
 
     def mine(self, user_id: int) -> list:
         rows = self.db.all(
@@ -188,8 +191,8 @@ class Labs:
             else:
                 raise LabsError("NO_ACTION", "本项目未注册该动作")
         with self._lk:
-            if len(self._running()) >= MAX_CONCURRENT:
-                raise LabsError("LIMIT", f"并发上限（{MAX_CONCURRENT} 个）已满，稍后再试", 429)
+            if len(self._running()) >= self.max_labs:
+                raise LabsError("LIMIT", f"并发上限（{self.max_labs} 个）已满，稍后再试", 429)
             if any(m["pid"] == pid and m["proc"].poll() is None for m in self._runs.values()):
                 raise LabsError("BUSY", "该项目已有进程在跑", 409)
             run_id = secrets.token_hex(6)
@@ -279,8 +282,8 @@ class Labs:
             time.sleep(1.0)
             for meta in list(self._runs.values()):
                 if meta["proc"] is not None and meta["proc"].poll() is None:
-                    if time.time() - meta["started"] > TASK_TIMEOUT:
-                        meta["buf"].append(f"[平台] 超时终止（>{TASK_TIMEOUT:.0f}s）")
+                    if time.time() - meta["started"] > self.task_timeout:
+                        meta["buf"].append(f"[平台] 超时终止（>{self.task_timeout:.0f}s）")
                         self._kill(meta)
 
     def shutdown(self) -> None:

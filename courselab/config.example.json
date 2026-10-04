@@ -1,0 +1,10 @@
+{
+  "bind": "127.0.0.1",
+  "port": 7900,
+  "data_dir": "data",
+  "max_labs": 2,
+  "task_timeout": 600,
+  "session_hours": 12,
+  "registration": "open",
+  "public_mode": false
+}
