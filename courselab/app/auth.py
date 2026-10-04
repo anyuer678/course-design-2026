@@ -47,11 +47,15 @@ def verify_password(password: str, salt_hex: str, hash_hex: str, iterations: int
 
 # ------------------------------------------------------------------ 校验
 
+def validate_password(password: str) -> None:
+    if len(password or "") < 8 or not (re.search(r"[A-Za-z]", password) and re.search(r"\d", password)):
+        raise AuthError("BAD_PASSWORD", "口令至少 8 位，且需同时包含字母与数字")
+
+
 def validate_credentials(username: str, password: str) -> None:
     if not USERNAME_RE.match(username or ""):
         raise AuthError("BAD_USERNAME", "用户名需为 3-32 位字母/数字/下划线")
-    if len(password or "") < 8 or not (re.search(r"[A-Za-z]", password) and re.search(r"\d", password)):
-        raise AuthError("BAD_PASSWORD", "口令至少 8 位，且需同时包含字母与数字")
+    validate_password(password)
 
 
 # ------------------------------------------------------------------ 限流
@@ -128,6 +132,24 @@ def login(db, username: str, password: str, ip: str = "", ua: str = "",
     token = create_session(db, row["id"], ip, ua, hours)
     db.execute("UPDATE users SET last_login = ? WHERE id = ?", (now_str(), row["id"]))
     return _user_public(db.one("SELECT * FROM users WHERE id = ?", (row["id"],))), token
+
+
+def change_password(db, user_id: int, old_password: str, new_password: str,
+                    keep_token: str = "", ip: str = "") -> None:
+    """改口令：旧口令校验（计入登录失败限流）；改后其他会话立即失效、当前会话保留。"""
+    row = db.one("SELECT * FROM users WHERE id = ?", (user_id,))
+    if row is None:
+        raise AuthError("NO_USER", "用户不存在", 404)
+    check_rate(row["username"], ip)
+    if not verify_password(old_password, row["pwd_salt"], row["pwd_hash"], row["pwd_iter"]):
+        record_failure(row["username"], ip)
+        raise AuthError("BAD_OLD_PASSWORD", "当前口令不正确")
+    validate_password(new_password)
+    salt, hsh, it = hash_password(new_password)
+    db.execute("UPDATE users SET pwd_salt = ?, pwd_hash = ?, pwd_iter = ? WHERE id = ?",
+               (salt, hsh, it, user_id))
+    db.execute("DELETE FROM sessions WHERE user_id = ? AND token != ?", (user_id, keep_token or ""))
+    clear_failures(row["username"], ip)
 
 
 def logout(db, token: str) -> None:

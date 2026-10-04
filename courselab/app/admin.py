@@ -1,6 +1,7 @@
 """管理端（F12-F15）：用户治理 / 课程治理（发布·排序·教师绑定）/ 实验审计 / 看板聚合。
 
-课程治理是"平台态覆盖层"：仓库现算的内容不动，course_meta 只记发布/排序/绑定教师。
+课程治理是"平台态覆盖层"：仓库现算的内容不动，course_meta 只记发布/排序/绑定教师，
+以及教师维护的补充简介/大纲（F9；与仓库内容并列展示、标明来源，不覆盖现算层）。
 """
 from __future__ import annotations
 
@@ -12,6 +13,8 @@ from app.db import now_str
 
 ROLES = ("student", "teacher", "admin")
 STATUSES = ("active", "banned")
+SUMMARY_MAX = 120
+OUTLINE_MAX = 2000
 _UNSET = object()
 
 
@@ -66,26 +69,50 @@ def course_rows(db) -> list:
 
 
 def set_course_meta(db, cid: str, actor_id: int = 0, published=None, sort=None,
-                    teacher_id=_UNSET) -> dict:
+                    teacher_id=_UNSET, summary=None, outline=None) -> dict:
     if courses.course_detail(cid) is None:
         raise AdminError("NO_COURSE", "课程不存在", 404)
     row = _meta_rows(db).get(cid)
     pub = (row["published"] if row else 1) if published is None else (1 if published else 0)
     srt = (row["sort"] if row else 0) if sort is None else int(sort)
     tid = (row["teacher_id"] if row else None) if teacher_id is _UNSET else teacher_id
+    summ = ((row["summary"] if row else "") or "") if summary is None else str(summary or "").strip()
+    outl = ((row["outline"] if row else "") or "") if outline is None else str(outline or "").strip()
+    if len(summ) > SUMMARY_MAX:
+        raise AdminError("BAD_SUMMARY", f"补充简介最长 {SUMMARY_MAX} 字")
+    if len(outl) > OUTLINE_MAX:
+        raise AdminError("BAD_OUTLINE", f"大纲最长 {OUTLINE_MAX} 字")
     if tid is not None:
         t = db.one("SELECT role FROM users WHERE id = ?", (int(tid),))
         if t is None or t["role"] not in ("teacher", "admin"):
             raise AdminError("BAD_TEACHER", "绑定对象必须是教师或管理员")
         tid = int(tid)
     db.execute(
-        "INSERT INTO course_meta(course, published, sort, teacher_id) VALUES(?,?,?,?)"
+        "INSERT INTO course_meta(course, published, sort, teacher_id, summary, outline)"
+        " VALUES(?,?,?,?,?,?)"
         " ON CONFLICT(course) DO UPDATE SET published=excluded.published,"
-        " sort=excluded.sort, teacher_id=excluded.teacher_id",
-        (cid, pub, srt, tid))
+        " sort=excluded.sort, teacher_id=excluded.teacher_id,"
+        " summary=excluded.summary, outline=excluded.outline",
+        (cid, pub, srt, tid, summ, outl))
     audit(db, actor_id, "course_meta", cid,
-          f"published={int(pub)} sort={srt} teacher_id={tid}")
-    return {"course": cid, "published": bool(pub), "sort": srt, "teacher_id": tid}
+          f"published={int(pub)} sort={srt} teacher_id={tid}"
+          f" summary={len(summ)}字 outline={len(outl)}字")
+    return {"course": cid, "published": bool(pub), "sort": srt, "teacher_id": tid,
+            "summary": summ, "outline": outl}
+
+
+def course_meta_public(db, cid: str) -> dict:
+    """课程详情附带的平台态：发布状态 + 教师维护的补充简介/大纲（注明来源教师名）。"""
+    m = _meta_rows(db).get(cid)
+    teacher = None
+    if m and m["teacher_id"]:
+        t = db.one("SELECT username, display_name FROM users WHERE id = ?", (m["teacher_id"],))
+        if t:
+            teacher = t["display_name"] or t["username"]
+    return {"published": bool(m["published"]) if m else True,
+            "summary": ((m["summary"] if m else "") or ""),
+            "outline": ((m["outline"] if m else "") or ""),
+            "teacher": teacher}
 
 
 def teacher_can_manage(db, user, cid: str) -> bool:

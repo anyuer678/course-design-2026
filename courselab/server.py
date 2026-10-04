@@ -204,6 +204,7 @@ class Handler(SimpleHTTPRequestHandler):
             detail["can"] = {"lab_run": can.can(user, "lab_run", cid)}
             detail["lab"] = labs.describe(cid)
             detail["taskboard"] = tasks.course_taskboard(self.db, user, cid)
+            detail["meta"] = admin.course_meta_public(self.db, cid)
             return self.send_json({"ok": True, "course": detail})
 
         if path == "/api/tasks/mine":
@@ -330,6 +331,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._login(data)
             if path == "/api/auth/logout":
                 return self._logout()
+            if path == "/api/auth/password":
+                return self._change_password(data)
             if path == "/api/labs/run":
                 return self._lab_run(data)
             if path.startswith("/api/labs/runs/") and path.endswith("/stop"):
@@ -342,6 +345,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._teacher_create(data)
             if path.startswith("/api/teacher/tasks/") and path.endswith("/delete"):
                 return self._teacher_delete(path)
+            if path == "/api/teacher/course/meta":
+                return self._teacher_course_meta(data)
             if path == "/api/notices":
                 return self._notice_publish(data)
             if path == "/api/notices/read-all":
@@ -468,6 +473,10 @@ class Handler(SimpleHTTPRequestHandler):
         if "teacher_id" in data:
             t = data.get("teacher_id")
             kwargs["teacher_id"] = None if t in (None, "", 0) else int(t)
+        if "summary" in data:
+            kwargs["summary"] = str(data.get("summary") or "")
+        if "outline" in data:
+            kwargs["outline"] = str(data.get("outline") or "")
         row = admin.set_course_meta(self.db, cid, user["id"], **kwargs)
         return self.send_json({"ok": True, "meta": row})
 
@@ -524,6 +533,35 @@ class Handler(SimpleHTTPRequestHandler):
     def _logout(self):
         auth.logout(self.db, self._token())
         return self.send_json({"ok": True}, set_cookie=f"{COOKIE_NAME}=; Path=/; Max-Age=0")
+
+    def _change_password(self, data):
+        user = self.current_user()
+        if user is None:
+            return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+        auth.change_password(self.db, user["id"],
+                             str(data.get("old_password") or ""),
+                             str(data.get("new_password") or ""),
+                             keep_token=self._token(), ip=self._client_ip())
+        return self.send_json({"ok": True, "notice": "口令已更新；其他已登录的会话已失效"})
+
+    def _teacher_course_meta(self, data):
+        user = self.current_user()
+        if user is None:
+            return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+        cid = str(data.get("course") or "").strip()
+        if not admin.teacher_can_manage(self.db, user, cid):
+            return self.send_error_json(403, "只能维护绑定给自己的课程", "FORBIDDEN")
+        kwargs = {}
+        if "published" in data:
+            kwargs["published"] = bool(data.get("published"))
+        if "summary" in data:
+            kwargs["summary"] = str(data.get("summary") or "")
+        if "outline" in data:
+            kwargs["outline"] = str(data.get("outline") or "")
+        if not kwargs:
+            return self.send_error_json(400, "没有要修改的字段", "EMPTY")
+        row = admin.set_course_meta(self.db, cid, user["id"], **kwargs)
+        return self.send_json({"ok": True, "meta": row})
 
     def _cookie(self, token: str) -> str:
         return (f"{COOKIE_NAME}={token}; Path=/; HttpOnly; SameSite=Lax; "
@@ -966,6 +1004,81 @@ def selftest(port: int = 7901) -> int:
     check("管理动作审计（角色/状态/课程/公告四类留痕）",
           {"user_role", "user_status", "course_meta", "notice_publish"} <= acts,
           str(sorted(acts)))
+
+    # -- F7 修改口令 + F9 课程维护（M8 补全）
+    post("/api/auth/register",
+         {"username": "stu_pw", "display_name": "改密同学", "password": "pw123456"})
+    _, _, hp1 = post("/api/auth/login", {"username": "stu_pw", "password": "pw123456"})
+    cp1 = cookie_of(hp1)
+    _, _, hp2 = post("/api/auth/login", {"username": "stu_pw", "password": "pw123456"})
+    cp2 = cookie_of(hp2)
+    status, data, _ = post("/api/auth/password",
+                           {"old_password": "pw123456", "new_password": "newpw12345"})
+    check("匿名改口令 401", status == 401)
+    status, data, _ = post("/api/auth/password",
+                           {"old_password": "wrong-old1", "new_password": "newpw12345"},
+                           cookie=cp1)
+    check("当前口令不对 400（BAD_OLD_PASSWORD）",
+          status == 400 and data["code"] == "BAD_OLD_PASSWORD")
+    status, data, _ = post("/api/auth/password",
+                           {"old_password": "pw123456", "new_password": "abcdefgh"},
+                           cookie=cp1)
+    check("新口令太弱 400（BAD_PASSWORD）", status == 400 and data["code"] == "BAD_PASSWORD")
+    status, data, _ = post("/api/auth/password",
+                           {"old_password": "pw123456", "new_password": "newpw12345"},
+                           cookie=cp1)
+    check("修改口令成功", status == 200)
+    status, data, _ = get("/api/me", cookie=cp1)
+    check("当前会话保留", status == 200 and (data.get("user") or {}).get("username") == "stu_pw")
+    status, data, _ = get("/api/me", cookie=cp2)
+    check("其他会话即时失效", status == 200 and data.get("user") is None)
+    status, data, _ = post("/api/auth/login", {"username": "stu_pw", "password": "pw123456"})
+    check("旧口令登录被拒 401", status == 401)
+    status, data, _ = post("/api/auth/login", {"username": "stu_pw", "password": "newpw12345"})
+    check("新口令登录成功", status == 200)
+
+    status, data, _ = post("/api/teacher/course/meta",
+                           {"course": "B3-logic-lab", "summary": "越权试试"}, cookie=tcookie)
+    check("教师维护未绑定课 403", status == 403)
+    status, data, _ = post("/api/teacher/course/meta",
+                           {"course": "B11-net-lab",
+                            "summary": "本课补充：先跑通 demo，再交实验报告",
+                            "outline": "第 1 周 环境与演示\n第 2 周 HTTP 子集解析\n第 3 周 对拍与边界"},
+                           cookie=tcookie)
+    check("教师维护绑定课（补充简介 + 大纲）",
+          status == 200 and data["meta"]["summary"].startswith("本课补充"))
+    status, data, _ = get("/api/courses/B11-net-lab")
+    m = (data.get("course") or {}).get("meta") or {}
+    check("课程详情回读维护内容（标明来源教师）",
+          m.get("summary", "").startswith("本课补充") and "第 2 周" in m.get("outline", "")
+          and m.get("teacher"))
+    status, data, _ = post("/api/teacher/course/meta",
+                           {"course": "B11-net-lab", "summary": "x" * 121}, cookie=tcookie)
+    check("补充简介超长 400（BAD_SUMMARY）", status == 400 and data["code"] == "BAD_SUMMARY")
+    status, data, _ = post("/api/teacher/course/meta", {"course": "B11-net-lab"}, cookie=tcookie)
+    check("空修改 400", status == 400)
+    status, data, _ = post("/api/teacher/course/meta",
+                           {"course": "B11-net-lab", "summary": "学生乱改"}, cookie=cookie)
+    check("学生维护课程 403", status == 403)
+    status, data, _ = post("/api/teacher/course/meta",
+                           {"course": "B11-net-lab", "published": False}, cookie=tcookie)
+    check("教师下架本课", status == 200 and data["meta"]["published"] is False)
+    status, data, _ = get("/api/courses")
+    check("下架后学生目录隐藏", all(c["id"] != "B11-net-lab" for c in data["courses"]))
+    status, data, _ = get("/api/courses/B11-net-lab", cookie=cookie)
+    check("下架后学生详情 404", status == 404)
+    status, data, _ = post("/api/teacher/course/meta",
+                           {"course": "B11-net-lab", "published": True}, cookie=tcookie)
+    check("教师重新上架", status == 200 and data["meta"]["published"] is True)
+    status, data, _ = get("/api/admin/audit", cookie=acookie)
+    evs = [x for x in data.get("events", [])
+           if x["action"] == "course_meta" and x["target"] == "B11-net-lab"]
+    check("教师维护动作同样留痕（summary= 在 detail）",
+          any("summary=" in x["detail"] for x in evs))
+    status, data, _ = post("/api/admin/courses/B11-net-lab/meta",
+                           {"summary": "管理员补写：面向全平台"}, cookie=acookie)
+    check("管理端 meta 接口也接受 summary/outline", status == 200
+          and data["meta"]["summary"] == "管理员补写：面向全平台")
 
     # -- 权限矩阵单元（负面为主）
     stu = {"role": "student"}

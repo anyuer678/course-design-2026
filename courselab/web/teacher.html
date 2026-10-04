@@ -11,7 +11,7 @@
 <h1>教师台</h1>
 <div id="box"><p class="note">加载中…</p></div>
 </main>
-<footer>教师可见：按课布置任务、看完成情况与本课统计（课程归属绑定在 M5 管理端接入）。</footer>
+<footer>教师可见：课程维护（补充简介 / 大纲 / 发布开关）、布置任务与查看完成、本课统计；课程归属由管理员绑定。</footer>
 <script src="/assets/app.js"></script>
 <script>
 "use strict";
@@ -82,6 +82,49 @@ function load(course) {
     stats.appendChild(stat("参与学生 " + d.totals.students));
     stats.appendChild(stat("记录 " + d.totals.records));
     panel.appendChild(stats);
+
+    // 课程维护（F9）：发布开关 + 补充简介 + 大纲（平台覆盖层，注明来源）
+    var upCard = CL.el("div", "card");
+    upCard.appendChild(CL.el("h3", null, "课程维护（平台覆盖层）"));
+    var upMsg = CL.el("p", "note",
+      "补充简介与大纲会显示在课程工作区（标明由教师维护）；发布开关控制学生在目录中是否可见。");
+    var upRow = CL.el("div", "toolbar");
+    var pubWrap = CL.el("label", "note");
+    var pub = document.createElement("input");
+    pub.type = "checkbox";
+    pubWrap.appendChild(pub);
+    pubWrap.appendChild(document.createTextNode(" 对学生在目录中可见（发布）"));
+    var sm = input("一句话补充（≤120 字）");
+    var saveUp = CL.el("button", "btn", "保存");
+    upRow.appendChild(pubWrap); upRow.appendChild(sm); upRow.appendChild(saveUp);
+    var ot = document.createElement("textarea");
+    ot.placeholder = "大纲 / 课程安排要点（≤2000 字）";
+    ot.style.cssText = "font:inherit;min-height:4.5em;width:100%;margin-top:.5rem;" +
+      "padding:.45rem .7rem;border:1px solid #e2e8f0;border-radius:8px;background:#fff";
+    upCard.appendChild(upRow);
+    upCard.appendChild(ot);
+    upCard.appendChild(upMsg);
+    panel.appendChild(upCard);
+    CL.api("/api/courses/" + encodeURIComponent(course)).then(function (r3) {
+      var m = ((r3.data && r3.data.course) || {}).meta || {};
+      pub.checked = !!m.published;
+      sm.value = m.summary || "";
+      ot.value = m.outline || "";
+    });
+    saveUp.addEventListener("click", function () {
+      saveUp.disabled = true;
+      CL.api("/api/teacher/course/meta", { method: "POST", body: {
+        course: curCourse, published: pub.checked, summary: sm.value, outline: ot.value } })
+        .then(function (r4) {
+          if (!r4.data || !r4.data.ok) {
+            upMsg.textContent = (r4.data && r4.data.error) || "保存失败";
+            return;
+          }
+          upMsg.textContent = "已保存。" + (pub.checked ? "" : "下架后学生在课程目录里看不到这门课。");
+        })
+        .catch(function () { upMsg.textContent = "网络错误，请重试。"; })
+        .then(function () { saveUp.disabled = false; });
+    });
 
     // 布置新任务
     var form = CL.el("div", "card");

@@ -11,11 +11,10 @@
 | **十几个功能点** | 18 个功能点（F1-F18，全部编号，里程碑按编号跟踪） | 见 §三 |
 | **能真实部署使用** | 单进程 + 配置 + 数据目录 + 备份/恢复 + 课堂局域网与公网两种场景 | 见 §七 |
 
-现状：**M0–M7 全部交付**——平台完整可用且可部署：账号、33 门课程工作区与项目页、在线实验
-（SSE/限额/审计）、练习任务闭环、管理端（看板/治理/审批）、配置化与运维工具（备份恢复/压测/
-自启）、部署/安全/论文三份文档；收官补全轮又落地 **F8 通知公告**（全员/课程两级 + 未读角标 +
-可见性规则）、**管理动作审计**（四类治理动作留痕）与**移动端响应式**（≤720px 断点）。
-后续按需平移到主流栈或扩展（见 THESIS §展望）。
+现状：**M0–M8 全部交付**——平台完整可用且可部署：账号（含**修改口令**）、33 门课程工作区与
+项目页、在线实验（SSE/限额/审计）、练习任务闭环、管理端（看板/治理/审批）、**教师课程维护**
+（补充简介/大纲/发布开关）、F8 通知公告、管理动作审计、移动端响应式、配置化与运维工具
+（备份恢复/压测/自启）、部署/安全/论文三份文档。后续按需平移到主流栈或扩展（见 THESIS §展望）。
 
 ## 一、概念模型：什么叫"每个课程各有一个小型项目平台"
 
@@ -70,7 +69,8 @@
 - **F8 通知与公告**：未读计数、列表、已读标记。
 
 **教师端（F9-F11）**
-- **F9 课程维护**：编辑简介 / 大纲 / 关联项目 / 发布开关（覆盖层写回平台 DB）。
+- **F9 课程维护**：补充简介（≤120 字）/ 大纲（≤2000 字）/ 发布开关（覆盖层写回平台 DB，
+  课程页并列展示并标明维护教师）；关联项目＝manifest 1:1 现算，不设编辑；封面（cover）不做。
 - **F10 任务布置与查看**：按课布置任务（可挂 g2 卡片）、设截止；查看领取与完成名单。
 - **F11 本课统计**：完成率、实验次数排行、最近活动（只限本人课程）。
 
@@ -114,8 +114,8 @@
 |---|---|---|
 | `users` | id, username, display_name, role, pwd_hash, pwd_salt, pwd_iter, status, created_at, last_login | role: student/teacher/admin；status: pending/active/banned |
 | `sessions` | token, user_id, created_at, expires_at, ip, ua | 登出/改密即失效；过期清扫 |
-| `course_meta` | course, summary, outline, teacher_id, published, sort, cover | 覆盖层：仓库没有的"平台态" |
-| `project_meta` | pid, published, sort, linked_course | 同上 |
+| `course_meta` | course, published, sort, teacher_id, summary, outline | 覆盖层：发布/排序/绑定教师 + 教师维护的补充简介/大纲（旧库自动 ALTER 迁移；cover 未做） |
+| `project_meta`（未建） | — | 项目治理并入课程治理：课程:项目=1:1，项目随课程上/下架 |
 | `tasks` | id, course, pid, title, body, due_at, created_by, g2_card | 内容源可挂 g2 卡片 id |
 | `task_records` | task_id, user_id, status, note, created_at | status: todo/doing/done |
 | `lab_runs` | id, user_id, pid, action, started_at, finished_at, exit, log_tail | 审计与 F14 队列的数据源 |
@@ -129,16 +129,17 @@
 
 | 分组 | 路由 | 说明 |
 |---|---|---|
-| auth | `POST /api/auth/register|login|logout`、`GET /api/me` | F1/F16 |
+| auth | `POST /api/auth/register|login|logout`、`POST /api/auth/password`、`GET /api/me` | F1/F16/F7 |
 | courses | `GET /api/courses`、`GET /api/courses/{code}` | F2/F3（现算 + 覆盖层合并） |
 | projects | `GET /api/projects/{pid}` | F4（详情 + 演示地址 + 动作表） |
 | labs | `POST /api/labs/run`、`GET /api/labs/runs/{id}`、`GET /api/labs/runs/{id}/log`（SSE）、`POST /api/labs/runs/{id}/stop` | F5（动作 id 白名单） |
 | tasks | `GET /api/tasks`、`POST /api/tasks/{id}/claim`、`POST /api/tasks/{id}/done`、`GET /api/tasks/mine` | F6/F7 |
-| teacher | `PUT /api/teacher/courses/{code}`、`POST /api/teacher/tasks`、`GET /api/teacher/tasks/{id}/records`、`GET /api/teacher/stats/{code}` | F9-F11 |
+| teacher | `GET /api/teacher/courses`、`GET /api/teacher/course`、`POST /api/teacher/tasks`、`POST /api/teacher/tasks/{id}/delete`、`POST /api/teacher/course/meta` | F9-F11 |
 | admin | `GET/PUT /api/admin/users`、`PUT /api/admin/courses|projects`、`GET /api/admin/labs`、`POST /api/admin/labs/{id}/kill`、`GET /api/admin/dashboard` | F12-F15 |
 | notices | `GET /api/notices`、`POST /api/notices/{id}/read` | F8 |
 
-共 24 条路由（含 SSE）。
+上表为 v1 草案（24 条含 SSE）；M3–M8 实际扩展多处（通知/审计/口令/课程维护/服务页面等），
+路由以 `server.py` 现行为准。
 
 ## 七、部署设计（能真实部署使用）
 
@@ -176,6 +177,7 @@ courselab/
 | M5 多端补全（已交付） | F7/F9/F12/F13/F15（F8 转入 M7 落地） | 三端可用；看板手写 SVG；角色/状态/课程治理留审计 |
 | M6 部署与论文素材（已交付） | F16 审批/F17/F18 | 课堂场景真机演示；备份/恢复演练；需求/设计/测试/部署四章素材 |
 | M7 收官补全（已交付） | F8 + 管理动作审计 + 响应式 | 通知可见性负面用例（未绑定 403/越级 403）；四类动作留痕；≤720px 断点样式 |
+| M8 F7/F9 补全（已交付） | F7 修改口令 + F9 课程维护 | 旧口令校验计入限流、其他会话即失效；教师维护的 403/超长 400/下架隐藏；旧库 ALTER 迁移保数据 |
 
 ## 九、边界（这一版说"不"）
 

@@ -42,7 +42,7 @@ CL.api("/api/me").then(function (res) {
   kv(dl, "角色", CL.roleName(user.role));
   kv(dl, "注册时间", user.created_at || "—");
   kv(dl, "上次登录", user.last_login || "—");
-  kv(dl, "在线实验权限", res.data.can.lab_run ? "可用（M3 上线后开放操作）" : "不可用");
+  kv(dl, "在线实验权限", res.data.can.lab_run ? "可用" : "不可用");
   card.appendChild(dl);
   var out = CL.el("button", "btn btn-ghost", "退出登录");
   out.style.marginTop = ".8rem";
@@ -51,6 +51,38 @@ CL.api("/api/me").then(function (res) {
   });
   card.appendChild(out);
   box.appendChild(card);
+
+  // 修改口令（F7）：改后其他会话即时失效，当前会话保留
+  var pwCard = CL.el("div", "card");
+  pwCard.appendChild(CL.el("h3", null, "修改口令"));
+  var pwRow = CL.el("div", "toolbar");
+  var oldI = pwInput("当前口令");
+  oldI.autocomplete = "current-password";
+  var newI = pwInput("新口令（至少 8 位，含字母与数字）");
+  var newI2 = pwInput("再输一遍新口令");
+  var pwBtn = CL.el("button", "btn", "保存");
+  var pwMsg = CL.el("p", "note", "修改成功后，你在其他设备上的登录会立即失效。");
+  pwBtn.addEventListener("click", function () {
+    if (newI.value !== newI2.value) { pwMsg.textContent = "两次输入的新口令不一致。"; return; }
+    pwBtn.disabled = true;
+    CL.api("/api/auth/password", { method: "POST", body: {
+      old_password: oldI.value, new_password: newI.value } })
+      .then(function (r) {
+        if (!r.data || !r.data.ok) {
+          pwMsg.textContent = (r.data && r.data.error) || "修改失败";
+          return;
+        }
+        oldI.value = ""; newI.value = ""; newI2.value = "";
+        pwMsg.textContent = (r.data.notice || "口令已更新") + "。";
+      })
+      .catch(function () { pwMsg.textContent = "网络错误，请重试。"; })
+      .then(function () { pwBtn.disabled = false; });
+  });
+  pwRow.appendChild(oldI); pwRow.appendChild(newI); pwRow.appendChild(newI2);
+  pwRow.appendChild(pwBtn);
+  pwCard.appendChild(pwRow);
+  pwCard.appendChild(pwMsg);
+  box.appendChild(pwCard);
 
   var later = CL.el("div", "card");
   later.appendChild(CL.el("h3", null, "我的实验记录"));
@@ -80,6 +112,14 @@ CL.api("/api/me").then(function (res) {
 function kv(dl, k, v) {
   dl.appendChild(CL.el("dt", null, k));
   dl.appendChild(CL.el("dd", null, v));
+}
+
+function pwInput(placeholder) {
+  var i = document.createElement("input");
+  i.type = "password";
+  i.autocomplete = "new-password";
+  i.placeholder = placeholder;
+  return i;
 }
 </script>
 </body>

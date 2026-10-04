@@ -63,7 +63,9 @@ CREATE TABLE IF NOT EXISTS course_meta (
   course TEXT PRIMARY KEY,
   published INTEGER NOT NULL DEFAULT 1,
   sort INTEGER NOT NULL DEFAULT 0,
-  teacher_id INTEGER
+  teacher_id INTEGER,
+  summary TEXT NOT NULL DEFAULT '',
+  outline TEXT NOT NULL DEFAULT ''
 );
 CREATE TABLE IF NOT EXISTS notices (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -94,6 +96,14 @@ def now_str() -> str:
     return time.strftime("%Y-%m-%d %H:%M:%S")
 
 
+def _migrate(conn) -> None:
+    """老库补列：CREATE TABLE IF NOT EXISTS 不会改已存在的表。"""
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(course_meta)")}
+    for name in ("summary", "outline"):
+        if name not in cols:
+            conn.execute(f"ALTER TABLE course_meta ADD COLUMN {name} TEXT NOT NULL DEFAULT ''")
+
+
 class DB:
     """单连接 + 一把锁：ThreadingHTTPServer 并发的写法下够用且简单。"""
 
@@ -104,6 +114,7 @@ class DB:
         self.conn = sqlite3.connect(str(self.path), check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.conn.executescript(SCHEMA)
+        _migrate(self.conn)
         self.conn.commit()
 
     def execute(self, sql: str, args=()):

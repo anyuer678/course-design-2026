@@ -15,6 +15,8 @@
 <h2>一句话</h2>
 <div class="card" id="summary">…</div>
 
+<div id="teacher-note"></div>
+
 <h2>知识点速览</h2>
 <div id="knowledge"></div>
 
@@ -33,7 +35,7 @@
   <p style="margin:.4rem 0"><a class="btn" id="to-project" href="#">进入项目页</a></p>
 </div>
 </main>
-<footer>内容现算自仓库 README 与 g2 卡片；平台不维护第二份。</footer>
+<footer>内容现算自仓库 README 与 g2 卡片（唯一源）；「本课补充」为平台层覆盖内容、标明维护教师。</footer>
 <script src="/assets/app.js"></script>
 <script>
 "use strict";
@@ -53,6 +55,21 @@ else {
     document.getElementById("meta").textContent =
       c.id + " · " + c.title + " · 批次 " + c.batch;
     document.getElementById("summary").textContent = c.summary || "（该课暂无一句话摘要）";
+
+    // 本课补充（F9：教师维护的平台层内容，与仓库现算内容并列展示、标明来源）
+    var tm = c.meta || {};
+    if (tm.summary || tm.outline) {
+      var note = CL.el("div", "card");
+      note.appendChild(CL.el("h3", null,
+        "本课补充" + (tm.teacher ? "（由教师 " + tm.teacher + " 维护）" : "（平台层）")));
+      if (tm.summary) note.appendChild(CL.el("p", null, tm.summary));
+      if (tm.outline) {
+        var pre = CL.el("pre", "note");
+        pre.textContent = tm.outline;
+        note.appendChild(pre);
+      }
+      document.getElementById("teacher-note").appendChild(note);
+    }
 
     var kb = document.getElementById("knowledge");
     if (c.knowledge && c.knowledge.length) {
