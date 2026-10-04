@@ -235,8 +235,13 @@ def overview(db) -> dict:
         (days[0], days[0]))["n"]
     day7 = db.one("SELECT COUNT(*) AS n FROM lab_runs WHERE substr(started_at,1,10)>=?",
                   (days[0],))["n"]
+    vt = db.one("SELECT n FROM visits WHERE day=?", (today,))
+    visits_today = int(vt["n"]) if vt else 0
+    visits_7d = int(db.one("SELECT COALESCE(SUM(n),0) AS n FROM visits WHERE day>=?",
+                           (days[0],))["n"])
     return {"ok": True, "users": int(users), "teachers": int(teachers),
             "labs_total": int(labs_total), "labs_today": int(labs_today),
             "labs_7d": int(day7),
+            "visits_today": visits_today, "visits_7d": visits_7d,
             "tasks_done": int(tasks_done), "tasks_doing": int(tasks_doing),
             "active_users_7d": int(active_users), "daily_labs": daily_labs}

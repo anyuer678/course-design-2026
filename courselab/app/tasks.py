@@ -168,6 +168,11 @@ def teacher_course_stats(db, cid: str) -> dict:
     students = db.one("SELECT COUNT(DISTINCT user_id) AS n FROM task_records WHERE course=?",
                       (cid,))["n"]
     records = db.one("SELECT COUNT(*) AS n FROM task_records WHERE course=?", (cid,))["n"]
+    lab_rank = [{"who": r["display_name"] or r["username"], "n": int(r["n"])}
+                for r in db.all(
+        "SELECT u.username, u.display_name, COUNT(*) AS n FROM lab_runs r"
+        " JOIN users u ON u.id = r.user_id WHERE r.pid = ?"
+        " GROUP BY r.user_id ORDER BY n DESC, u.id LIMIT 10", (cid,))]
     recent = []
     for r in db.all(
             "SELECT r.task_key, r.status, r.updated_at, u.username, u.display_name"
@@ -179,7 +184,7 @@ def teacher_course_stats(db, cid: str) -> dict:
               "doing": sum(x["doing"] for x in builtin_stats + custom),
               "students": int(students), "records": int(records)}
     return {"ok": True, "course": cid, "totals": totals, "builtin_stats": builtin_stats,
-            "custom": custom, "recent": recent}
+            "custom": custom, "recent": recent, "lab_rank": lab_rank}
 
 
 def teacher_create(db, user_id: int, course: str, title: str, body: str, due_at: str) -> dict:

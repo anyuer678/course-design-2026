@@ -73,7 +73,8 @@ function loadOverview() {
     board.textContent = "";
     var stats = CL.el("div", "stats");
     [["用户", d.users], ["教师", d.teachers], ["实验总数", d.labs_total],
-     ["今日实验", d.labs_today], ["7 日活跃用户", d.active_users_7d],
+     ["今日实验", d.labs_today], ["今日访问", d.visits_today], ["7 日访问", d.visits_7d],
+     ["7 日活跃用户", d.active_users_7d],
      ["任务完成", d.tasks_done], ["任务进行中", d.tasks_doing]].forEach(function (pair) {
       var s = CL.el("span", "stat");
       var b = CL.el("b", null, String(pair[1]));
@@ -283,7 +284,7 @@ function loadLabs() {
     var c2 = card([CL.el("h3", null, "最近运行记录（" + res.data.recent.length + "）")]);
     var t = CL.el("table", "kb");
     var head = CL.el("tr");
-    ["时间", "谁", "项目", "动作", "类型", "结果"].forEach(function (h) {
+    ["时间", "谁", "项目", "动作", "类型", "耗时", "结果"].forEach(function (h) {
       head.appendChild(CL.el("th", null, h));
     });
     t.appendChild(head);
@@ -294,6 +295,7 @@ function loadLabs() {
       tr.appendChild(CL.el("td", null, r.pid));
       tr.appendChild(CL.el("td", null, r.action));
       tr.appendChild(CL.el("td", null, r.kind === "serve" ? "服务" : "任务"));
+      tr.appendChild(CL.el("td", null, durOf(r.started_at, r.finished_at)));
       tr.appendChild(CL.el("td", null,
         r.exit_code === null ? "未完成" : ("exit=" + r.exit_code)));
       t.appendChild(tr);
@@ -301,6 +303,19 @@ function loadLabs() {
     c2.appendChild(t);
     host.appendChild(c2);
   });
+}
+
+// 耗时 = finished_at - started_at（手动解析 "YYYY-MM-DD HH:MM:SS"，不依赖浏览器 Date 兼容性）
+function tsOf(s) {
+  var m = /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/.exec(s || "");
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : 0;
+}
+
+function durOf(start, finish) {
+  var a = tsOf(start), b = tsOf(finish);
+  if (!a || !b) return "—";
+  var d = (b - a) / 1000;
+  return (d < 10 ? d.toFixed(1) : String(Math.round(d))) + "s";
 }
 
 // ---------------- 管理动作审计

@@ -192,6 +192,16 @@ function load(course) {
     card2.appendChild(t);
     panel.appendChild(card2);
 
+    // 本课实验次数排行（F11）
+    var cardRank = CL.el("div", "card");
+    cardRank.appendChild(CL.el("h3", null, "本课实验次数（Top 10）"));
+    var rank = d.lab_rank || [];
+    if (!rank.length) cardRank.appendChild(CL.el("p", "note", "还没有本课项目的实验记录。"));
+    rank.forEach(function (x) {
+      cardRank.appendChild(CL.el("div", "note", x.who + " · " + x.n + " 次"));
+    });
+    panel.appendChild(cardRank);
+
     // 最近动态
     var card3 = CL.el("div", "card");
     card3.appendChild(CL.el("h3", null, "最近动态"));

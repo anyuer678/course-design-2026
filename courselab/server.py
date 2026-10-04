@@ -15,6 +15,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -27,7 +28,7 @@ from pathlib import Path
 from urllib.parse import unquote, urlparse
 
 from app import admin, auth, can, courses, labs, notices, tasks
-from app.db import DB
+from app.db import DB, now_str
 
 ROOT = Path(__file__).resolve().parent          # courselab/
 REPO = ROOT.parent                              # 课设仓库根（内容源）
@@ -73,6 +74,31 @@ def _json_bytes(obj) -> bytes:
     return json.dumps(obj, ensure_ascii=False).encode("utf-8")
 
 
+_LOG_RE = re.compile(r"^app-(\d{4}-\d{2}-\d{2})\.log$")
+
+
+def prune_logs(log_dir, keep_days: int = 14) -> int:
+    """删除文件名日期早于 keep_days 天的 app-*.log（F18：日志保留 14 天）。"""
+    cutoff = time.strftime("%Y-%m-%d", time.localtime(time.time() - keep_days * 86400))
+    removed = 0
+    for f in Path(log_dir).glob("app-*.log"):
+        m = _LOG_RE.match(f.name)
+        if m and m.group(1) < cutoff:
+            try:
+                f.unlink()
+                removed += 1
+            except OSError:
+                pass
+    return removed
+
+
+def count_visit(db) -> None:
+    """页面访问计数（F15）：只计 / 与 *.html 页面，不计资源与 API。"""
+    day = time.strftime("%Y-%m-%d")
+    db.execute("INSERT INTO visits(day, n) VALUES(?, 1)"
+               " ON CONFLICT(day) DO UPDATE SET n = n + 1", (day,))
+
+
 class Handler(SimpleHTTPRequestHandler):
     server_version = "CourseLab/0.2"
 
@@ -81,7 +107,17 @@ class Handler(SimpleHTTPRequestHandler):
 
     # ---------------------------------------------------------- 基础工具
     def log_message(self, fmt, *args):
-        sys.stderr.write("[courselab] %s\n" % (fmt % args))
+        line = fmt % args
+        sys.stderr.write("[courselab] %s\n" % line)
+        log_dir = getattr(self.server, "log_dir", None)
+        if log_dir is None:
+            return
+        try:
+            with open(log_dir / ("app-%s.log" % time.strftime("%Y-%m-%d")),
+                      "a", encoding="utf-8") as fh:
+                fh.write("%s [courselab] %s\n" % (time.strftime("%H:%M:%S"), line))
+        except OSError:
+            pass
 
     @property
     def db(self) -> DB:
@@ -286,6 +322,9 @@ class Handler(SimpleHTTPRequestHandler):
         if path.startswith("/repo/"):
             return self._serve_repo(unquote(path[len("/repo/"):]))
 
+        if self.command == "GET" and (path == "/" or (path.endswith(".html")
+                                                      and (WEB / path.lstrip("/")).is_file())):
+            count_visit(self.db)
         return super().do_GET()
 
     def _serve_repo(self, rel: str):
@@ -577,7 +616,16 @@ def serve(port: int, db: DB, cfg: dict | None = None, open_browser: bool = False
     httpd.db = db            # type: ignore[attr-defined]
     httpd.labs = engine      # type: ignore[attr-defined]
     httpd.cfg = cfg          # type: ignore[attr-defined]
-    print(f"课程工坊已启动：http://127.0.0.1:{port}/（数据：{db.path}；Ctrl+C 结束）")
+    log_dir = Path(db.path).parent / "logs"
+    try:
+        log_dir.mkdir(parents=True, exist_ok=True)
+        httpd.log_dir = log_dir  # type: ignore[attr-defined]
+        prune_logs(log_dir)
+        log_note = f"日志：{log_dir}，保留 14 天"
+    except OSError:
+        httpd.log_dir = None     # type: ignore[attr-defined]
+        log_note = "日志：目录不可写，仅控制台"
+    print(f"课程工坊已启动：http://127.0.0.1:{port}/（数据：{db.path}；{log_note}；Ctrl+C 结束）")
     if bind != "127.0.0.1":
         print(f"    监听 {bind}:{port}——局域网/公网可访问；注册模式：{cfg.get('registration')}")
         if cfg.get("public_mode"):
@@ -1079,6 +1127,35 @@ def selftest(port: int = 7901) -> int:
                            {"summary": "管理员补写：面向全平台"}, cookie=acookie)
     check("管理端 meta 接口也接受 summary/outline", status == 200
           and data["meta"]["summary"] == "管理员补写：面向全平台")
+
+    # -- 访问量（F15）+ 日志保留（F18）+ 本课实验排行（F11）（M9 对账补全）
+    log_dir = Path(tmp.name) / "logs"
+    logs = sorted(log_dir.glob("app-*.log")) if log_dir.is_dir() else []
+    check("访问日志落盘（数据目录 logs/app-日期.log）",
+          bool(logs) and "[courselab]" in logs[-1].read_text(encoding="utf-8"))
+    old_log = log_dir / "app-2000-01-01.log"
+    old_log.write_text("old", encoding="utf-8")
+    removed = prune_logs(log_dir, keep_days=14)
+    check("日志保留策略（超 14 天自动清理）",
+          removed >= 1 and not old_log.exists() and bool(logs) and logs[-1].exists())
+    status, data, _ = get("/api/admin/overview", cookie=acookie)
+    v0 = int(data.get("visits_today", 0))
+    urllib.request.urlopen(base + "/", timeout=5).read()
+    urllib.request.urlopen(base + "/me.html", timeout=5).read()
+    status, data, _ = get("/api/admin/overview", cookie=acookie)
+    v1 = int(data.get("visits_today", 0))
+    check("访问计数：匿名访问 2 个页面 +2", v1 == v0 + 2, f"{v0} -> {v1}")
+    get("/api/courses")
+    get("/api/me")
+    status, data, _ = get("/api/admin/overview", cookie=acookie)
+    check("API 请求与资源不计入访问量", int(data.get("visits_today", 0)) == v1)
+    stu_id = db.one("SELECT id FROM users WHERE username='stu_a'")["id"]
+    db.execute("INSERT INTO lab_runs(id, user_id, pid, action, kind, started_at, finished_at,"
+               " exit_code, log_tail) VALUES('rank1', ?, 'B11-net-lab', 'demo', 'task', ?, ?, 0, '')",
+               (stu_id, now_str(), now_str()))
+    status, data, _ = get("/api/teacher/course?course=B11-net-lab", cookie=tcookie)
+    check("本课实验排行按人聚合（Top 10；夹具 1 条）",
+          status == 200 and data.get("lab_rank") and data["lab_rank"][0]["n"] >= 1)
 
     # -- 权限矩阵单元（负面为主）
     stu = {"role": "student"}

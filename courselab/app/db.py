@@ -89,6 +89,10 @@ CREATE TABLE IF NOT EXISTS admin_audit (
   target TEXT DEFAULT '',
   detail TEXT DEFAULT ''
 );
+CREATE TABLE IF NOT EXISTS visits (
+  day TEXT PRIMARY KEY,
+  n INTEGER NOT NULL DEFAULT 0
+);
 """
 
 
