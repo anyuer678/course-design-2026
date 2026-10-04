@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LinkBox · 自托管工具站</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>LinkBox</h1>
+  <p class="sub">自托管工具站：短链 / 文本暂存</p>
+  <nav>
+    <button class="tab active" data-tab="links">短链</button>
+    <button class="tab" data-tab="stash">暂存</button>
+    <button class="tab" data-tab="stats">统计</button>
+  </nav>
+</header>
+
+<main>
+<section id="tab-links" class="tabpage">
+  <h2>新建短链</h2>
+  <form id="link-form">
+    <input id="link-url" type="url" placeholder="https://example.com/…" required>
+    <input id="link-alias" type="text" placeholder="自定义短码（可选，base62）" pattern="[A-Za-z0-9]{1,12}">
+    <button type="submit">创建</button>
+  </form>
+  <div id="link-result" class="result" hidden></div>
+  <h2>最近链接</h2>
+  <ul id="link-list" class="list"></ul>
+</section>
+
+<section id="tab-stash" class="tabpage" hidden>
+  <h2>新建文本暂存</h2>
+  <form id="stash-form">
+    <textarea id="stash-content" rows="6" placeholder="粘贴要暂存的文本（代码/日志/地址…），可含换行" required></textarea>
+    <select id="stash-ttl">
+      <option value="1">1 小时后过期</option>
+      <option value="24" selected>1 天后过期</option>
+      <option value="168">7 天后过期</option>
+      <option value="720">30 天后过期</option>
+    </select>
+    <button type="submit">暂存</button>
+  </form>
+  <div id="stash-result" class="result" hidden></div>
+  <p class="note">暂存到期自动清除；查看页是 <code>/s/短码</code>，把链接发给需要的人即可。</p>
+</section>
+
+<section id="tab-stats" class="tabpage" hidden>
+  <h2>总览</h2>
+  <div id="stats"></div>
+</section>
+</main>
+
+<footer><p>LinkBox M1 · 引擎复用课程任务 B31（短链）与 B11（netlab）· 数据只在本机</p></footer>
+<script src="app.js"></script>
+</body>
+</html>
