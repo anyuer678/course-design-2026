@@ -39,11 +39,16 @@
 
   CL.navbar = function () {
     var bar = document.getElementById("topbar");
-    if (!bar) return;
-    CL.api("/api/me").then(function (res) {
+    if (!bar) return Promise.resolve(null);
+    return CL.api("/api/me").then(function (res) {
       CL.me = (res.data && res.data.user) || null;
       render(CL.me);
-    }).catch(function () { render(null); });
+      return CL.me;
+    }).catch(function () {
+      CL.me = null;
+      render(null);
+      return null;
+    });
 
     function render(user) {
       bar.textContent = "";
@@ -54,6 +59,16 @@
       var dir = CL.el("a", null, "课程目录");
       dir.href = "/";
       links.appendChild(dir);
+      if (user) {
+        var tk = CL.el("a", null, "我的任务");
+        tk.href = "/tasks.html";
+        links.appendChild(tk);
+      }
+      if (user && (user.role === "teacher" || user.role === "admin")) {
+        var th = CL.el("a", null, "教师台");
+        th.href = "/teacher.html";
+        links.appendChild(th);
+      }
       bar.appendChild(links);
       var auth = CL.el("div", "navauth");
       if (user) {

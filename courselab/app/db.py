@@ -41,6 +41,24 @@ CREATE TABLE IF NOT EXISTS lab_runs (
   exit_code INTEGER,
   log_tail TEXT
 );
+CREATE TABLE IF NOT EXISTS tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  course TEXT NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT DEFAULT '',
+  due_at TEXT,
+  created_by INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS task_records (
+  task_key TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
+  course TEXT NOT NULL,
+  status TEXT NOT NULL,
+  note TEXT DEFAULT '',
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (task_key, user_id)
+);
 """
 
 

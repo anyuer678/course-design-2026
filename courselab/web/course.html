@@ -37,8 +37,8 @@
 <script src="/assets/app.js"></script>
 <script>
 "use strict";
-CL.navbar();
 var cid = CL.param("id");
+CL.navbar().then(function () {
 if (!cid) document.getElementById("title").textContent = "缺少课程参数 ?id=";
 else {
   CL.api("/api/courses/" + encodeURIComponent(cid)).then(function (res) {
@@ -72,20 +72,8 @@ else {
       kb.appendChild(CL.el("p", "note", "（该课暂无知识点表）"));
     }
 
-    document.getElementById("tasks-title").textContent = "练习任务（" + c.tasks.length + " 条）";
-    var box = document.getElementById("tasks");
-    if (c.tasks.length) {
-      var ul = CL.el("ul", "plain");
-      c.tasks.forEach(function (t) {
-        var li = CL.el("li", null, t.text);
-        if (t.from) li.appendChild(CL.el("span", "from", "（" + t.from + "）"));
-        ul.appendChild(li);
-      });
-      box.appendChild(ul);
-      box.appendChild(CL.el("p", "note", "任务领取与完成记录在 M4 里程碑接入（当前照卡片自练即可）。"));
-    } else {
-      box.appendChild(CL.el("p", "note", "（该课暂无练习卡）"));
-    }
+    document.getElementById("tasks-title").textContent = "练习任务";
+    renderTasks(c);
 
     document.getElementById("pits-title").textContent = "踩坑清单（" + c.pits.length + " 条）";
     var pits = document.getElementById("pits");
@@ -106,6 +94,91 @@ else {
     });
 
     document.getElementById("to-project").href = "/project.html?id=" + encodeURIComponent(c.id);
+  });
+}
+});
+
+// ---------------- 练习任务板（M4：领取/完成/进度）
+function renderTasks(course) {
+  var tb = course.taskboard || { items: [], custom: [], progress: { total: 0, done: 0 } };
+  document.getElementById("tasks-title").textContent =
+    "练习任务（已完成 " + tb.progress.done + " / " + tb.progress.total + "）";
+  var box = document.getElementById("tasks");
+  box.textContent = "";
+  var bar = CL.el("div", "bar");
+  var fill = CL.el("div", "bar-fill");
+  fill.style.width =
+    (tb.progress.total ? Math.round(tb.progress.done * 100 / tb.progress.total) : 0) + "%";
+  bar.appendChild(fill);
+  box.appendChild(bar);
+  if (!CL.me) {
+    var hint = CL.el("p", "note", "登录后可领取与完成，进度会记到你的账号：");
+    var lg = CL.el("a", null, "去登录");
+    lg.href = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
+    hint.appendChild(lg);
+    box.appendChild(hint);
+  }
+  if (tb.items.length) {
+    var ul = CL.el("ul", "plain");
+    tb.items.forEach(function (t) { ul.appendChild(taskRow(t, t.text, t.from)); });
+    box.appendChild(ul);
+  } else {
+    box.appendChild(CL.el("p", "note", "（该课暂无内置练习卡）"));
+  }
+  if (tb.custom.length) {
+    box.appendChild(CL.el("h3", null, "教师布置的任务"));
+    var ul2 = CL.el("ul", "plain");
+    tb.custom.forEach(function (t) {
+      ul2.appendChild(taskRow(t, t.title + (t.body ? "　" + t.body : ""),
+                              t.due_at ? ("截止 " + t.due_at) : ""));
+    });
+    box.appendChild(ul2);
+  }
+}
+
+function taskRow(t, text, sub) {
+  var li = CL.el("li");
+  li.appendChild(CL.el("span", "pill " + (t.my || ""),
+                       t.my === "done" ? "已完成" : (t.my === "doing" ? "进行中" : "未领取")));
+  li.appendChild(document.createTextNode(text));
+  if (sub) li.appendChild(CL.el("span", "from", "（" + sub + "）"));
+  if (t.done_count) li.appendChild(CL.el("span", "from", "已 " + t.done_count + " 人完成"));
+  if (CL.me) {
+    if (!t.my) {
+      var b = CL.el("button", "btn btn-ghost btn-xs", "领取");
+      b.style.marginLeft = ".4rem";
+      b.addEventListener("click", function () { taskAct("claim", t.key, "", b); });
+      li.appendChild(b);
+    } else if (t.my === "doing") {
+      var input = document.createElement("input");
+      input.className = "task-note";
+      input.placeholder = "备注（可选）";
+      var done = CL.el("button", "btn btn-xs", "完成");
+      done.style.marginLeft = ".4rem";
+      done.addEventListener("click", function () { taskAct("done", t.key, input.value, done); });
+      li.appendChild(input);
+      li.appendChild(done);
+    } else if (t.note) {
+      li.appendChild(CL.el("span", "from", "（备注：" + t.note + "）"));
+    }
+  }
+  return li;
+}
+
+function taskAct(kind, key, note, btn) {
+  btn.disabled = true;
+  CL.api("/api/tasks/" + kind, { method: "POST", body: { course: cid, key: key, note: note } })
+    .then(function (res) {
+      if (!res.data || !res.data.ok) { alert((res.data && res.data.error) || "操作失败"); }
+      refreshTaskboard();
+    })
+    .catch(function () { alert("网络错误，请重试。"); })
+    .then(function () { btn.disabled = false; });
+}
+
+function refreshTaskboard() {
+  CL.api("/api/courses/" + encodeURIComponent(cid)).then(function (res) {
+    if (res.data && res.data.ok) renderTasks(res.data.course);
   });
 }
 </script>

@@ -57,8 +57,6 @@
 <script src="/assets/app.js"></script>
 <script>
 "use strict";
-CL.navbar();
-
 var tabs = document.querySelectorAll(".tab");
 Array.prototype.forEach.call(tabs, function (t) {
   t.addEventListener("click", function () {
@@ -71,6 +69,7 @@ Array.prototype.forEach.call(tabs, function (t) {
 });
 
 var pid = CL.param("id");
+CL.navbar().then(function () {
 if (!pid) document.getElementById("title").textContent = "缺少项目参数 ?id=";
 else {
   CL.api("/api/courses/" + encodeURIComponent(pid)).then(function (res) {
@@ -132,6 +131,7 @@ else {
     }
   });
 }
+});
 
 // ---------------- 在线实验（M3）
 var labInfo = { actions: [], port: null, ui: false };

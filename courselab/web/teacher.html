@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>教师台 · 课程工坊 CourseLab</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main>
+<h1>教师台</h1>
+<div id="box"><p class="note">加载中…</p></div>
+</main>
+<footer>教师可见：按课布置任务、看完成情况与本课统计（课程归属绑定在 M5 管理端接入）。</footer>
+<script src="/assets/app.js"></script>
+<script>
+"use strict";
+var curCourse = "";
+var box = document.getElementById("box");
+
+CL.navbar().then(function () {
+  if (!CL.me || (CL.me.role !== "teacher" && CL.me.role !== "admin")) {
+    box.textContent = "";
+    var card = CL.el("div", "card");
+    card.appendChild(CL.el("p", null, "这一页需要教师权限（管理员可见全部）。"));
+    var p = CL.el("p");
+    p.appendChild(document.createTextNode("如果你已注册：管理员可用 "));
+    var code = CL.el("code", null, "python server.py --promote 你的用户名 teacher");
+    p.appendChild(code);
+    p.appendChild(document.createTextNode(" 提升角色；未登录请先 "));
+    var a = CL.el("a", null, "登录");
+    a.href = "/login.html?next=/teacher.html";
+    p.appendChild(a);
+    p.appendChild(document.createTextNode("。"));
+    card.appendChild(p);
+    box.appendChild(card);
+    return;
+  }
+  CL.api("/api/courses").then(function (res) {
+    box.textContent = "";
+    var bar = CL.el("div", "toolbar");
+    var label = CL.el("label", "note", "选择课程：");
+    var sel = document.createElement("select");
+    sel.style.cssText = "font:inherit;padding:.45rem .7rem;border:1px solid #e2e8f0;border-radius:8px;background:#fff";
+    (res.data.courses || []).forEach(function (c) {
+      var o = document.createElement("option");
+      o.value = c.id;
+      o.textContent = c.course + "（" + c.id + "）";
+      sel.appendChild(o);
+    });
+    sel.addEventListener("change", function () { load(sel.value); });
+    bar.appendChild(label);
+    bar.appendChild(sel);
+    box.appendChild(bar);
+    box.appendChild(CL.el("div", "", "")).id = "panel";
+    if (sel.value) load(sel.value);
+  });
+});
+
+function load(course) {
+  curCourse = course;
+  var panel = document.getElementById("panel");
+  panel.textContent = "";
+  panel.appendChild(CL.el("p", "note", "加载中…"));
+  CL.api("/api/teacher/course?course=" + encodeURIComponent(course)).then(function (res) {
+    panel.textContent = "";
+    var d = res.data;
+    if (!d || !d.ok) {
+      panel.appendChild(CL.el("p", "note", (d && d.error) || "读取失败"));
+      return;
+    }
+    var stats = CL.el("div", "stats");
+    stats.appendChild(stat("已完成 " + d.totals.done));
+    stats.appendChild(stat("进行中 " + d.totals.doing));
+    stats.appendChild(stat("参与学生 " + d.totals.students));
+    stats.appendChild(stat("记录 " + d.totals.records));
+    panel.appendChild(stats);
+
+    // 布置新任务
+    var form = CL.el("div", "card");
+    form.appendChild(CL.el("h3", null, "布置任务"));
+    var row = CL.el("div", "toolbar");
+    var title = input("标题（必填）");
+    var body = input("说明（可选）");
+    var due = document.createElement("input");
+    due.type = "date";
+    due.style.cssText = "font:inherit;padding:.45rem .7rem;border:1px solid #e2e8f0;border-radius:8px;background:#fff";
+    var btn = CL.el("button", "btn", "布置");
+    btn.addEventListener("click", function () {
+      btn.disabled = true;
+      CL.api("/api/teacher/tasks", { method: "POST", body: {
+        course: curCourse, title: title.value, body: body.value, due_at: due.value } })
+        .then(function (r2) {
+          if (!r2.data || !r2.data.ok) { alert((r2.data && r2.data.error) || "布置失败"); return; }
+          title.value = ""; body.value = ""; due.value = "";
+          load(curCourse);
+        })
+        .catch(function () { alert("网络错误"); })
+        .then(function () { btn.disabled = false; });
+    });
+    row.appendChild(title); row.appendChild(body); row.appendChild(due); row.appendChild(btn);
+    form.appendChild(row);
+    panel.appendChild(form);
+
+    // 教师布置的任务
+    var card = CL.el("div", "card");
+    card.appendChild(CL.el("h3", null, "本课自定义任务（" + d.custom.length + "）"));
+    if (!d.custom.length) card.appendChild(CL.el("p", "note", "还没有——用上面的表单布置一条。"));
+    d.custom.forEach(function (t) {
+      var li = CL.el("div");
+      li.style.cssText = "padding:.35rem 0;border-bottom:1px dashed #e2e8f0";
+      li.appendChild(document.createTextNode(t.title));
+      if (t.body) li.appendChild(CL.el("span", "from", "　" + t.body));
+      if (t.due_at) li.appendChild(CL.el("span", "from", "　截止 " + t.due_at));
+      li.appendChild(CL.el("span", "from", "　进行中 " + t.doing + " · 完成 " + t.done));
+      var del = CL.el("button", "btn btn-ghost btn-xs", "删除");
+      del.style.marginLeft = ".5rem";
+      del.addEventListener("click", function () {
+        if (!window.confirm("删除这条任务及其完成记录？")) return;
+        CL.api("/api/teacher/tasks/" + t.id + "/delete", { method: "POST", body: {} })
+          .then(function () { load(curCourse); });
+      });
+      li.appendChild(del);
+      card.appendChild(li);
+    });
+    panel.appendChild(card);
+
+    // 内置任务统计
+    var t = CL.el("table", "kb");
+    var head = CL.el("tr");
+    ["内置任务", "进行中", "已完成"].forEach(function (h) { head.appendChild(CL.el("th", null, h)); });
+    t.appendChild(head);
+    d.builtin_stats.forEach(function (x) {
+      var tr = CL.el("tr");
+      tr.appendChild(CL.el("td", null, x.title));
+      tr.appendChild(CL.el("td", null, String(x.doing)));
+      tr.appendChild(CL.el("td", null, String(x.done)));
+      t.appendChild(tr);
+    });
+    var card2 = CL.el("div", "card");
+    card2.appendChild(CL.el("h3", null, "内置练习任务统计"));
+    card2.appendChild(t);
+    panel.appendChild(card2);
+
+    // 最近动态
+    var card3 = CL.el("div", "card");
+    card3.appendChild(CL.el("h3", null, "最近动态"));
+    if (!d.recent.length) card3.appendChild(CL.el("p", "note", "暂无记录。"));
+    d.recent.forEach(function (r) {
+      var li = CL.el("div", "note");
+      li.textContent = r.updated_at + " · " + r.who + " · " +
+        (r.status === "done" ? "完成" : "领取") + " · " + r.title;
+      card3.appendChild(li);
+    });
+    panel.appendChild(card3);
+  });
+}
+
+function input(placeholder) {
+  var i = document.createElement("input");
+  i.placeholder = placeholder;
+  return i;
+}
+
+function stat(text) {
+  var d = CL.el("span", "stat");
+  d.textContent = text;
+  return d;
+}
+</script>
+</body>
+</html>

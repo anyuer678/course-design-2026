@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>我的任务 · 课程工坊 CourseLab</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main>
+<h1>我的任务</h1>
+<div class="stats" id="stats"></div>
+<div class="chips" id="chips"></div>
+<ul class="plain" id="list"><li class="note">加载中…</li></ul>
+</main>
+<footer>任务内容现算自 g2 卡片与教师布置；完成记录存在平台数据库（task_records）。</footer>
+<script src="/assets/app.js"></script>
+<script>
+"use strict";
+var DATA = [];
+var filter = "all";
+
+CL.navbar().then(function () {
+  if (!CL.me) {
+    var list = document.getElementById("list");
+    list.textContent = "";
+    var li = CL.el("li");
+    li.appendChild(document.createTextNode("请先登录，登录后这里会列出你的任务进度："));
+    var a = CL.el("a", null, "去登录");
+    a.href = "/login.html?next=/tasks.html";
+    li.appendChild(a);
+    list.appendChild(li);
+    return;
+  }
+  CL.api("/api/tasks/mine").then(function (res) {
+    DATA = (res.data && res.data.tasks) || [];
+    var stats = document.getElementById("stats");
+    stats.textContent = "";
+    stats.appendChild(stat("进行中 " + DATA.filter(function (x) { return x.status === "doing"; }).length));
+    stats.appendChild(stat("已完成 " + DATA.filter(function (x) { return x.status === "done"; }).length));
+    stats.appendChild(stat("全部 " + DATA.length));
+    var chips = document.getElementById("chips");
+    chips.textContent = "";
+    [["all", "全部"], ["doing", "进行中"], ["done", "已完成"]].forEach(function (pair) {
+      var c = CL.el("button", "chip" + (filter === pair[0] ? " active" : ""), pair[1]);
+      c.addEventListener("click", function () {
+        filter = pair[0];
+        Array.prototype.forEach.call(chips.children, function (x) {
+          x.className = "chip" + (x === c ? " active" : "");
+        });
+        render();
+      });
+      chips.appendChild(c);
+    });
+    render();
+  });
+});
+
+function stat(text) {
+  var d = CL.el("span", "stat");
+  d.textContent = text;
+  return d;
+}
+
+function render() {
+  var list = document.getElementById("list");
+  list.textContent = "";
+  var hit = DATA.filter(function (x) { return filter === "all" || x.status === filter; });
+  if (!hit.length) {
+    list.appendChild(CL.el("li", "note", "这里还空着——去课程工作区领一条练习任务吧。"));
+    return;
+  }
+  hit.forEach(function (x) {
+    var li = CL.el("li");
+    li.appendChild(CL.el("span", "pill " + x.status, x.status === "done" ? "已完成" : "进行中"));
+    li.appendChild(document.createTextNode(x.title));
+    var a = CL.el("a", "from", "（" + x.course + "）");
+    a.href = "/course.html?id=" + encodeURIComponent(x.course);
+    a.style.marginLeft = ".4rem";
+    li.appendChild(a);
+    li.appendChild(CL.el("span", "from", x.updated_at + (x.note ? "　备注：" + x.note : "")));
+    list.appendChild(li);
+  });
+}
+</script>
+</body>
+</html>
