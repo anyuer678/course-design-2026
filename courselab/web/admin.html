@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>管理端 · 课程工坊 CourseLab</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main>
+<h1>管理端</h1>
+<div id="box"><p class="note">加载中…</p></div>
+</main>
+<footer>看板数据现算自平台库（users / lab_runs / task_records）；图表为手写 SVG，零图表库。</footer>
+<script src="/assets/app.js"></script>
+<script>
+"use strict";
+var box = document.getElementById("box");
+
+CL.navbar().then(function () {
+  if (!CL.me || CL.me.role !== "admin") {
+    box.textContent = "";
+    var card = CL.el("div", "card");
+    card.appendChild(CL.el("p", null, "这一页需要管理员权限。"));
+    var p = CL.el("p");
+    p.appendChild(document.createTextNode("管理员可用 "));
+    p.appendChild(CL.el("code", null, "python server.py --promote 你的用户名 admin"));
+    p.appendChild(document.createTextNode(" 提升角色。"));
+    card.appendChild(p);
+    box.appendChild(card);
+    return;
+  }
+  box.textContent = "";
+  box.appendChild(sectionTitle("平台看板"));
+  var board = CL.el("div", ""); board.id = "board";
+  box.appendChild(board);
+  box.appendChild(sectionTitle("用户管理"));
+  var users = CL.el("div", ""); users.id = "users";
+  box.appendChild(users);
+  box.appendChild(sectionTitle("课程治理（上架 / 排序 / 绑定教师）"));
+  var coursesBox = CL.el("div", ""); coursesBox.id = "courses";
+  box.appendChild(coursesBox);
+  box.appendChild(sectionTitle("实验审计与队列"));
+  var labsBox = CL.el("div", ""); labsBox.id = "labs";
+  box.appendChild(labsBox);
+  loadOverview();
+  loadUsers();
+  loadCourses();
+  loadLabs();
+});
+
+function sectionTitle(text) {
+  var h = CL.el("h2", null, text);
+  h.style.marginTop = "1.4rem";
+  return h;
+}
+
+function card(children) {
+  var c = CL.el("div", "card");
+  children.forEach(function (x) { c.appendChild(x); });
+  return c;
+}
+
+// ---------------- 看板
+function loadOverview() {
+  CL.api("/api/admin/overview").then(function (res) {
+    var d = res.data;
+    var board = document.getElementById("board");
+    board.textContent = "";
+    var stats = CL.el("div", "stats");
+    [["用户", d.users], ["教师", d.teachers], ["实验总数", d.labs_total],
+     ["今日实验", d.labs_today], ["7 日活跃用户", d.active_users_7d],
+     ["任务完成", d.tasks_done], ["任务进行中", d.tasks_doing]].forEach(function (pair) {
+      var s = CL.el("span", "stat");
+      var b = CL.el("b", null, String(pair[1]));
+      s.appendChild(b);
+      s.appendChild(document.createTextNode(" " + pair[0]));
+      stats.appendChild(s);
+    });
+    board.appendChild(stats);
+    var c = card([CL.el("h3", null, "最近 7 天实验运行")]);
+    var chartBox = CL.el("div");
+    drawChart(chartBox, d.daily_labs);
+    c.appendChild(chartBox);
+    board.appendChild(c);
+  });
+}
+
+function drawChart(host, daily) {
+  var NS = "http://www.w3.org/2000/svg";
+  var W = 640, H = 180, pad = 30;
+  var max = 1;
+  daily.forEach(function (d) { if (d.n > max) max = d.n; });
+  var svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
+  svg.setAttribute("class", "chart");
+  var step = (W - pad * 2) / daily.length;
+  daily.forEach(function (d, i) {
+    var h = Math.round((H - 56) * d.n / max);
+    var x = pad + i * step + step * 0.15;
+    var w = step * 0.7;
+    var rect = document.createElementNS(NS, "rect");
+    rect.setAttribute("x", x); rect.setAttribute("y", H - 30 - h);
+    rect.setAttribute("width", w); rect.setAttribute("height", Math.max(2, h));
+    rect.setAttribute("rx", 4); rect.setAttribute("fill", "#3b82f6");
+    svg.appendChild(rect);
+    var v = document.createElementNS(NS, "text");
+    v.setAttribute("x", x + w / 2); v.setAttribute("y", H - 36 - h);
+    v.setAttribute("text-anchor", "middle"); v.setAttribute("font-size", "11");
+    v.setAttribute("fill", "#475569"); v.textContent = String(d.n);
+    svg.appendChild(v);
+    var t = document.createElementNS(NS, "text");
+    t.setAttribute("x", x + w / 2); t.setAttribute("y", H - 10);
+    t.setAttribute("text-anchor", "middle"); t.setAttribute("font-size", "11");
+    t.setAttribute("fill", "#94a3b8"); t.textContent = d.label;
+    svg.appendChild(t);
+  });
+  host.appendChild(svg);
+}
+
+// ---------------- 用户管理
+function loadUsers() {
+  CL.api("/api/admin/users").then(function (res) {
+    var host = document.getElementById("users");
+    host.textContent = "";
+    var c = card([CL.el("h3", null, "用户（" + res.data.users.length + "）")]);
+    var t = CL.el("table", "kb");
+    var head = CL.el("tr");
+    ["用户", "角色", "状态", "注册", "最近登录", "操作"].forEach(function (h) {
+      head.appendChild(CL.el("th", null, h));
+    });
+    t.appendChild(head);
+    res.data.users.forEach(function (u) {
+      var tr = CL.el("tr");
+      tr.appendChild(CL.el("td", null, (u.display_name || u.username) + "（" + u.username + "）"));
+      var roleTd = CL.el("td");
+      var sel = document.createElement("select");
+      ["student", "teacher", "admin"].forEach(function (r) {
+        var o = document.createElement("option");
+        o.value = r;
+        o.textContent = CL.roleName(r);
+        if (r === u.role) o.selected = true;
+        sel.appendChild(o);
+      });
+      roleTd.appendChild(sel);
+      tr.appendChild(roleTd);
+      tr.appendChild(CL.el("td", null, u.status === "active" ? "正常" : "已封禁"));
+      tr.appendChild(CL.el("td", null, u.created_at || ""));
+      tr.appendChild(CL.el("td", null, u.last_login || ""));
+      var ops = CL.el("td");
+      var self = (CL.me && CL.me.id === u.id);
+      var save = CL.el("button", "btn btn-ghost btn-xs", "改角色");
+      save.disabled = self;
+      save.addEventListener("click", function () {
+        save.disabled = true;
+        CL.api("/api/admin/users/" + u.id + "/role", { method: "POST", body: { role: sel.value } })
+          .then(function (r2) {
+            if (!r2.data || !r2.data.ok) { alert((r2.data && r2.data.error) || "失败"); }
+            loadUsers(); loadOverview();
+          }).then(function () { save.disabled = false; });
+      });
+      var toggle = CL.el("button", "btn btn-ghost btn-xs",
+                         u.status === "active" ? "封禁" : "解封");
+      toggle.style.marginLeft = ".35rem";
+      toggle.disabled = self;
+      toggle.addEventListener("click", function () {
+        toggle.disabled = true;
+        CL.api("/api/admin/users/" + u.id + "/status",
+               { method: "POST", body: { status: u.status === "active" ? "banned" : "active" } })
+          .then(function (r2) {
+            if (!r2.data || !r2.data.ok) { alert((r2.data && r2.data.error) || "失败"); }
+            loadUsers();
+          }).then(function () { toggle.disabled = false; });
+      });
+      ops.appendChild(save);
+      ops.appendChild(toggle);
+      tr.appendChild(ops);
+      t.appendChild(tr);
+    });
+    c.appendChild(t);
+    host.appendChild(c);
+  });
+}
+
+// ---------------- 课程治理
+function loadCourses() {
+  CL.api("/api/admin/courses").then(function (res) {
+    var host = document.getElementById("courses");
+    host.textContent = "";
+    var teachers = [];
+    CL.api("/api/admin/users").then(function (u2) {
+      (u2.data.users || []).forEach(function (u) {
+        if (u.role === "teacher" || u.role === "admin") teachers.push(u);
+      });
+      var c = card([CL.el("h3", null, "课程（" + res.data.courses.length + "）")]);
+      var t = CL.el("table", "kb");
+      var head = CL.el("tr");
+      ["课程", "上架", "排序", "绑定教师", "操作"].forEach(function (h) {
+        head.appendChild(CL.el("th", null, h));
+      });
+      t.appendChild(head);
+      res.data.courses.forEach(function (co) {
+        var tr = CL.el("tr");
+        tr.appendChild(CL.el("td", null, co.course + "（" + co.id + "）"));
+        var pubTd = CL.el("td");
+        var pub = document.createElement("input");
+        pub.type = "checkbox";
+        pub.checked = co.published;
+        pubTd.appendChild(pub);
+        tr.appendChild(pubTd);
+        var sortTd = CL.el("td");
+        var sort = document.createElement("input");
+        sort.type = "number";
+        sort.value = String(co.sort);
+        sort.style.width = "4.5rem";
+        sortTd.appendChild(sort);
+        tr.appendChild(sortTd);
+        var tidTd = CL.el("td");
+        var sel = document.createElement("select");
+        var none = document.createElement("option");
+        none.value = "";
+        none.textContent = "（未绑定）";
+        sel.appendChild(none);
+        teachers.forEach(function (t2) {
+          var o = document.createElement("option");
+          o.value = String(t2.id);
+          o.textContent = t2.display_name || t2.username;
+          if (co.teacher_id === t2.id) o.selected = true;
+          sel.appendChild(o);
+        });
+        tidTd.appendChild(sel);
+        tr.appendChild(tidTd);
+        var ops = CL.el("td");
+        var save = CL.el("button", "btn btn-ghost btn-xs", "保存");
+        save.addEventListener("click", function () {
+          save.disabled = true;
+          CL.api("/api/admin/courses/" + encodeURIComponent(co.id) + "/meta", {
+            method: "POST", body: {
+              published: pub.checked, sort: Number(sort.value) || 0,
+              teacher_id: sel.value === "" ? null : Number(sel.value) } })
+            .then(function (r2) {
+              if (!r2.data || !r2.data.ok) { alert((r2.data && r2.data.error) || "失败"); }
+              loadCourses();
+            }).then(function () { save.disabled = false; });
+        });
+        ops.appendChild(save);
+        tr.appendChild(ops);
+        t.appendChild(tr);
+      });
+      c.appendChild(t);
+      host.appendChild(c);
+    });
+  });
+}
+
+// ---------------- 实验审计与队列
+function loadLabs() {
+  CL.api("/api/admin/labs").then(function (res) {
+    var host = document.getElementById("labs");
+    host.textContent = "";
+    var c = card([CL.el("h3", null, "运行中（" + res.data.active.length + "）")]);
+    if (!res.data.active.length) c.appendChild(CL.el("p", "note", "当前没有运行中的实验。"));
+    res.data.active.forEach(function (r) {
+      var p = CL.el("p");
+      p.textContent = r.pid + " · " + r.action + " · " + r.seconds + "s";
+      var kill = CL.el("button", "btn btn-ghost btn-xs", "强停");
+      kill.style.marginLeft = ".5rem";
+      kill.addEventListener("click", function () {
+        CL.api("/api/labs/runs/" + r.run_id + "/stop", { method: "POST", body: {} })
+          .then(function () { loadLabs(); });
+      });
+      p.appendChild(kill);
+      c.appendChild(p);
+    });
+    host.appendChild(c);
+
+    var c2 = card([CL.el("h3", null, "最近运行记录（" + res.data.recent.length + "）")]);
+    var t = CL.el("table", "kb");
+    var head = CL.el("tr");
+    ["时间", "谁", "项目", "动作", "类型", "结果"].forEach(function (h) {
+      head.appendChild(CL.el("th", null, h));
+    });
+    t.appendChild(head);
+    res.data.recent.forEach(function (r) {
+      var tr = CL.el("tr");
+      tr.appendChild(CL.el("td", null, r.started_at));
+      tr.appendChild(CL.el("td", null, r.who));
+      tr.appendChild(CL.el("td", null, r.pid));
+      tr.appendChild(CL.el("td", null, r.action));
+      tr.appendChild(CL.el("td", null, r.kind === "serve" ? "服务" : "任务"));
+      tr.appendChild(CL.el("td", null,
+        r.exit_code === null ? "未完成" : ("exit=" + r.exit_code)));
+      t.appendChild(tr);
+    });
+    c2.appendChild(t);
+    host.appendChild(c2);
+  });
+}
+</script>
+</body>
+</html>

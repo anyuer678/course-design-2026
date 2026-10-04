@@ -36,13 +36,20 @@ CL.navbar().then(function () {
     box.appendChild(card);
     return;
   }
-  CL.api("/api/courses").then(function (res) {
+  CL.api("/api/teacher/courses").then(function (res) {
     box.textContent = "";
+    var list = (res.data && res.data.courses) || [];
+    if (!list.length) {
+      var card0 = CL.el("div", "card");
+      card0.appendChild(CL.el("p", null, "还没有绑定课程——请管理员在「管理端」把课程绑定给你。"));
+      box.appendChild(card0);
+      return;
+    }
     var bar = CL.el("div", "toolbar");
     var label = CL.el("label", "note", "选择课程：");
     var sel = document.createElement("select");
     sel.style.cssText = "font:inherit;padding:.45rem .7rem;border:1px solid #e2e8f0;border-radius:8px;background:#fff";
-    (res.data.courses || []).forEach(function (c) {
+    list.forEach(function (c) {
       var o = document.createElement("option");
       o.value = c.id;
       o.textContent = c.course + "（" + c.id + "）";

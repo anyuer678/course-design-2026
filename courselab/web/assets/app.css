@@ -122,5 +122,9 @@ border:1px solid var(--line);border-radius:6px;margin-left:.4rem}
 overflow:auto;font:12.5px/1.55 ui-monospace,Consolas,monospace;white-space:pre-wrap;
 word-break:break-word;margin:.6rem 0 0}
 
+/* 看板图表（手写 SVG） */
+.chart{width:100%;height:auto;display:block;background:#fff;border:1px solid var(--line);
+border-radius:10px;margin:.4rem 0}
+
 footer{color:var(--faint);font-size:.85rem;max-width:68rem;margin:2.5rem auto 0;padding:1rem 1.2rem 0;
 border-top:1px solid var(--line)}

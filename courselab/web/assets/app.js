@@ -69,6 +69,11 @@
         th.href = "/teacher.html";
         links.appendChild(th);
       }
+      if (user && user.role === "admin") {
+        var ad = CL.el("a", null, "管理端");
+        ad.href = "/admin.html";
+        links.appendChild(ad);
+      }
       bar.appendChild(links);
       var auth = CL.el("div", "navauth");
       if (user) {

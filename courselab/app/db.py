@@ -59,6 +59,12 @@ CREATE TABLE IF NOT EXISTS task_records (
   updated_at TEXT NOT NULL,
   PRIMARY KEY (task_key, user_id)
 );
+CREATE TABLE IF NOT EXISTS course_meta (
+  course TEXT PRIMARY KEY,
+  published INTEGER NOT NULL DEFAULT 1,
+  sort INTEGER NOT NULL DEFAULT 0,
+  teacher_id INTEGER
+);
 """
 
 

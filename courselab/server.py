@@ -25,7 +25,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from app import auth, can, courses, labs, tasks
+from app import admin, auth, can, courses, labs, tasks
 from app.db import DB
 
 ROOT = Path(__file__).resolve().parent          # courselab/
@@ -126,6 +126,13 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             return
 
+        if path in ("/admin", "/admin/"):
+            self.send_response(302)
+            self.send_header("Location", "/admin.html")
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+
         if path == "/api/me":
             user = self.current_user()
             return self.send_json({
@@ -137,16 +144,18 @@ class Handler(SimpleHTTPRequestHandler):
 
         if path == "/api/courses":
             try:
-                return self.send_json(courses.course_list())
+                return self.send_json(admin.public_course_list(self.db))
             except (OSError, ValueError) as exc:
                 return self.send_error_json(500, f"课程目录读取失败：{exc}")
 
         if path.startswith("/api/courses/"):
             cid = unquote(path[len("/api/courses/"):]).strip("/")
+            user = self.current_user()
+            if not admin.course_visible(self.db, cid) and not can.can(user, "admin"):
+                return self.send_error_json(404, "课程不存在", "NO_COURSE")
             detail = courses.course_detail(cid)
             if detail is None:
                 return self.send_error_json(404, "课程不存在", "NO_COURSE")
-            user = self.current_user()
             detail["can"] = {"lab_run": can.can(user, "lab_run", cid)}
             detail["lab"] = labs.describe(cid)
             detail["taskboard"] = tasks.course_taskboard(self.db, user, cid)
@@ -158,17 +167,42 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
             return self.send_json({"ok": True, "tasks": tasks.my_records(self.db, user["id"])})
 
-        if path == "/api/teacher/course":
+        if path == "/api/teacher/courses":
             user = self.current_user()
             if user is None:
                 return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
             if not can.can(user, "manage_course"):
                 return self.send_error_json(403, "需要教师权限", "FORBIDDEN")
+            return self.send_json({"ok": True, "courses": admin.teacher_courses(self.db, user)})
+
+        if path == "/api/teacher/course":
+            user = self.current_user()
+            if user is None:
+                return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
             cid = (query.get("course") or [""])[0]
+            if not admin.teacher_can_manage(self.db, user, cid):
+                return self.send_error_json(403, "该课未绑定给你（联系管理员在管理端绑定）", "FORBIDDEN")
             try:
                 return self.send_json(tasks.teacher_course_stats(self.db, cid))
             except tasks.TaskError as exc:
                 return self.send_error_json(exc.http, exc.message, exc.code)
+
+        if path.startswith("/api/admin/"):
+            user = self.current_user()
+            if user is None:
+                return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+            if not can.can(user, "admin"):
+                return self.send_error_json(403, "需要管理员权限", "FORBIDDEN")
+            if path == "/api/admin/overview":
+                return self.send_json(admin.overview(self.db))
+            if path == "/api/admin/users":
+                return self.send_json({"ok": True, "users": admin.users_list(self.db)})
+            if path == "/api/admin/courses":
+                return self.send_json({"ok": True, "courses": admin.course_rows(self.db)})
+            if path == "/api/admin/labs":
+                return self.send_json({"ok": True, "recent": admin.labs_audit(self.db),
+                                       "active": self.labs.active()["running"]})
+            return self.send_error_json(404, "unknown api")
 
         if path == "/api/labs/active":
             if self.current_user() is None:
@@ -261,7 +295,11 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._teacher_create(data)
             if path.startswith("/api/teacher/tasks/") and path.endswith("/delete"):
                 return self._teacher_delete(path)
-        except (auth.AuthError, labs.LabsError, tasks.TaskError) as exc:
+            if path.startswith("/api/admin/users/") and path.endswith(("/role", "/status")):
+                return self._admin_user(path, data)
+            if path.startswith("/api/admin/courses/") and path.endswith("/meta"):
+                return self._admin_course(path, data)
+        except (admin.AdminError, auth.AuthError, labs.LabsError, tasks.TaskError) as exc:
             return self.send_error_json(exc.http, exc.message, exc.code)
         return self.send_error_json(404, "unknown api")
 
@@ -283,9 +321,10 @@ class Handler(SimpleHTTPRequestHandler):
         user = self.current_user()
         if user is None:
             return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
-        if not can.can(user, "manage_course"):
-            return self.send_error_json(403, "需要教师权限", "FORBIDDEN")
-        row = tasks.teacher_create(self.db, user["id"], str(data.get("course") or ""),
+        course = str(data.get("course") or "")
+        if not admin.teacher_can_manage(self.db, user, course):
+            return self.send_error_json(403, "该课未绑定给你（联系管理员在管理端绑定）", "FORBIDDEN")
+        row = tasks.teacher_create(self.db, user["id"], course,
                                    str(data.get("title") or ""), str(data.get("body") or ""),
                                    str(data.get("due_at") or ""))
         return self.send_json({"ok": True, "task": row})
@@ -294,15 +333,59 @@ class Handler(SimpleHTTPRequestHandler):
         user = self.current_user()
         if user is None:
             return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
-        if not can.can(user, "manage_course"):
-            return self.send_error_json(403, "需要教师权限", "FORBIDDEN")
         raw = path[len("/api/teacher/tasks/"):-len("/delete")].strip("/")
         try:
             task_id = int(raw)
         except ValueError:
             return self.send_error_json(400, "任务编号不合法")
+        row = self.db.one("SELECT course FROM tasks WHERE id = ?", (task_id,))
+        if row is None:
+            return self.send_error_json(404, "任务不存在", "NO_TASK")
+        if not admin.teacher_can_manage(self.db, user, row["course"]):
+            return self.send_error_json(403, "该课未绑定给你（联系管理员在管理端绑定）", "FORBIDDEN")
         tasks.teacher_delete(self.db, task_id)
         return self.send_json({"ok": True})
+
+    def _admin_user(self, path, data):
+        user = self.current_user()
+        if user is None:
+            return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+        if not can.can(user, "admin"):
+            return self.send_error_json(403, "需要管理员权限", "FORBIDDEN")
+        is_role = path.endswith("/role")
+        tail = "/role" if is_role else "/status"
+        raw = path[len("/api/admin/users/"):-len(tail)].strip("/")
+        try:
+            target_id = int(raw)
+        except ValueError:
+            return self.send_error_json(400, "用户编号不合法")
+        if is_role:
+            row = admin.set_user_role(self.db, user["id"], target_id, str(data.get("role") or ""))
+        else:
+            row = admin.set_user_status(self.db, user["id"], target_id,
+                                        str(data.get("status") or ""))
+        return self.send_json({"ok": True, "user": row})
+
+    def _admin_course(self, path, data):
+        user = self.current_user()
+        if user is None:
+            return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+        if not can.can(user, "admin"):
+            return self.send_error_json(403, "需要管理员权限", "FORBIDDEN")
+        cid = unquote(path[len("/api/admin/courses/"):-len("/meta")]).strip("/")
+        kwargs = {}
+        if "published" in data:
+            kwargs["published"] = bool(data.get("published"))
+        if "sort" in data:
+            try:
+                kwargs["sort"] = int(data.get("sort") or 0)
+            except (TypeError, ValueError):
+                return self.send_error_json(400, "排序值必须是整数")
+        if "teacher_id" in data:
+            t = data.get("teacher_id")
+            kwargs["teacher_id"] = None if t in (None, "", 0) else int(t)
+        row = admin.set_course_meta(self.db, cid, **kwargs)
+        return self.send_json({"ok": True, "meta": row})
 
     def _lab_run(self, data):
         user = self.current_user()
@@ -573,9 +656,17 @@ def selftest(port: int = 7901) -> int:
     post("/api/auth/register", {"username": "teach_a", "display_name": "乙老师",
                                 "password": "pw123456"})
     db.execute("UPDATE users SET role='teacher' WHERE username='teach_a'")
+    teach_a_id = db.one("SELECT id FROM users WHERE username='teach_a'")["id"]
+    # 教师绑定（M5 起教师只能管绑定给自己的课；这里直接建绑定做测试准备）
+    db.execute("INSERT INTO course_meta(course, published, sort, teacher_id)"
+               " VALUES('B11-net-lab', 1, 0, ?)", (teach_a_id,))
     status, data, h2 = post("/api/auth/login", {"username": "teach_a", "password": "pw123456"})
     tcookie = cookie_of(h2)
-    check("教师账号就绪（注册 + 提升为 teacher）", status == 200)
+    check("教师账号就绪（注册 + 提升 + 绑定 B11）", status == 200)
+
+    status, data, _ = post("/api/teacher/tasks", {"course": "B3-logic-lab", "title": "越权试探"},
+                           cookie=tcookie)
+    check("教师管未绑定的课 403（绑定即权限）", status == 403)
 
     status, data, _ = post("/api/teacher/tasks",
                            {"course": "B11-net-lab", "title": "自测：补一个边界用例",
@@ -600,6 +691,76 @@ def selftest(port: int = 7901) -> int:
     status, data, _ = get("/api/tasks/mine", cookie=cookie)
     check("删除后学生记录同步消失", all(x["key"] != f"T{tid}" for x in data["tasks"]))
 
+    # -- 管理端（M5）
+    status, data, _ = get("/api/admin/overview", cookie=cookie)
+    check("学生访问管理端 403", status == 403)
+    post("/api/auth/register", {"username": "admin_a", "display_name": "丙管理员",
+                                "password": "pw123456"})
+    db.execute("UPDATE users SET role='admin' WHERE username='admin_a'")
+    status, data, h3 = post("/api/auth/login", {"username": "admin_a", "password": "pw123456"})
+    acookie = cookie_of(h3)
+    check("管理员账号就绪", status == 200 and data["user"]["role"] == "admin")
+
+    status, data, _ = get("/api/admin/overview", cookie=acookie)
+    check("看板聚合（用户/实验/任务/七日曲线）",
+          status == 200 and data["users"] >= 3 and data["labs_total"] >= 1
+          and len(data["daily_labs"]) == 7)
+    status, data, _ = get("/api/admin/users", cookie=acookie)
+    check("用户列表", status == 200 and len(data["users"]) >= 3)
+    status, data, _ = get("/api/admin/labs", cookie=acookie)
+    check("实验审计（含历史运行）", status == 200 and len(data["recent"]) >= 1)
+
+    stu_a_id = db.one("SELECT id FROM users WHERE username='stu_a'")["id"]
+    status, data, _ = post(f"/api/admin/users/{stu_a_id}/role", {"role": "teacher"},
+                           cookie=acookie)
+    check("改角色 student->teacher", status == 200 and data["user"]["role"] == "teacher")
+    status, data, _ = post(f"/api/admin/users/{stu_a_id}/role", {"role": "student"},
+                           cookie=acookie)
+    check("改回 student", status == 200 and data["user"]["role"] == "student")
+    admin_id = db.one("SELECT id FROM users WHERE username='admin_a'")["id"]
+    status, data, _ = post(f"/api/admin/users/{admin_id}/status", {"status": "banned"},
+                           cookie=acookie)
+    check("管理员自封被拒（防锁死）", status == 400 and data["code"] == "SELF")
+
+    post("/api/auth/register", {"username": "stu_ban", "display_name": "封禁样例",
+                                "password": "pw123456"})
+    status, data, hb = post("/api/auth/login", {"username": "stu_ban", "password": "pw123456"})
+    ban_cookie = cookie_of(hb)
+    ban_id = db.one("SELECT id FROM users WHERE username='stu_ban'")["id"]
+    status, data, _ = post(f"/api/admin/users/{ban_id}/status", {"status": "banned"},
+                           cookie=acookie)
+    check("封禁用户", status == 200 and data["user"]["status"] == "banned")
+    status, data, _ = get("/api/me", cookie=ban_cookie)
+    check("封禁即下线（存量会话失效）", data.get("user") is None)
+    status, data, _ = post("/api/auth/login", {"username": "stu_ban", "password": "pw123456"})
+    check("封禁后登录被拒 403", status == 403 and data["code"] == "USER_DISABLED")
+    post(f"/api/admin/users/{ban_id}/status", {"status": "active"}, cookie=acookie)
+
+    status, data, _ = post("/api/admin/courses/B31-shorturl/meta", {"published": False},
+                           cookie=acookie)
+    check("下架课程", status == 200 and data["meta"]["published"] is False)
+    status, data, _ = get("/api/courses")
+    check("下架后学生目录隐藏", all(c["id"] != "B31-shorturl" for c in data["courses"]))
+    status, data, _ = get("/api/courses/B31-shorturl", cookie=cookie)
+    check("下架后详情对学生 404", status == 404)
+    status, data, _ = post("/api/admin/courses/B31-shorturl/meta",
+                           {"published": True, "sort": 999}, cookie=acookie)
+    check("重新上架并排序", status == 200 and data["meta"]["sort"] == 999)
+    status, data, _ = get("/api/courses")
+    check("排序生效（排到最后）", data["courses"][-1]["id"] == "B31-shorturl")
+
+    status, data, _ = post("/api/admin/courses/B31-shorturl/meta",
+                           {"teacher_id": teach_a_id}, cookie=acookie)
+    check("绑定 B31 给教师", status == 200 and data["meta"]["teacher_id"] == teach_a_id)
+    status, data, _ = get("/api/teacher/course?course=B31-shorturl", cookie=tcookie)
+    check("绑定后可管（教师读 B31 统计）", status == 200 and data["course"] == "B31-shorturl")
+    status, data, _ = get("/api/teacher/courses", cookie=tcookie)
+    check("教师台课程列表=绑定的课",
+          status == 200 and {c["id"] for c in data["courses"]} == {"B11-net-lab", "B31-shorturl"})
+    post("/api/admin/courses/B31-shorturl/meta", {"teacher_id": None}, cookie=acookie)
+    status, data, _ = get("/api/teacher/course?course=B31-shorturl", cookie=tcookie)
+    check("解绑后教师 403", status == 403)
+
     # -- 权限矩阵单元（负面为主）
     stu = {"role": "student"}
     check("can()：学生不可 admin / 可 lab_run；教师可 manage_course",
@@ -614,7 +775,7 @@ def selftest(port: int = 7901) -> int:
           and bat.count(b"\n") == bat.count(b"\r\n"))
 
     for page in ("/", "/login.html", "/register.html", "/course.html", "/project.html",
-                 "/me.html", "/tasks.html", "/teacher.html"):
+                 "/me.html", "/tasks.html", "/teacher.html", "/admin.html"):
         with urllib.request.urlopen(base + page, timeout=5) as r:
             body = r.read()
         check(f"页面 {page} 200", r.status == 200 and len(body) > 300)
