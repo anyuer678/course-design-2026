@@ -620,6 +620,9 @@ def serve(port: int, db: DB, cfg: dict | None = None, open_browser: bool = False
     httpd.db = db            # type: ignore[attr-defined]
     httpd.labs = engine      # type: ignore[attr-defined]
     httpd.cfg = cfg          # type: ignore[attr-defined]
+    swept = auth.sweep_sessions(db)
+    if swept:
+        print(f"    启动清扫：删除过期会话 {swept} 条")
     log_dir = Path(db.path).parent / "logs"
     try:
         log_dir.mkdir(parents=True, exist_ok=True)
@@ -1183,6 +1186,42 @@ def selftest(port: int = 7901) -> int:
     status, data, _ = get("/api/teacher/course?course=B11-net-lab", cookie=tcookie)
     check("本课实验排行按人聚合（Top 10；夹具 1 条）",
           status == 200 and data.get("lab_rank") and data["lab_rank"][0]["n"] >= 1)
+
+    # -- 竞态与清理：服务就绪判定 + 会话过期清扫（M11）
+    hold = socket.socket()
+    hold.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    hold.bind(("127.0.0.1", 8313))
+    hold.listen(1)
+
+    class _FadingProc:
+        """端口可连、自己的进程随后死掉——复现"连上别人端口即宣告就绪"的竞态窗口。"""
+
+        def __init__(self):
+            self.t0 = time.time()
+
+        def poll(self):
+            return None if time.time() - self.t0 < 0.25 else 1
+
+    probe_engine = labs.Labs(REPO, db, max_labs=1)
+    try:
+        probe_engine._wait_port({"proc": _FadingProc(), "port": 8313, "stopped": False})
+        got = "OK(误报)"
+    except labs.LabsError as exc:
+        got = exc.code
+    finally:
+        hold.close()
+    check("就绪判定不误报：端口可连但自己的进程随后退出 → SERVE_FAILED", got == "SERVE_FAILED", got)
+    owner = db.one("SELECT id FROM users WHERE username='stu_a'")["id"]
+    db.execute("INSERT INTO sessions(token, user_id, created_at, expires_at)"
+               " VALUES('expired_tok', ?, '2000-01-01 00:00:00', '2000-01-02 00:00:00')",
+               (owner,))
+    db.execute("INSERT INTO sessions(token, user_id, created_at, expires_at)"
+               " VALUES('live_tok', ?, '2000-01-01 00:00:00', '2999-01-01 00:00:00')",
+               (owner,))
+    swept = auth.sweep_sessions(db)
+    left = {r["token"] for r in db.all("SELECT token FROM sessions")}
+    check("启动会话清扫：过期删除、有效保留",
+          swept >= 1 and "expired_tok" not in left and "live_tok" in left)
 
     # -- 权限矩阵单元（负面为主）
     stu = {"role": "student"}

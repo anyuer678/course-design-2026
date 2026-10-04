@@ -157,6 +157,12 @@ def logout(db, token: str) -> None:
         db.execute("DELETE FROM sessions WHERE token = ?", (token,))
 
 
+def sweep_sessions(db) -> int:
+    """清扫过期会话（平台启动时调用）。返回清理条数。"""
+    cur = db.execute("DELETE FROM sessions WHERE expires_at <= ?", (now_str(),))
+    return int(cur.rowcount) if cur.rowcount and cur.rowcount > 0 else 0
+
+
 def user_by_session(db, token: str):
     if not token:
         return None

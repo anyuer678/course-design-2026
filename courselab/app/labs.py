@@ -231,15 +231,23 @@ class Labs:
 
     def _wait_port(self, meta: dict) -> None:
         deadline = time.time() + SERVE_READY_TIMEOUT
+        stable = 0
         while time.time() < deadline:
             if meta["proc"].poll() is not None:
+                if meta.get("stopped"):
+                    raise LabsError("SERVE_STOPPED", "服务已被停止", 409)
                 raise LabsError("SERVE_FAILED", "服务进程提前退出，看日志尾部",
                                 500)
             try:
                 with socket.create_connection(("127.0.0.1", meta["port"]), timeout=0.3):
-                    return
+                    # 端口能连≠我们自己的进程在听：别的实例占着同端口时，
+                    # 自己的进程会在 bind 失败后退出——必须连续观察一小段才敢报就绪
+                    stable += 1
+                    if stable >= 3:
+                        return
             except OSError:
-                time.sleep(0.15)
+                stable = 0
+            time.sleep(0.15)
         self._kill(meta)
         raise LabsError("SERVE_TIMEOUT", f"服务 {SERVE_READY_TIMEOUT:.0f} 秒内未就绪", 504)
 
@@ -253,6 +261,7 @@ class Labs:
             raise LabsError("NO_RUN", "没有这个运行记录", 404)
         if meta["proc"].poll() is not None:
             return {"ok": True, "already": True}
+        meta["stopped"] = True   # 启动等待中的请求据此区分"被停止"与"自己崩了"
         self._kill(meta)
         return {"ok": True}
 
