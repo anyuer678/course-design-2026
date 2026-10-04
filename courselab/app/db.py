@@ -30,6 +30,17 @@ CREATE TABLE IF NOT EXISTS sessions (
   ip TEXT,
   ua TEXT
 );
+CREATE TABLE IF NOT EXISTS lab_runs (
+  id TEXT PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  pid TEXT NOT NULL,
+  action TEXT NOT NULL,
+  kind TEXT NOT NULL,
+  started_at TEXT NOT NULL,
+  finished_at TEXT,
+  exit_code INTEGER,
+  log_tail TEXT
+);
 """
 
 

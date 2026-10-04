@@ -39,9 +39,18 @@
 </div>
 
 <div class="pane" id="pane-lab">
-  <div class="hint" id="lab-hint">在线实验将在 M3 里程碑接入：登录用户在平台上直接跑演示/测试并看实时日志。</div>
-  <p class="note">现在就能用：打开课设仓库根目录，双击 <b>lab.bat</b> 用本地实验台（本机控制台，可启停服务/跑演示/跑测试）。</p>
-  <p class="note" id="lab-auth"></p>
+  <div class="msg err" id="lab-msg" style="display:none"></div>
+  <div id="lab-guest">
+    <div class="hint">登录后即可在本页直接跑这个项目的演示 / 测试 / 服务，日志实时滚动。</div>
+    <p class="note" id="lab-auth"></p>
+  </div>
+  <div id="lab-console" style="display:none">
+    <div class="toolbar" id="lab-buttons"></div>
+    <div class="meta"><span id="lab-status">还没有运行中的实验。</span>
+      <a id="lab-open" style="display:none;margin-left:.5rem" target="_blank" rel="noopener">打开服务页面</a>
+    </div>
+    <pre class="logbox" id="lab-log">（点上面的按钮开始，日志会实时滚动）</pre>
+  </div>
 </div>
 </main>
 <footer>演示页是项目生成物（零依赖静态页）；平台数据现算自仓库。</footer>
@@ -105,11 +114,14 @@ else {
     }
 
     var labAuth = document.getElementById("lab-auth");
+    var labInfo = c.lab || { actions: [], port: null, ui: false };
     if (CL.me) {
-      labAuth.textContent = "已登录（" + CL.me.display_name + "）——M3 上线后此处直接可用。";
+      document.getElementById("lab-guest").style.display = "none";
+      document.getElementById("lab-console").style.display = "";
+      renderLabButtons(labInfo);
     } else {
-      labAuth.innerHTML = "";
-      labAuth.appendChild(document.createTextNode("登录后即可使用（M3 上线时）："));
+      labAuth.textContent = "";
+      labAuth.appendChild(document.createTextNode("现在就可以："));
       var a1 = CL.el("a", null, "登录");
       a1.href = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
       var a2 = CL.el("a", null, "注册");
@@ -119,6 +131,117 @@ else {
       labAuth.appendChild(a2);
     }
   });
+}
+
+// ---------------- 在线实验（M3）
+var labInfo = { actions: [], port: null, ui: false };
+var labEs = null;
+var labRunId = null;
+var labPid = pid;
+
+function labMsg(text) {
+  var m = document.getElementById("lab-msg");
+  m.textContent = text;
+  m.style.display = text ? "" : "none";
+}
+
+function renderLabButtons(info) {
+  labInfo = info;
+  var box = document.getElementById("lab-buttons");
+  box.textContent = "";
+  (info.actions || []).forEach(function (a) {
+    var b = CL.el("button", "btn btn-ghost", a.label);
+    b.addEventListener("click", function () { startAction(a, b); });
+    box.appendChild(b);
+  });
+  var stop = CL.el("button", "btn", "停止当前");
+  stop.id = "lab-stop";
+  stop.disabled = true;
+  stop.addEventListener("click", stopAction);
+  box.appendChild(stop);
+  if (!info.actions || !info.actions.length) {
+    box.appendChild(CL.el("span", "note", "该项目未接平台实验动作。"));
+  }
+}
+
+function startAction(a, btn) {
+  labMsg("");
+  btn.disabled = true;
+  CL.api("/api/labs/run", { method: "POST", body: { project: labPid, action: a.id } })
+    .then(function (res) {
+      if (!res.data || !res.data.ok) {
+        labMsg((res.data && res.data.error) || "启动失败");
+        return;
+      }
+      openStream(res.data.run_id, res.data.port);
+    })
+    .catch(function () { labMsg("网络错误，请重试。"); })
+    .then(function () { btn.disabled = false; });
+}
+
+function stopAction() {
+  if (!labRunId) return;
+  CL.api("/api/labs/runs/" + labRunId + "/stop", { method: "POST", body: {} })
+    .then(function () { labMsg(""); })
+    .catch(function () { labMsg("停止失败"); });
+}
+
+function setStopEnabled(on) {
+  var s = document.getElementById("lab-stop");
+  if (s) s.disabled = !on;
+}
+
+function appendLabLine(text) {
+  var log = document.getElementById("lab-log");
+  var atBottom = log.scrollTop + log.clientHeight >= log.scrollHeight - 8;
+  log.textContent += text + "\n";
+  if (atBottom) log.scrollTop = log.scrollHeight;
+}
+
+function openStream(runId, port) {
+  if (labEs) { labEs.close(); }
+  labRunId = runId;
+  setStopEnabled(true);
+  var log = document.getElementById("lab-log");
+  log.textContent = "";
+  var status = document.getElementById("lab-status");
+  status.textContent = "运行中（" + runId + "）……";
+  if (port && labInfo.ui) {
+    var open = document.getElementById("lab-open");
+    open.href = "http://127.0.0.1:" + port + "/";
+    open.style.display = "";
+  }
+  labEs = new EventSource("/api/labs/runs/" + runId + "/log");
+  labEs.addEventListener("log", function (e) { appendLabLine(JSON.parse(e.data)); });
+  labEs.addEventListener("done", function (e) {
+    var d = JSON.parse(e.data);
+    labEs.close();
+    labEs = null;
+    labRunId = null;
+    setStopEnabled(false);
+    document.getElementById("lab-open").style.display = "none";
+    status.textContent = "结束：exit=" + d.exit + " · " + d.seconds + "s（" + d.action + "）";
+    updateQueue();
+  });
+  labEs.onerror = function () { /* 结束后连接关闭属正常 */ };
+}
+
+function updateQueue() {
+  CL.api("/api/labs/active").then(function (res) {
+    if (!res.data || !res.data.ok) return;
+    var running = res.data.running || [];
+    if (!running.length) {
+      if (!labRunId) document.getElementById("lab-status").textContent = "当前没有运行中的实验。";
+      return;
+    }
+    var parts = running.map(function (r) {
+      return r.pid + "（" + r.action + "，" + r.seconds + "s）";
+    });
+    if (!labRunId) {
+      document.getElementById("lab-status").textContent =
+        "平台上运行中：" + parts.join("、") + "　[限额 " + res.data.limit + "]";
+    }
+  }).catch(function () {});
 }
 </script>
 </body>

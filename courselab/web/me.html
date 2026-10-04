@@ -53,9 +53,28 @@ CL.api("/api/me").then(function (res) {
   box.appendChild(card);
 
   var later = CL.el("div", "card");
-  later.appendChild(CL.el("p", "note",
-    "我的任务与实验记录在 M3/M4 里程碑接入（任务领取、运行历史）；变更口令在 M6 的账号设置里。"));
+  later.appendChild(CL.el("h3", null, "我的实验记录"));
+  var list = CL.el("ul", "plain");
+  list.appendChild(CL.el("li", "note", "加载中…"));
+  later.appendChild(list);
   box.appendChild(later);
+  CL.api("/api/labs/runs/mine").then(function (res) {
+    list.textContent = "";
+    var runs = (res.data && res.data.runs) || [];
+    if (!runs.length) {
+      list.appendChild(CL.el("li", "note", "还没有实验记录——去项目页的「在线实验」跑一个吧。"));
+      return;
+    }
+    runs.forEach(function (r) {
+      var li = CL.el("li");
+      var verdict = r.exit_code === null ? "未完成（被停止或平台重启）" : ("exit=" + r.exit_code);
+      li.textContent = r.started_at + " · " + r.pid + " · " + r.action + " · " + verdict;
+      list.appendChild(li);
+    });
+  }).catch(function () {
+    list.textContent = "";
+    list.appendChild(CL.el("li", "note", "记录读取失败。"));
+  });
 });
 
 function kv(dl, k, v) {

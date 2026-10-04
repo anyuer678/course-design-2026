@@ -25,7 +25,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from app import auth, can, courses
+from app import auth, can, courses, labs
 from app.db import DB
 
 ROOT = Path(__file__).resolve().parent          # courselab/
@@ -54,6 +54,10 @@ class Handler(SimpleHTTPRequestHandler):
     @property
     def db(self) -> DB:
         return self.server.db            # type: ignore[attr-defined]
+
+    @property
+    def labs(self) -> labs.Labs:
+        return self.server.labs          # type: ignore[attr-defined]
 
     def send_json(self, obj, code: int = 200, set_cookie: str | None = None):
         body = _json_bytes(obj)
@@ -134,7 +138,39 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_error_json(404, "课程不存在", "NO_COURSE")
             user = self.current_user()
             detail["can"] = {"lab_run": can.can(user, "lab_run", cid)}
+            detail["lab"] = labs.describe(cid)
             return self.send_json({"ok": True, "course": detail})
+
+        if path == "/api/labs/active":
+            if self.current_user() is None:
+                return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+            return self.send_json(self.labs.active())
+
+        if path == "/api/labs/runs/mine":
+            user = self.current_user()
+            if user is None:
+                return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+            return self.send_json({"ok": True, "runs": self.labs.mine(user["id"])})
+
+        if path.startswith("/api/labs/runs/"):
+            user = self.current_user()
+            if user is None:
+                return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+            if path.endswith("/log"):
+                run_id = unquote(path[len("/api/labs/runs/"):-len("/log")]).strip("/")
+                meta = self.labs.status(run_id)
+                if meta is None:
+                    return self.send_error_json(404, "没有这个运行记录", "NO_RUN")
+                if not self._can_view_run(user, meta):
+                    return self.send_error_json(403, "只能看自己的实验日志", "FORBIDDEN")
+                return self._sse(self.labs.stream(run_id))
+            run_id = unquote(path[len("/api/labs/runs/"):]).strip("/")
+            meta = self.labs.status(run_id)
+            if meta is None:
+                return self.send_error_json(404, "没有这个运行记录", "NO_RUN")
+            if not self._can_view_run(user, meta):
+                return self.send_error_json(403, "只能看自己的实验记录", "FORBIDDEN")
+            return self.send_json({"ok": True, "run": meta})
 
         if path.startswith("/repo/"):
             return self._serve_repo(unquote(path[len("/repo/"):]))
@@ -155,6 +191,22 @@ class Handler(SimpleHTTPRequestHandler):
         if self.command != "HEAD":
             self.wfile.write(body)
 
+    def _can_view_run(self, user, meta) -> bool:
+        return user["id"] == meta["user_id"] or can.can(user, "manage_course")
+
+    def _sse(self, gen):
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.end_headers()
+        try:
+            for event, data in gen:
+                chunk = "event: %s\ndata: %s\n\n" % (event, json.dumps(data, ensure_ascii=False))
+                self.wfile.write(chunk.encode("utf-8"))
+                self.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+
     # ---------------------------------------------------------- POST
     def do_POST(self):
         path = urlparse(self.path).path
@@ -168,9 +220,35 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._login(data)
             if path == "/api/auth/logout":
                 return self._logout()
-        except auth.AuthError as exc:
+            if path == "/api/labs/run":
+                return self._lab_run(data)
+            if path.startswith("/api/labs/runs/") and path.endswith("/stop"):
+                return self._lab_stop(path)
+        except (auth.AuthError, labs.LabsError) as exc:
             return self.send_error_json(exc.http, exc.message, exc.code)
         return self.send_error_json(404, "unknown api")
+
+    def _lab_run(self, data):
+        user = self.current_user()
+        if user is None:
+            return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+        if not can.can(user, "lab_run"):
+            return self.send_error_json(403, "没有实验权限", "FORBIDDEN")
+        out = self.labs.start(user, str(data.get("project") or ""),
+                              str(data.get("action") or ""))
+        return self.send_json(out)
+
+    def _lab_stop(self, path):
+        user = self.current_user()
+        if user is None:
+            return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+        run_id = unquote(path[len("/api/labs/runs/"):-len("/stop")]).strip("/")
+        meta = self.labs.status(run_id)
+        if meta is None:
+            return self.send_error_json(404, "没有这个运行记录", "NO_RUN")
+        if not self._can_view_run(user, meta):
+            return self.send_error_json(403, "只能停自己的实验", "FORBIDDEN")
+        return self.send_json(self.labs.stop(run_id))
 
     def _register(self, data):
         user = auth.register(self.db, str(data.get("username") or "").strip(),
@@ -197,8 +275,10 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 def serve(port: int, db: DB, open_browser: bool = False) -> int:
+    engine = labs.Labs(REPO, db)
     httpd = ThreadingHTTPServer(("127.0.0.1", port), Handler)
     httpd.db = db            # type: ignore[attr-defined]
+    httpd.labs = engine      # type: ignore[attr-defined]
     print(f"课程工坊已启动：http://127.0.0.1:{port}/（数据：{db.path}；Ctrl+C 结束）")
     if open_browser:
         url = f"http://127.0.0.1:{port}/"
@@ -275,9 +355,10 @@ def selftest(port: int = 7901) -> int:
 
     status, data, _ = get("/api/courses/B11-net-lab")
     c = data.get("course", {})
-    check("课程工作区：B11 详情含知识点/任务/材料",
+    check("课程工作区：B11 详情含知识点/任务/材料/实验动作",
           data.get("ok") and len(c.get("knowledge", [])) >= 1 and len(c.get("tasks", [])) >= 1
-          and any(m["kind"] == "file" for m in c.get("materials", [])))
+          and any(m["kind"] == "file" for m in c.get("materials", []))
+          and any(a["id"] == "serve_start" for a in c.get("lab", {}).get("actions", [])))
     status, data, _ = get("/api/courses/no-such-course")
     check("未知课程 404", status == 404)
 
@@ -322,6 +403,68 @@ def selftest(port: int = 7901) -> int:
     status, data, _ = post("/api/auth/login", {"username": "stu_a", "password": "pw123456"},
                            origin="http://evil.example")
     check("跨源 POST 被拒（同源基线）", status == 403 and data["code"] == "BAD_ORIGIN")
+
+    # -- 在线实验（M3）
+    status, data, _ = post("/api/labs/run", {"project": "B3-logic-lab", "action": "demo"})
+    check("匿名发起实验被拒 401", status == 401 and data["code"] == "LOGIN_REQUIRED")
+
+    status, data, hdrs = post("/api/auth/login", {"username": "stu_a", "password": "pw123456"})
+    cookie = cookie_of(hdrs)
+    check("重新登录（实验阶段）", status == 200 and cookie.startswith("cl_session="))
+
+    status, data, _ = post("/api/labs/run", {"project": "B3-logic-lab", "action": "demo"},
+                           cookie=cookie)
+    rid = data.get("run_id")
+    check("学生发起 demo 实验", status == 200 and bool(rid), str(data)[:80])
+
+    st, t0 = {}, time.time()
+    while time.time() - t0 < 60:
+        _, d2, _ = get(f"/api/labs/runs/{rid}", cookie=cookie)
+        st = d2.get("run") or {}
+        if st and st.get("running") is False:
+            break
+        time.sleep(0.4)
+    check("demo 跑完且 exit=0", st.get("running") is False and st.get("exit") == 0, str(st))
+
+    req = urllib.request.Request(base + f"/api/labs/runs/{rid}/log")
+    req.add_header("Cookie", cookie)
+    with urllib.request.urlopen(req, timeout=10) as r:
+        sse = r.read().decode("utf-8", "replace")
+    check("SSE 日志流（回放含 log 与 done 事件）",
+          "event: log" in sse and "event: done" in sse, f"{len(sse)}B")
+
+    status, data, _ = get("/api/labs/runs/mine", cookie=cookie)
+    check("我的实验记录含本次运行", any(x["id"] == rid for x in data.get("runs", [])))
+
+    s1, d1, _ = post("/api/labs/run", {"project": "B2-datastruct-lab", "action": "run"}, cookie=cookie)
+    s2, d2, _ = post("/api/labs/run", {"project": "B1-cpp-ministl", "action": "run"}, cookie=cookie)
+    s3, d3, _ = post("/api/labs/run", {"project": "B3-logic-lab", "action": "demo"}, cookie=cookie)
+    check("并发限额：第 3 个被拒 429", s1 == 200 and s2 == 200 and s3 == 429,
+          f"{s1}/{s2}/{s3} {d3.get('code')}")
+    st1, _, _ = post(f"/api/labs/runs/{d1['run_id']}/stop", {}, cookie=cookie)
+    st2, _, _ = post(f"/api/labs/runs/{d2['run_id']}/stop", {}, cookie=cookie)
+    check("强停两个运行中任务（整树杀）", st1 == 200 and st2 == 200)
+    t0 = time.time()
+    gone = False
+    while time.time() - t0 < 8:
+        _, da, _ = get("/api/labs/active", cookie=cookie)
+        if not da.get("running"):
+            gone = True
+            break
+        time.sleep(0.4)
+    check("停止后运行列表清空", gone)
+
+    s, d, _ = post("/api/labs/run", {"project": "B31-shorturl", "action": "serve_start"},
+                   cookie=cookie)
+    check("启动真实服务 B31（:8312）", s == 200 and d.get("port") == 8312, str(d)[:80])
+    if s == 200:
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:8312/", timeout=5) as r:
+                page = r.read(120)
+            check("服务页面可打开（「打开」目标）", r.status == 200 and len(page) > 20)
+        finally:
+            s3, _, _ = post(f"/api/labs/runs/{d['run_id']}/stop", {}, cookie=cookie)
+        check("停止服务", s3 == 200)
 
     # -- 权限矩阵单元（负面为主）
     stu = {"role": "student"}
