@@ -36,16 +36,19 @@
   };
 
   CL.me = null;
+  CL.unread = 0;
 
   CL.navbar = function () {
     var bar = document.getElementById("topbar");
     if (!bar) return Promise.resolve(null);
     return CL.api("/api/me").then(function (res) {
       CL.me = (res.data && res.data.user) || null;
+      CL.unread = (res.data && res.data.unread) || 0;
       render(CL.me);
       return CL.me;
     }).catch(function () {
       CL.me = null;
+      CL.unread = 0;
       render(null);
       return null;
     });
@@ -63,6 +66,9 @@
         var tk = CL.el("a", null, "我的任务");
         tk.href = "/tasks.html";
         links.appendChild(tk);
+        var nt = CL.el("a", null, "通知" + (CL.unread ? "（" + CL.unread + "）" : ""));
+        nt.href = "/notices.html";
+        links.appendChild(nt);
       }
       if (user && (user.role === "teacher" || user.role === "admin")) {
         var th = CL.el("a", null, "教师台");

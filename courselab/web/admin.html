@@ -43,10 +43,14 @@ CL.navbar().then(function () {
   box.appendChild(sectionTitle("实验审计与队列"));
   var labsBox = CL.el("div", ""); labsBox.id = "labs";
   box.appendChild(labsBox);
+  box.appendChild(sectionTitle("管理动作审计"));
+  var auditBox = CL.el("div", ""); auditBox.id = "audit";
+  box.appendChild(auditBox);
   loadOverview();
   loadUsers();
   loadCourses();
   loadLabs();
+  loadAudit();
 });
 
 function sectionTitle(text) {
@@ -296,6 +300,34 @@ function loadLabs() {
     });
     c2.appendChild(t);
     host.appendChild(c2);
+  });
+}
+
+// ---------------- 管理动作审计
+function loadAudit() {
+  CL.api("/api/admin/audit").then(function (res) {
+    var host = document.getElementById("audit");
+    host.textContent = "";
+    var events = (res.data && res.data.events) || [];
+    var c = card([CL.el("h3", null, "管理动作（最近 " + events.length + " 条）")]);
+    if (!events.length) c.appendChild(CL.el("p", "note", "暂无记录。"));
+    var t = CL.el("table", "kb");
+    var head = CL.el("tr");
+    ["时间", "谁", "动作", "对象", "详情"].forEach(function (h) {
+      head.appendChild(CL.el("th", null, h));
+    });
+    t.appendChild(head);
+    events.forEach(function (e) {
+      var tr = CL.el("tr");
+      tr.appendChild(CL.el("td", null, e.ts));
+      tr.appendChild(CL.el("td", null, e.who));
+      tr.appendChild(CL.el("td", null, e.action));
+      tr.appendChild(CL.el("td", null, e.target));
+      tr.appendChild(CL.el("td", null, e.detail));
+      t.appendChild(tr);
+    });
+    c.appendChild(t);
+    host.appendChild(c);
   });
 }
 </script>

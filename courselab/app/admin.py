@@ -8,6 +8,7 @@ import time
 from datetime import datetime, timedelta
 
 from app import courses
+from app.db import now_str
 
 ROLES = ("student", "teacher", "admin")
 STATUSES = ("active", "banned")
@@ -64,7 +65,8 @@ def course_rows(db) -> list:
     return out
 
 
-def set_course_meta(db, cid: str, published=None, sort=None, teacher_id=_UNSET) -> dict:
+def set_course_meta(db, cid: str, actor_id: int = 0, published=None, sort=None,
+                    teacher_id=_UNSET) -> dict:
     if courses.course_detail(cid) is None:
         raise AdminError("NO_COURSE", "课程不存在", 404)
     row = _meta_rows(db).get(cid)
@@ -81,6 +83,8 @@ def set_course_meta(db, cid: str, published=None, sort=None, teacher_id=_UNSET) 
         " ON CONFLICT(course) DO UPDATE SET published=excluded.published,"
         " sort=excluded.sort, teacher_id=excluded.teacher_id",
         (cid, pub, srt, tid))
+    audit(db, actor_id, "course_meta", cid,
+          f"published={int(pub)} sort={srt} teacher_id={tid}")
     return {"course": cid, "published": bool(pub), "sort": srt, "teacher_id": tid}
 
 
@@ -128,13 +132,29 @@ def _public(row) -> dict:
             ("id", "username", "display_name", "role", "status", "created_at", "last_login")}
 
 
+def audit(db, actor_id: int, action: str, target: str = "", detail: str = "") -> None:
+    db.execute("INSERT INTO admin_audit(ts, actor_id, action, target, detail) VALUES(?,?,?,?,?)",
+               (now_str(), actor_id, action, target, detail[:300]))
+
+
+def audit_list(db, limit: int = 100) -> list:
+    rows = db.all(
+        "SELECT a.ts, a.action, a.target, a.detail, u.username, u.display_name"
+        " FROM admin_audit a JOIN users u ON u.id = a.actor_id"
+        " ORDER BY a.id DESC LIMIT ?", (limit,))
+    return [{"ts": r["ts"], "who": r["display_name"] or r["username"],
+             "action": r["action"], "target": r["target"], "detail": r["detail"]}
+            for r in rows]
+
+
 def set_user_role(db, actor_id: int, target_id: int, role: str) -> dict:
     if role not in ROLES:
         raise AdminError("BAD_ROLE", "角色只能是 student / teacher / admin")
     if target_id == actor_id:
         raise AdminError("SELF", "不能改自己的角色（防止把自己锁在门外）")
-    _target_user(db, target_id)
+    target = _target_user(db, target_id)
     db.execute("UPDATE users SET role = ? WHERE id = ?", (role, target_id))
+    audit(db, actor_id, "user_role", target["username"], f"{target['role']} -> {role}")
     return _public(_target_user(db, target_id))
 
 
@@ -143,10 +163,11 @@ def set_user_status(db, actor_id: int, target_id: int, status: str) -> dict:
         raise AdminError("BAD_STATUS", "状态只能是 active / banned")
     if target_id == actor_id:
         raise AdminError("SELF", "不能封禁自己")
-    _target_user(db, target_id)
+    target = _target_user(db, target_id)
     db.execute("UPDATE users SET status = ? WHERE id = ?", (status, target_id))
     if status == "banned":
         db.execute("DELETE FROM sessions WHERE user_id = ?", (target_id,))   # 封禁即下线
+    audit(db, actor_id, "user_status", target["username"], f"{target['status']} -> {status}")
     return _public(_target_user(db, target_id))
 
 

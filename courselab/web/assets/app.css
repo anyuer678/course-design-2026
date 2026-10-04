@@ -128,3 +128,25 @@ border-radius:10px;margin:.4rem 0}
 
 footer{color:var(--faint);font-size:.85rem;max-width:68rem;margin:2.5rem auto 0;padding:1rem 1.2rem 0;
 border-top:1px solid var(--line)}
+
+/* 移动端响应式（学生端在手机上同样可用） */
+@media (max-width: 720px){
+  body{font-size:15px}
+  .topbar{flex-wrap:wrap;gap:.35rem;padding:.7rem .8rem}
+  .navlinks{gap:.6rem;font-size:.85rem}
+  .navauth{margin-left:auto;font-size:.85rem}
+  main{padding:0 .8rem}
+  h1{font-size:1.25rem}
+  .grid{grid-template-columns:1fr}
+  .toolbar input{min-width:0;flex:1 1 100%}
+  .stats .stat{font-size:.82rem;padding:.4rem .7rem}
+  .field input,.task-note{font-size:.95rem}
+  .task-note{width:8rem}
+  .kv{grid-template-columns:1fr;gap:.1rem .3rem}
+  .kv dt{margin-top:.35rem;font-size:.85rem}
+  table.kb{display:block;overflow-x:auto;white-space:nowrap}
+  iframe.demo{height:58vh}
+  .logbox{max-height:240px;font-size:12px}
+  ul.plain li{flex-wrap:wrap}
+  .crumb{font-size:.8rem}
+}

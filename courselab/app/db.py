@@ -65,6 +65,28 @@ CREATE TABLE IF NOT EXISTS course_meta (
   sort INTEGER NOT NULL DEFAULT 0,
   teacher_id INTEGER
 );
+CREATE TABLE IF NOT EXISTS notices (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  title TEXT NOT NULL,
+  body TEXT DEFAULT '',
+  audience TEXT NOT NULL DEFAULT 'all',
+  created_by INTEGER NOT NULL,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS notice_reads (
+  notice_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  read_at TEXT NOT NULL,
+  PRIMARY KEY (notice_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS admin_audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts TEXT NOT NULL,
+  actor_id INTEGER NOT NULL,
+  action TEXT NOT NULL,
+  target TEXT DEFAULT '',
+  detail TEXT DEFAULT ''
+);
 """
 
 

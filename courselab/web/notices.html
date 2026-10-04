@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>通知与公告 · 课程工坊 CourseLab</title>
+<link rel="stylesheet" href="/assets/app.css">
+</head>
+<body>
+<header class="topbar" id="topbar"></header>
+<main>
+<h1>通知与公告</h1>
+<div id="publish"></div>
+<div class="stats" id="stats"></div>
+<div id="list"><p class="note">加载中…</p></div>
+</main>
+<footer>可见性规则：全员公告所有人可见；课程公告对该课管理员/任课教师、以及在该课有记录（做过任务或跑过实验）的人可见。</footer>
+<script src="/assets/app.js"></script>
+<script>
+"use strict";
+var COURSES = {};      // id -> 课程名（用于显示课程公告的对象）
+var curUser = null;
+
+CL.navbar().then(function () {
+  if (!CL.me) {
+    document.getElementById("list").textContent = "请先登录后查看通知。";
+    return;
+  }
+  curUser = CL.me;
+  CL.api("/api/courses").then(function (res) {
+    ((res.data && res.data.courses) || []).forEach(function (c) { COURSES[c.id] = c.course; });
+    renderList();
+  });
+  if (CL.me.role === "admin" || CL.me.role === "teacher") renderPublish();
+});
+
+function renderPublish() {
+  var box = document.getElementById("publish");
+  box.textContent = "";
+  var card = CL.el("div", "card");
+  card.appendChild(CL.el("h3", null, "发布公告"));
+  var row = CL.el("div", "toolbar");
+  var title = document.createElement("input");
+  title.placeholder = "标题（1-100 字）";
+  var body = document.createElement("input");
+  body.placeholder = "正文（可选）";
+  var sel = document.createElement("select");
+  sel.style.cssText = "font:inherit;padding:.45rem .7rem;border:1px solid #e2e8f0;border-radius:8px;background:#fff";
+  var btn = CL.el("button", "btn", "发布");
+  row.appendChild(title); row.appendChild(body); row.appendChild(sel); row.appendChild(btn);
+  card.appendChild(row);
+  box.appendChild(card);
+
+  function loadAudience() {
+    sel.textContent = "";
+    if (CL.me.role === "admin") {
+      var o = document.createElement("option");
+      o.value = "all"; o.textContent = "全员（平台公告）";
+      sel.appendChild(o);
+      CL.api("/api/courses").then(function (res) {
+        ((res.data && res.data.courses) || []).forEach(function (c) {
+          var op = document.createElement("option");
+          op.value = c.id; op.textContent = "课程：" + c.course;
+          sel.appendChild(op);
+        });
+      });
+    } else {
+      CL.api("/api/teacher/courses").then(function (res) {
+        ((res.data && res.data.courses) || []).forEach(function (c) {
+          var op = document.createElement("option");
+          op.value = c.id; op.textContent = "课程：" + c.course;
+          sel.appendChild(op);
+        });
+      });
+    }
+  }
+  loadAudience();
+  btn.addEventListener("click", function () {
+    btn.disabled = true;
+    CL.api("/api/notices", { method: "POST", body: {
+      title: title.value, body: body.value, audience: sel.value || "all" } })
+      .then(function (r) {
+        if (!r.data || !r.data.ok) { alert((r.data && r.data.error) || "发布失败"); return; }
+        title.value = ""; body.value = "";
+        renderList();
+      }).catch(function () { alert("网络错误"); })
+      .then(function () { btn.disabled = false; });
+  });
+}
+
+function audienceLabel(a) {
+  if (a === "all") return "全员";
+  return "课程：" + (COURSES[a] || a);
+}
+
+function renderList() {
+  CL.api("/api/notices").then(function (res) {
+    var host = document.getElementById("list");
+    host.textContent = "";
+    var stats = document.getElementById("stats");
+    stats.textContent = "";
+    var d = res.data || {};
+    stats.appendChild(stat("全部 " + (d.notices || []).length));
+    stats.appendChild(stat("未读 " + (d.unread || 0)));
+    var all = CL.el("button", "chip", "全部标为已读");
+    all.style.marginLeft = ".4rem";
+    all.addEventListener("click", function () {
+      CL.api("/api/notices/read-all", { method: "POST", body: {} }).then(function () { renderList(); CL.navbar(); });
+    });
+    stats.appendChild(all);
+
+    var items = d.notices || [];
+    if (!items.length) {
+      host.appendChild(CL.el("p", "note", "暂时没有公告。"));
+      return;
+    }
+    items.forEach(function (n) {
+      var card = CL.el("div", "card");
+      if (!n.read) card.style.borderLeft = "4px solid #3b82f6";
+      var h = CL.el("h3", null, (n.read ? "" : "【未读】") + n.title);
+      card.appendChild(h);
+      card.appendChild(CL.el("div", "meta",
+        audienceLabel(n.audience) + " · " + n.by + " · " + n.created_at));
+      if (n.body) card.appendChild(CL.el("p", null, n.body));
+      if (!n.read) {
+        var b = CL.el("button", "btn btn-ghost btn-xs", "标为已读");
+        b.addEventListener("click", function () {
+          CL.api("/api/notices/" + n.id + "/read", { method: "POST", body: {} })
+            .then(function () { renderList(); CL.navbar(); });
+        });
+        card.appendChild(b);
+      }
+      host.appendChild(card);
+    });
+  });
+}
+
+function stat(text) {
+  var d = CL.el("span", "stat");
+  d.textContent = text;
+  return d;
+}
+</script>
+</body>
+</html>

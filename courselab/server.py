@@ -26,7 +26,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlparse
 
-from app import admin, auth, can, courses, labs, tasks
+from app import admin, auth, can, courses, labs, notices, tasks
 from app.db import DB
 
 ROOT = Path(__file__).resolve().parent          # courselab/
@@ -173,10 +173,19 @@ class Handler(SimpleHTTPRequestHandler):
             user = self.current_user()
             return self.send_json({
                 "ok": True, "user": user,
+                "unread": notices.unread_count(self.db, user),
                 "can": {"lab_run": can.can(user, "lab_run"),
                         "manage_course": can.can(user, "manage_course"),
                         "admin": can.can(user, "admin")},
             })
+
+        if path == "/api/notices":
+            user = self.current_user()
+            if user is None:
+                return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+            items = notices.list_for(self.db, user)
+            return self.send_json({"ok": True, "notices": items,
+                                   "unread": sum(1 for x in items if not x["read"])})
 
         if path == "/api/courses":
             try:
@@ -238,6 +247,8 @@ class Handler(SimpleHTTPRequestHandler):
             if path == "/api/admin/labs":
                 return self.send_json({"ok": True, "recent": admin.labs_audit(self.db),
                                        "active": self.labs.active()["running"]})
+            if path == "/api/admin/audit":
+                return self.send_json({"ok": True, "events": admin.audit_list(self.db)})
             return self.send_error_json(404, "unknown api")
 
         if path == "/api/labs/active":
@@ -331,13 +342,50 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._teacher_create(data)
             if path.startswith("/api/teacher/tasks/") and path.endswith("/delete"):
                 return self._teacher_delete(path)
+            if path == "/api/notices":
+                return self._notice_publish(data)
+            if path == "/api/notices/read-all":
+                user = self.current_user()
+                if user is None:
+                    return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+                return self.send_json({"ok": True, "marked": notices.mark_all_read(self.db, user)})
+            if path.startswith("/api/notices/") and path.endswith("/read"):
+                user = self.current_user()
+                if user is None:
+                    return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+                raw = path[len("/api/notices/"):-len("/read")].strip("/")
+                try:
+                    notice_id = int(raw)
+                except ValueError:
+                    return self.send_error_json(400, "公告编号不合法")
+                notices.mark_read(self.db, user, notice_id)
+                return self.send_json({"ok": True})
             if path.startswith("/api/admin/users/") and path.endswith(("/role", "/status")):
                 return self._admin_user(path, data)
             if path.startswith("/api/admin/courses/") and path.endswith("/meta"):
                 return self._admin_course(path, data)
-        except (admin.AdminError, auth.AuthError, labs.LabsError, tasks.TaskError) as exc:
+        except (admin.AdminError, auth.AuthError, labs.LabsError, notices.NoticeError,
+                tasks.TaskError) as exc:
             return self.send_error_json(exc.http, exc.message, exc.code)
         return self.send_error_json(404, "unknown api")
+
+    def _notice_publish(self, data):
+        user = self.current_user()
+        if user is None:
+            return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+        audience = str(data.get("audience") or "all").strip() or "all"
+        if audience == "all":
+            if not can.can(user, "admin"):
+                return self.send_error_json(403, "只有管理员能发全员公告", "FORBIDDEN")
+        else:
+            if courses.course_detail(audience) is None:
+                return self.send_error_json(400, "公告对象课程不存在", "NO_COURSE")
+            if not admin.teacher_can_manage(self.db, user, audience):
+                return self.send_error_json(403, "只能给自己负责的课程发公告", "FORBIDDEN")
+        row = notices.publish(self.db, user["id"], str(data.get("title") or ""),
+                              str(data.get("body") or ""), audience)
+        admin.audit(self.db, user["id"], "notice_publish", audience, row["title"])
+        return self.send_json({"ok": True, "notice": row})
 
     def _task_action(self, data, kind):
         user = self.current_user()
@@ -420,7 +468,7 @@ class Handler(SimpleHTTPRequestHandler):
         if "teacher_id" in data:
             t = data.get("teacher_id")
             kwargs["teacher_id"] = None if t in (None, "", 0) else int(t)
-        row = admin.set_course_meta(self.db, cid, **kwargs)
+        row = admin.set_course_meta(self.db, cid, user["id"], **kwargs)
         return self.send_json({"ok": True, "meta": row})
 
     def _lab_run(self, data):
@@ -520,7 +568,8 @@ def selftest(port: int = 7901) -> int:
         print(("[PASS] " if cond else "[FAIL] ") + label + (f"  {extra}" if extra else ""))
         ok = ok and bool(cond)
 
-    tmp = tempfile.TemporaryDirectory(prefix="courselab-test-")
+    tmp = tempfile.TemporaryDirectory(prefix="courselab-test-",
+                                      ignore_cleanup_errors=True)
     db = DB(Path(tmp.name) / "app.db")
     t = threading.Thread(target=serve, args=(port, db), daemon=True)
     t.start()
@@ -858,23 +907,65 @@ def selftest(port: int = 7901) -> int:
                 " created_at) VALUES('u1','样例','student','s','h',1,'2026-01-01')")
     tdb.close()
     out_dir = Path(tmp.name) / "bk"
+    tool_env = dict(os.environ, PYTHONUTF8="1")
     r1 = subprocess.run([sys.executable, str(ROOT / "tools" / "backup.py"),
                          "--db", str(tdb_path), "--out", str(out_dir)],
-                        capture_output=True, text=True, encoding="utf-8")
+                        capture_output=True, text=True, encoding="utf-8",
+                        errors="replace", env=tool_env)
     backups = sorted(out_dir.glob("app-*.db")) if out_dir.is_dir() else []
     check("备份工具：VACUUM INTO + 校验", r1.returncode == 0 and len(backups) == 1,
           " / ".join((r1.stdout or "").strip().splitlines()[-1:]))
     r2 = subprocess.run([sys.executable, str(ROOT / "tools" / "restore.py"),
                          "--from", str(backups[0]) if backups else "missing",
                          "--db", str(Path(tmp.name) / "restored.db")],
-                        capture_output=True, text=True, encoding="utf-8")
+                        capture_output=True, text=True, encoding="utf-8",
+                        errors="replace", env=tool_env)
     check("恢复工具：复制 + 校验行数", r2.returncode == 0,
           " / ".join((r2.stdout or "").strip().splitlines()[-1:]))
     r3 = subprocess.run([sys.executable, str(ROOT / "tools" / "bench.py"),
                          "--url", base, "--n", "40", "--c", "4"],
-                        capture_output=True, text=True, encoding="utf-8")
+                        capture_output=True, text=True, encoding="utf-8",
+                        errors="replace", env=tool_env)
     check("压测工具跑通（40 请求 / 4 并发）", r3.returncode == 0,
           " / ".join((r3.stdout or "").strip().splitlines()[-1:]))
+
+    # -- 通知公告（F8）+ 管理动作审计（收官补全）
+    status, data, _ = get("/api/notices")
+    check("匿名看公告 401", status == 401)
+    status, data, _ = post("/api/notices",
+                           {"title": "平台公告：本周维护", "body": "周五 22:00 停机演练",
+                            "audience": "all"}, cookie=acookie)
+    check("管理员发全员公告", status == 200 and data["notice"]["id"])
+    nid = data["notice"]["id"] if status == 200 else 0
+    status, data, _ = get("/api/me", cookie=cookie)
+    check("学生未读 +1（/api/me unread）", data.get("unread", 0) >= 1)
+    status, data, _ = get("/api/notices", cookie=cookie)
+    check("公告列表含未读条目", any(x["id"] == nid and not x["read"] for x in data["notices"]))
+    status, data, _ = post(f"/api/notices/{nid}/read", {}, cookie=cookie)
+    check("标记已读", status == 200)
+    status, data, _ = get("/api/me", cookie=cookie)
+    check("已读后未读归零", data.get("unread") == 0)
+
+    status, data, _ = post("/api/notices", {"title": "B11 作业提醒", "body": "下周交",
+                                            "audience": "B11-net-lab"}, cookie=tcookie)
+    check("教师发本课公告（绑定课）", status == 200)
+    status, data, _ = post("/api/notices", {"title": "越权", "audience": "B3-logic-lab"},
+                           cookie=tcookie)
+    check("教师发未绑定课公告 403", status == 403)
+    status, data, _ = post("/api/notices", {"title": "越权2", "audience": "all"}, cookie=tcookie)
+    check("教师发全员公告 403", status == 403)
+    status, data, _ = post("/api/notices", {"title": "学生乱发", "audience": "all"},
+                           cookie=cookie)
+    check("学生发公告 403", status == 403)
+    status, data, _ = get("/api/notices", cookie=cookie)
+    check("学生对有记录的课程可见该课公告",
+          any(x["title"] == "B11 作业提醒" for x in data["notices"]))
+
+    status, data, _ = get("/api/admin/audit", cookie=acookie)
+    acts = {x["action"] for x in data.get("events", [])}
+    check("管理动作审计（角色/状态/课程/公告四类留痕）",
+          {"user_role", "user_status", "course_meta", "notice_publish"} <= acts,
+          str(sorted(acts)))
 
     # -- 权限矩阵单元（负面为主）
     stu = {"role": "student"}
@@ -890,7 +981,7 @@ def selftest(port: int = 7901) -> int:
           and bat.count(b"\n") == bat.count(b"\r\n"))
 
     for page in ("/", "/login.html", "/register.html", "/course.html", "/project.html",
-                 "/me.html", "/tasks.html", "/teacher.html", "/admin.html"):
+                 "/me.html", "/tasks.html", "/notices.html", "/teacher.html", "/admin.html"):
         with urllib.request.urlopen(base + page, timeout=5) as r:
             body = r.read()
         check(f"页面 {page} 200", r.status == 200 and len(body) > 300)
