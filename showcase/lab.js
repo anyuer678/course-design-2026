@@ -66,6 +66,15 @@
       "[data-lab-index] .lab-log{flex-basis:100%;width:100%;background:#0f172a;color:#e2e8f0;",
       "border-radius:8px;padding:8px 10px;margin:6px 0 2px;max-height:200px;overflow:auto;",
       "font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;word-break:break-word}",
+      "[data-lab-index] a.lab-open{font:inherit;font-size:12px;padding:2px 9px;",
+      "border:1px solid var(--kb-border,#e2e8f0);border-radius:999px;background:#fff;",
+      "color:var(--kb-primary,#3b82f6);cursor:pointer;text-decoration:none;transition:all .2s ease}",
+      "[data-lab-index] a.lab-open:hover{border-color:var(--kb-primary,#3b82f6)}",
+      "#lab-slot a.lab-open{display:inline-flex;font:inherit;font-size:13px;padding:4px 12px;",
+      "border:1px solid var(--kb-border,#e2e8f0);border-radius:999px;background:#fff;",
+      "color:var(--kb-primary,#3b82f6);cursor:pointer;text-decoration:none;",
+      "transition:border-color .2s ease,color .2s ease}",
+      "#lab-slot a.lab-open:hover{border-color:var(--kb-primary,#3b82f6)}",
     ].join("");
     document.head.appendChild(s);
   }
@@ -74,11 +83,40 @@
   function indexConsole() {
     var hint = document.getElementById("hub-hint");
     var openLogPid = null, logTimer = null, logFrom = 0, logPre = null;
+    var current = [];          // 最近一次 overview 的项目列表（全部停止用）
+    var stopAll = null;
+
+    // 提示横幅：静态文字先包进 .hub-txt（之后只改它，保住追加的「全部停止」按钮）
+    if (hint && !hint.querySelector(".hub-txt")) {
+      var t0 = el("span", "hub-txt");
+      while (hint.firstChild) t0.appendChild(hint.firstChild);
+      hint.appendChild(t0);
+    }
+    if (hint) {
+      stopAll = el("button", "lab-mini", "全部停止");
+      stopAll.style.display = "none";
+      stopAll.title = "停掉所有由本实验台启动的服务与长任务";
+      stopAll.addEventListener("click", function () {
+        var running = current.filter(function (p) { return p.state && p.state.running; });
+        if (!running.length) return;
+        if (!window.confirm("停止所有在跑的进程（服务与长任务）？")) return;
+        stopAll.disabled = true;
+        (function next(i) {
+          if (i >= running.length) { refresh(); return; }
+          api("/lab/api/stop", { project: running[i].project })
+            .then(function () { next(i + 1); })
+            .catch(function () { next(i + 1); });
+        })(0);
+      });
+      hint.appendChild(document.createTextNode(" "));
+      hint.appendChild(stopAll);
+    }
 
     function setHint(cls, text) {
       if (!hint) return;
       hint.className = "hub" + (cls ? (" " + cls) : "");
-      hint.textContent = text;
+      var t = hint.querySelector(".hub-txt");
+      if (t) t.textContent = text;
     }
 
     function rowOf(project) {
@@ -169,12 +207,17 @@
         box.appendChild(dot);
       }
       var running = !!(entry.state && entry.state.running);
-      dot.textContent = running ? ("● " + (entry.state.port ? (":" + entry.state.port) : "运行中")) : "○";
+      var up = running && entry.state.up ? " · " + Math.round(entry.state.up) + "s" : "";
+      dot.textContent = running
+        ? ("● " + (entry.state.port ? (":" + entry.state.port) : "运行中") + up)
+        : "○";
       dot.title = running
         ? ("运行中 pid=" + entry.state.pid + "（" + entry.state.up + "s" +
            (entry.state.kind ? "，" + entry.state.kind : "") + "）")
         : "未运行";
       dot.className = "lab-dot" + (running ? " on" : "");
+      var op = box.querySelector(".lab-open");
+      if (op) op.style.display = running ? "" : "none";
       if (box.dataset.built === "1") return;    // 按钮只建一次，轮询只刷新状态点
       box.dataset.built = "1";
       (entry.actions || []).forEach(function (a) {
@@ -182,6 +225,18 @@
         b.addEventListener("click", function () { fire(entry, a, b); });
         box.appendChild(b);
       });
+      if (entry.ui && entry.port) {
+        // 服务自己的浏览器页面（B11 路线帮助 / B31 前端 / B28 看板 / dorm 原型）
+        var open = document.createElement("a");
+        open.className = "lab-open";
+        open.textContent = "打开";
+        open.href = "http://127.0.0.1:" + entry.port + "/";
+        open.target = "_blank";
+        open.rel = "noopener";
+        open.title = "在新标签页打开 http://127.0.0.1:" + entry.port + "/";
+        open.style.display = running ? "" : "none";
+        box.appendChild(open);
+      }
       var lg = el("button", "lab-mini", "日志");
       lg.addEventListener("click", function () { toggleLog(entry, lg); });
       box.appendChild(lg);
@@ -192,14 +247,34 @@
         if (!r.ok) {
           setHint("warn", "控制仅限本机：" + (r.error || "该来源不可用") +
             "——局域网访客可以继续浏览全部页面。");
+          if (stopAll) stopAll.style.display = "none";
           return;
         }
         var projects = r.projects || [];
+        current = projects;
         projects.forEach(fillRow);
-        setHint("ok", "实验台已连接——共 " + projects.length +
-          " 项：每行可 启动/停止 真实服务、跑 演示/测试、看实时日志；点项目名进入各自页面。");
+        var svc = [], tasks = 0;
+        projects.forEach(function (p) {
+          var st = p.state || {};
+          if (!st.running) return;
+          if (st.port) svc.push(p.project.split("-")[0] + ":" + st.port);
+          else tasks += 1;
+        });
+        var live = svc.length + tasks;
+        if (stopAll) {
+          stopAll.style.display = live ? "" : "none";
+          stopAll.disabled = false;
+          stopAll.textContent = "全部停止" + (live ? "（" + live + "）" : "");
+        }
+        setHint("ok", "实验台已连接——共 " + projects.length + " 项" +
+          (live
+            ? "；正在运行：" + (svc.length ? "服务 " + svc.join("、") : "") +
+              (svc.length && tasks ? "，" : "") + (tasks ? "长任务×" + tasks : "")
+            : "，当前没有运行中的进程") +
+          "。每行可 启动/停止 服务、跑 演示/测试/运行、看日志；B11/B31/B28/dorm 的服务运行时可点「打开」进它自己的页面。");
       }).catch(function () {
         setHint("", "实时控制台已断开——重新启动 lab.bat 后刷新本页即可恢复。");
+        if (stopAll) stopAll.style.display = "none";
       });
     }
 
@@ -253,6 +328,21 @@
     });
     slot.appendChild(row);
 
+    // ---- 「打开」按钮：ui 服务运行时指向它自己的浏览器页面
+    var openLink = null;
+    if (info.ui && info.port) {
+      openLink = document.createElement("a");
+      openLink.className = "lab-open";
+      openLink.textContent = "打开服务页面（:" + info.port + "）";
+      openLink.href = "http://127.0.0.1:" + info.port + "/";
+      openLink.target = "_blank";
+      openLink.rel = "noopener";
+      openLink.style.display = "none";
+      var openRow = el("div", "lab-row");
+      openRow.appendChild(openLink);
+      slot.appendChild(openRow);
+    }
+
     // ---- 请求发送区（只对注册了常驻服务的项目显示）
     var resp = null;
     if (info.sample) {
@@ -298,6 +388,7 @@
               : "未运行");
           if (wasRunning && !st.running) appendLog("[实验台] 进程已退出");
           wasRunning = !!st.running;
+          if (openLink) openLink.style.display = st.running ? "" : "none";
         }).catch(function () {
           status.textContent = "实验台连接已断开（服务状态未知；重新启动 lab.bat 后刷新本页）";
         });

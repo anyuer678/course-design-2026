@@ -41,6 +41,7 @@ ROOT = Path(__file__).resolve().parents[1]          # 仓库根
 PY = sys.executable
 
 #: 可启动的真实服务（命令固定、端口固定、示例请求供页面预填）。
+#: ui=True：根路径 / 有可用浏览器打开的页面（控制台据此给运行中的服务多一个「打开」按钮）。
 #: 每个命令都是"照着各自 demo/文档抄的构造方式"，不含任何客户端可控参数。
 SERVE = {
     "B11-net-lab": {
@@ -49,12 +50,14 @@ SERVE = {
                   "print('netlab 已启动 127.0.0.1:%d' % s.port, flush=True); "
                   "import time; time.sleep(10**8)")],
         "port": 8311,
+        "ui": True,
         "sample": "GET /kv/repair HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n",
         "hint": "HTTP/1.1 子集 + 单线程 select；示例是读回演示里 PUT 过的键",
     },
     "B31-shorturl": {
         "argv": [PY, "-m", "b31.server", "--port", "8312", "--memory"],
         "port": 8312,
+        "ui": True,
         "sample": 'POST /api/links HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nContent-Type: application/json\\r\\n'
                   'Content-Length: 19\\r\\nConnection: close\\r\\n\\r\\n{"url":"http://a/"}',
         "hint": "真短链服务：POST 建链 → 302 跳转计命中（示例就是建一条）",
@@ -65,6 +68,7 @@ SERVE = {
                   "print('redis 子集已启动 127.0.0.1:%d' % s.port, flush=True); "
                   "import time; time.sleep(10**8)")],
         "port": 8313,
+        "ui": False,
         "sample": "PING\\r\\nSET demo hello\\r\\nGET demo\\r\\nINCR n\\r\\nTTL demo\\r\\n",
         "hint": "RESP2：一行一条 inline 命令（也可发数组帧），回复按行返回",
     },
@@ -74,18 +78,21 @@ SERVE = {
                   "print('mqtt broker 已启动 127.0.0.1:%d' % b.port, flush=True); "
                   "import time; time.sleep(10**8)")],
         "port": 8314,
+        "ui": False,
         "sample": "\\x10\\x13\\x00\\x04MQTT\\x04\\x02\\x00\\x3c\\x00\\x07lab-cli",
         "hint": "MQTT：示例是 CONNECT 报文（\\xNN 转义），回包应为 CONNACK 20 02 00 00",
     },
     "B28-bi-dashboard": {
         "argv": [PY, "-m", "bi.server", "--port", "8315"],
         "port": 8315,
+        "ui": True,
         "sample": "GET /api/summary HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n",
         "hint": "看板服务：/api/summary、/api/drill?month_from=&month_to=",
     },
     "dorm-repair": {
         "argv": [PY, "-m", "prototype.server", "--port", "8316"],
         "port": 8316,
+        "ui": True,
         "sample": "GET / HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n",
         "hint": "B16 原型服务：非回环访问会被拒（服务端自身策略）",
     },
@@ -403,6 +410,7 @@ class Handler(SimpleHTTPRequestHandler):
             projects = [{
                 "project": pid,
                 "port": SERVE[pid]["port"] if pid in SERVE else None,
+                "ui": bool(SERVE[pid].get("ui")) if pid in SERVE else False,
                 "actions": _actions_of(pid),
                 "state": _state_of(pid),
                 "page": f"/projects/{pid}/web/showcase.html",
@@ -414,6 +422,8 @@ class Handler(SimpleHTTPRequestHandler):
             return self._json({
                 "ok": True, "project": pid, "actions": _actions_of(pid),
                 "state": _state_of(pid),
+                "port": serve.get("port") if serve else None,
+                "ui": bool(serve.get("ui")) if serve else False,
                 "sample": serve.get("sample") if serve else None,
                 "hint": serve.get("hint") if serve else None,
             })
@@ -560,6 +570,11 @@ def selftest(port: int = 7799) -> int:
     check("overview 里 B31 带服务动作",
           any(p["project"] == "B31-shorturl" and p["port"] == 8312
               and any(a["id"] == "serve_start" for a in p["actions"]) for p in ov["projects"]))
+    ui_by_pid = {p["project"]: p.get("ui") for p in ov["projects"]}
+    check("ui 标记分账（B11/B31/B28/dorm 真，B38/B35 假；「打开」按钮的名单）",
+          all(ui_by_pid.get(pid) is True for pid in
+              ("B11-net-lab", "B31-shorturl", "B28-bi-dashboard", "dorm-repair"))
+          and all(ui_by_pid.get(pid) is False for pid in ("B38-mini-redis", "B35-iot-mqtt")))
     b1_ids = next(([a["id"] for a in p["actions"]]
                    for p in ov["projects"] if p["project"] == "B1-cpp-ministl"), [])
     check("B1 带 run + stop_run 动作（bat=[] 回归 + 长任务可中止）",
@@ -582,6 +597,10 @@ def selftest(port: int = 7799) -> int:
     got = sock_probe("B31-shorturl", unescape_bytes(sample))
     check("真实请求 → 201", got.get("ok") and "201" in got.get("text", ""),
           f"got={got.get('got')}B")
+    root = sock_probe("B31-shorturl", unescape_bytes(
+        "GET / HTTP/1.1\\r\\nHost: 127.0.0.1\\r\\nConnection: close\\r\\n\\r\\n"))
+    check("打开目标就绪：B31 的 / 返回 200（「打开」按钮指向的地方）",
+          root.get("ok") and "200" in root.get("text", ""), f"got={root.get('got')}B")
     r = _stop("B31-shorturl")
     check("停止服务", r.get("ok"))
     print("实验台自检：" + ("PASS" if ok else "FAIL"))
