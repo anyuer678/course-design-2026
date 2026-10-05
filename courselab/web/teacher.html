@@ -317,6 +317,7 @@ function submissionRow(key, r) {
           return;
         }
         msg.textContent = "已记录。";
+        CL.toast("批阅已记录", "ok");
         loadSubmissions(key);
       })
       .catch(function () { msg.textContent = "网络错误，请重试。"; })

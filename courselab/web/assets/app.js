@@ -1,4 +1,10 @@
-/* CourseLab 共享脚本：API 封装 + 顶栏（会话感知）。（零依赖） */
+/* CourseLab 共享脚本：API 封装 + 顶栏 + Toast + 主题。（零依赖）
+   本轮前端优化：
+   1. CL.api 把网络错误归一成 {status:0, data:{error}} —— 页面不再因
+      fetch 异常卡在"加载中"，统一走错误分支；
+   2. CL.toast —— 全局通知（自动消失、aria-live），替代散落的提示；
+   3. 深色模式 —— data-theme 跟随系统 + 顶栏可切换（localStorage 记忆）；
+   4. 导航高亮当前页（aria-current）。 */
 (function () {
   "use strict";
   var CL = window.CL = {};
@@ -11,7 +17,12 @@
       init.body = JSON.stringify(opts.body);
     }
     return fetch(path, init).then(function (r) {
-      return r.json().then(function (data) { return { status: r.status, data: data }; });
+      return r.json().then(function (data) {
+        return { status: r.status, data: data };
+      });
+    }).catch(function () {
+      // 网络层错误归一：调用方只需处理 data.error，不再各自兜底
+      return { status: 0, data: { error: "网络错误，请确认服务是否在运行。" } };
     });
   };
 
@@ -35,9 +46,44 @@
     return (next && next.charAt(0) === "/") ? next : "/";
   };
 
+  /* ------------------------------------------------ Toast（全局通知） */
+  CL.toast = function (msg, kind) {
+    var box = document.getElementById("toasts");
+    if (!box) {
+      box = CL.el("div", "toasts");
+      box.setAttribute("aria-live", "polite");
+      document.body.appendChild(box);
+    }
+    var t = CL.el("div", "toast " + (kind || "info"), msg);
+    box.appendChild(t);
+    setTimeout(function () {
+      t.classList.add("out");
+      setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 350);
+    }, 3500);
+  };
+
+  /* ------------------------------------------------ 主题（深色模式） */
+  CL.themeApply = function () {
+    var saved = null;
+    try { saved = localStorage.getItem("cl-theme"); } catch (e) { /* 隐私模式忽略 */ }
+    var dark = saved === "dark" ||
+      (!saved && window.matchMedia &&
+       window.matchMedia("(prefers-color-scheme: dark)").matches);
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    return dark;
+  };
+  CL.themeToggle = function () {
+    var dark = document.documentElement.dataset.theme === "dark";
+    try { localStorage.setItem("cl-theme", dark ? "light" : "dark"); }
+    catch (e) { /* 忽略 */ }
+    CL.themeApply();
+  };
+  try { CL.themeApply(); } catch (e) { /* 忽略 */ }
+
   CL.me = null;
   CL.unread = 0;
 
+  /* ------------------------------------------------ 顶栏（会话感知 + 当前页高亮 + 主题切换） */
   CL.navbar = function () {
     var bar = document.getElementById("topbar");
     if (!bar) return Promise.resolve(null);
@@ -46,11 +92,6 @@
       CL.unread = (res.data && res.data.unread) || 0;
       render(CL.me);
       return CL.me;
-    }).catch(function () {
-      CL.me = null;
-      CL.unread = 0;
-      render(null);
-      return null;
     });
 
     function render(user) {
@@ -58,40 +99,60 @@
       var brand = CL.el("a", "brand", "课程工坊 CourseLab");
       brand.href = "/";
       bar.appendChild(brand);
-      var links = CL.el("div", "navlinks");
-      var dir = CL.el("a", null, "课程目录");
-      dir.href = "/";
-      links.appendChild(dir);
+      var links = CL.el("nav", "navlinks");
+      links.setAttribute("aria-label", "主导航");
+      var here = location.pathname;
+      function navLink(href, text) {
+        var a = CL.el("a", null, text);
+        a.href = href;
+        if (here === href) {                       // 当前页高亮（无查询串比较）
+          a.setAttribute("aria-current", "page");
+          a.className = "active";
+        }
+        return a;
+      }
+      links.appendChild(navLink("/", "课程目录"));
       if (user) {
-        var tk = CL.el("a", null, "我的任务");
-        tk.href = "/tasks.html";
-        links.appendChild(tk);
+        links.appendChild(navLink("/tasks.html", "我的任务"));
         var nt = CL.el("a", null, "通知" + (CL.unread ? "（" + CL.unread + "）" : ""));
         nt.href = "/notices.html";
+        if (here === "/notices.html") nt.setAttribute("aria-current", "page");
         links.appendChild(nt);
       }
       if (user && (user.role === "teacher" || user.role === "admin")) {
-        var th = CL.el("a", null, "教师台");
-        th.href = "/teacher.html";
-        links.appendChild(th);
+        links.appendChild(navLink("/teacher.html", "教师台"));
       }
       if (user && user.role === "admin") {
-        var ad = CL.el("a", null, "管理端");
-        ad.href = "/admin.html";
-        links.appendChild(ad);
+        links.appendChild(navLink("/admin.html", "管理端"));
+      }
+      // 课程/项目详情页归属"课程目录"：详情页上也要高亮它的入口
+      if (here === "/course.html" || here === "/project.html") {
+        var dirLink = links.children[0];
+        if (dirLink) { dirLink.setAttribute("aria-current", "page"); dirLink.className = "active"; }
       }
       bar.appendChild(links);
       var auth = CL.el("div", "navauth");
+      var themeBtn = CL.el("button", "btn btn-ghost theme-btn",
+                           document.documentElement.dataset.theme === "dark" ? "☀" : "🌙");
+      themeBtn.setAttribute("aria-label", "切换深色/浅色模式");
+      themeBtn.addEventListener("click", function () {
+        CL.themeToggle();
+        themeBtn.textContent =
+          document.documentElement.dataset.theme === "dark" ? "☀" : "🌙";
+      });
+      auth.appendChild(themeBtn);
       if (user) {
-        var me = CL.el("a", "me-link", user.display_name + "（" + CL.roleName(user.role) + "）");
+        var me = CL.el("a", "me-link",
+                       user.display_name + "（" + CL.roleName(user.role) + "）");
         me.href = "/me.html";
+        if (here === "/me.html") me.setAttribute("aria-current", "page");
+        auth.appendChild(me);
         var out = CL.el("button", "btn btn-ghost", "退出");
         out.addEventListener("click", function () {
           CL.api("/api/auth/logout", { method: "POST", body: {} }).then(function () {
             location.href = "/";
           });
         });
-        auth.appendChild(me);
         auth.appendChild(out);
       } else {
         var lg = CL.el("a", "btn btn-ghost", "登录");

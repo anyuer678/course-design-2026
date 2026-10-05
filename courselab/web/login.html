@@ -33,11 +33,15 @@ function submit() {
   var username = document.getElementById("username").value.trim();
   var password = document.getElementById("password").value;
   if (!username || !password) { show("请填写用户名与口令。"); return; }
+  var btn = document.getElementById("submit");
+  if (btn.disabled) return;                  // 防连点：请求在途时不再提交
+  btn.disabled = true; btn.textContent = "登录中…";
   CL.api("/api/auth/login", { method: "POST", body: { username: username, password: password } })
     .then(function (res) {
       if (res.data && res.data.ok) { location.href = CL.nextTarget(); return; }
       show((res.data && res.data.error) || "登录失败");
-    }).catch(function () { show("网络错误，请重试。"); });
+    }).catch(function () { show("网络错误，请重试。"); })
+    .then(function () { btn.disabled = false; btn.textContent = "登录"; });
 }
 document.getElementById("submit").addEventListener("click", submit);
 document.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });

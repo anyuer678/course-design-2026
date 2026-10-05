@@ -43,11 +43,15 @@ function submit() {
   var password = document.getElementById("password").value;
   var password2 = document.getElementById("password2").value;
   if (password !== password2) { show("两次输入的口令不一致。"); return; }
+  var btn = document.getElementById("submit");
+  if (btn.disabled) return;                    // 防连点
+  btn.disabled = true; btn.textContent = "注册中…";
   CL.api("/api/auth/register", { method: "POST", body: { username: username, display_name: displayName, password: password } })
     .then(function (res) {
       if (res.data && res.data.ok) { location.href = "/me.html"; return; }
       show((res.data && res.data.error) || "注册失败");
-    }).catch(function () { show("网络错误，请重试。"); });
+    }).catch(function () { show("网络错误，请重试。"); })
+    .then(function () { btn.disabled = false; btn.textContent = "注册并登录"; });
 }
 document.getElementById("submit").addEventListener("click", submit);
 document.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });

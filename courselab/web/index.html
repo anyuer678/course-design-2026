@@ -24,17 +24,8 @@
 CL.navbar();
 
 var DATA = [];
-fetch("/api/courses").then(function (r) { return r.json(); }).then(function (data) {
-  if (!data.ok) { document.getElementById("grid").textContent = "课程目录读取失败：" + (data.error || ""); return; }
-  DATA = data.courses;
-  var stats = document.getElementById("stats");
-  stats.appendChild(stat(data.count + " 门课程"));
-  stats.appendChild(stat(data.count + " 个项目"));
-  stats.appendChild(stat(data.cards + " 张练习卡"));
-  buildChips();
-  render("");
-  document.getElementById("q").addEventListener("input", function () { render(this.value.trim()); });
-});
+var grid = document.getElementById("grid");
+var curBatch = "all";
 
 function stat(text) {
   var d = CL.el("span", "stat");
@@ -42,15 +33,44 @@ function stat(text) {
   return d;
 }
 
+function load() {
+  grid.textContent = "";
+  grid.appendChild(CL.el("div", "skeleton"));
+  grid.appendChild(CL.el("div", "skeleton w80"));
+  grid.appendChild(CL.el("div", "skeleton w60"));
+  CL.api("/api/courses").then(function (data) {
+    grid.textContent = "";
+    if (!data.ok) {
+      // 网络错误已由 CL.api 归一：这里给出可操作的重试入口
+      var errCard = CL.el("div", "card");
+      errCard.appendChild(CL.el("p", null, "课程目录读取失败：" + (data.error || "未知错误")));
+      var retry = CL.el("button", "btn btn-ghost", "重试");
+      retry.addEventListener("click", function () { load(); });
+      errCard.appendChild(retry);
+      grid.appendChild(errCard);
+      return;
+    }
+    DATA = data.courses;
+    var stats = document.getElementById("stats");
+    stats.textContent = "";
+    var batches = DATA.map(function (c) { return c.batch; })
+                      .filter(function (v, i, a) { return a.indexOf(v) === i; });
+    stats.appendChild(stat(DATA.length + " 门课程"));
+    stats.appendChild(stat(batches.length + " 个批次"));
+    stats.appendChild(stat((data.cards || 0) + " 张练习卡"));
+    buildChips(batches);
+    render(document.getElementById("q").value.trim());
+  });
+}
+
 var curBatch = "all";
-function buildChips() {
+function buildChips(batches) {
   var box = document.getElementById("chips");
-  var batches = [];
-  DATA.forEach(function (c) { if (batches.indexOf(c.batch) < 0) batches.push(c.batch); });
-  batches.sort(function (a, b) { return Number(a) - Number(b); });
+  box.textContent = "";
   var all = CL.el("button", "chip active", "全部（" + DATA.length + "）");
   all.addEventListener("click", function () { curBatch = "all"; mark(all); render(document.getElementById("q").value.trim()); });
   box.appendChild(all);
+  batches.sort(function (a, b) { return Number(a) - Number(b); });
   batches.forEach(function (b) {
     var n = DATA.filter(function (c) { return c.batch === b; }).length;
     var chip = CL.el("button", "chip", "批次 " + b + "（" + n + "）");
@@ -65,16 +85,15 @@ function buildChips() {
 }
 
 function render(q) {
-  var grid = document.getElementById("grid");
-  grid.textContent = "";
   var kw = q.toLowerCase();
   var hit = DATA.filter(function (c) {
     if (curBatch !== "all" && c.batch !== curBatch) return false;
     if (!kw) return true;
     return (c.course + " " + c.id + " " + c.title).toLowerCase().indexOf(kw) >= 0;
   });
+  grid.textContent = "";
   if (!hit.length) {
-    grid.appendChild(CL.el("p", "note", "没有匹配的课程。"));
+    grid.appendChild(CL.el("p", "note", "没有匹配的课程。换个关键词试试。"));
     return;
   }
   hit.forEach(function (c) {
@@ -91,6 +110,11 @@ function render(q) {
     grid.appendChild(a);
   });
 }
+
+document.getElementById("q").addEventListener("input", function () {
+  render(this.value.trim());
+});
+load();
 </script>
 </body>
 </html>

@@ -74,6 +74,7 @@ CL.api("/api/me").then(function (res) {
         }
         oldI.value = ""; newI.value = ""; newI2.value = "";
         pwMsg.textContent = (r.data.notice || "口令已更新") + "。";
+        CL.toast("口令已更新", "ok");
       })
       .catch(function () { pwMsg.textContent = "网络错误，请重试。"; })
       .then(function () { pwBtn.disabled = false; });

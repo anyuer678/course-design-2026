@@ -152,3 +152,64 @@ border-top:1px solid var(--line)}
   ul.plain li{flex-wrap:wrap}
   .crumb{font-size:.8rem}
 }
+
+/* ================================================================
+   前端体验优化轮（2026-10-05）：深色模式 / Toast / 骨架屏 / 焦点可见
+   ================================================================ */
+
+/* 焦点可见性：键盘导航必须有清晰指示 */
+:focus-visible{outline:2px solid var(--primary);outline-offset:2px;border-radius:4px}
+
+/* 深色模式：token 整体替换 + 覆盖散落的硬编码浅色背景 */
+html[data-theme="dark"]{--ink:#e5eaf3;--muted:#a8b3c5;--faint:#7c8aa0;--line:#2a3550;
+--card:#131c2e;--bg:#0b1120;--primary:#60a5fa;--primary-deep:#93c5fd;
+--ok:#6ee7b7;--okbg:#06281e;--okline:#0b5c3d;--warn:#fbbf24;--warnbg:#2b2005;
+--warnline:#6b4e09;--err:#f87171;--errbg:#2b0d0d}
+html[data-theme="dark"] body{background:var(--bg)}
+html[data-theme="dark"] .card,html[data-theme="dark"] .stat,
+html[data-theme="dark"] .chip,html[data-theme="dark"] .field input,
+html[data-theme="dark"] .toolbar input,html[data-theme="dark"] .pane,
+html[data-theme="dark"] table.kb,html[data-theme="dark"] .task-note,
+html[data-theme="dark"] .btn-ghost,html[data-theme="dark"] iframe.demo{background:#131c2e}
+html[data-theme="dark"] table.kb th,html[data-theme="dark"] .tab.active,
+html[data-theme="dark"] .pill,html[data-theme="dark"] .tag{background:#18233a}
+html[data-theme="dark"] .tab.active{color:var(--ink)}
+html[data-theme="dark"] .logbox{background:#050a14;border-color:#1c2942}
+html[data-theme="dark"] .msg.ok{background:#06281e}
+html[data-theme="dark"] .hint{background:#2b2005}
+html[data-theme="dark"] .chart{background:#131c2e}
+html[data-theme="dark"] a.card{border-color:#2a3550}
+html[data-theme="dark"] a.card:hover{border-color:#3b5280;box-shadow:0 4px 12px rgb(0 0 0/40%)}
+
+/* Toast 全局通知 */
+.toasts{position:fixed;top:1rem;right:1rem;z-index:99;display:flex;flex-direction:column;
+gap:.5rem;max-width:22rem}
+.toast{background:#0f172a;color:#e6e9ef;border-radius:10px;padding:.6rem .9rem;
+font-size:.92rem;box-shadow:0 6px 18px rgb(0 0 0/.25);animation:toast-in .25s ease;
+word-break:break-word}
+html[data-theme="dark"] .toast{background:#1e293b}
+.toast.ok{border-left:4px solid #10b981}.toast.err{border-left:4px solid #ef4444}
+.toast.info{border-left:4px solid #3b82f6}
+.toast.out{opacity:0;transform:translateX(8px);transition:all .3s ease}
+@keyframes toast-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* 骨架屏：加载中的占位（替代光秃秃的"加载中…"文字） */
+.skeleton{border-radius:8px;height:1rem;margin:.45rem 0;
+background:linear-gradient(90deg,#e8edf4 25%,#dde4ee 37%,#e8edf4 63%);
+background-size:400% 100%;animation:skeleton 1.2s ease-in-out infinite}
+.skeleton.w60{width:60%}.skeleton.w40{width:40%}.skeleton.w80{width:80%}
+@keyframes skeleton{0%{background-position:100% 0}100%{background-position:0 0}}
+html[data-theme="dark"] .skeleton{background:linear-gradient(90deg,#182238 25%,#1f2b44 37%,#182238 63%);
+background-size:400% 100%}
+
+/* 导航当前页高亮 */
+.navlinks a.active{color:var(--primary);font-weight:600}
+html[data-theme="dark"] .navlinks a.active{color:#93c5fd}
+
+/* 按钮/表单禁用态 */
+.btn[disabled],button[disabled]{opacity:.55;cursor:not-allowed}
+
+/* 动效偏好：用户系统设置减少动效时全部关掉 */
+@media (prefers-reduced-motion: reduce){
+  *{animation:none!important;transition:none!important}
+}

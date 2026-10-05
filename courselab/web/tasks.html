@@ -56,6 +56,16 @@ CL.navbar().then(function () {
       chips.appendChild(c);
     });
     render();
+  }).catch(function () {
+    var list = document.getElementById("list");
+    list.textContent = "";
+    var li = CL.el("li");
+    li.appendChild(CL.el("span", "note", "任务读取失败。"));
+    var retry = CL.el("button", "btn btn-ghost btn-xs", "重试");
+    retry.style.marginLeft = ".5rem";
+    retry.addEventListener("click", function () { location.reload(); });
+    li.appendChild(retry);
+    list.appendChild(li);
   });
 });
 
