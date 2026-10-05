@@ -2,6 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fafafa">
 <title>课程工坊 CourseLab · 课程目录</title>
 <link rel="stylesheet" href="/assets/app.css">
 </head>
@@ -25,7 +27,6 @@ CL.navbar();
 
 var DATA = [];
 var grid = document.getElementById("grid");
-var curBatch = "all";
 
 function stat(text) {
   var d = CL.el("span", "stat");
@@ -64,22 +65,27 @@ function load() {
 }
 
 var curBatch = "all";
+var resetChips = function () {};
 function buildChips(batches) {
   var box = document.getElementById("chips");
   box.textContent = "";
   var all = CL.el("button", "chip active", "全部（" + DATA.length + "）");
+  all.type = "button"; all.setAttribute("aria-pressed", "true");
   all.addEventListener("click", function () { curBatch = "all"; mark(all); render(document.getElementById("q").value.trim()); });
   box.appendChild(all);
   batches.sort(function (a, b) { return Number(a) - Number(b); });
   batches.forEach(function (b) {
     var n = DATA.filter(function (c) { return c.batch === b; }).length;
     var chip = CL.el("button", "chip", "批次 " + b + "（" + n + "）");
+    chip.type = "button"; chip.setAttribute("aria-pressed", "false");
     chip.addEventListener("click", function () { curBatch = b; mark(chip); render(document.getElementById("q").value.trim()); });
     box.appendChild(chip);
   });
+  resetChips = function () { mark(all); };
   function mark(btn) {
     Array.prototype.forEach.call(box.children, function (c) {
       c.className = "chip" + (c === btn ? " active" : "");
+      c.setAttribute("aria-pressed", c === btn ? "true" : "false");
     });
   }
 }
@@ -93,7 +99,20 @@ function render(q) {
   });
   grid.textContent = "";
   if (!hit.length) {
-    grid.appendChild(CL.el("p", "note", "没有匹配的课程。换个关键词试试。"));
+    var empty = CL.el("div", "empty");
+    empty.appendChild(CL.el("p", null, "没有匹配「" + q + "」的课程。"));
+    var tip = CL.el("p", "note", "换个关键词，或清除筛选查看全部批次。");
+    empty.appendChild(tip);
+    var clear = CL.el("button", "btn btn-ghost", "清除筛选");
+    clear.type = "button";
+    clear.addEventListener("click", function () {
+      document.getElementById("q").value = "";
+      curBatch = "all";
+      resetChips();
+      render("");
+    });
+    empty.appendChild(clear);
+    grid.appendChild(empty);
     return;
   }
   hit.forEach(function (c) {

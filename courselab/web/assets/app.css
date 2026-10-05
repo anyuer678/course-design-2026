@@ -1,9 +1,9 @@
-/* CourseLab 共享样式 v2 —— 依据 docs/DESIGN-SPEC.md（Geist/Linear 风格 + Vercel 界面准则）
+/* CourseLab 共享样式 v2.1 —— 依据 docs/DESIGN-SPEC.md（Geist/Linear 风格 + Vercel 界面准则）
    设计方向：克制工程风。低饱和中性色、单一强调色、细边框 + 两层阴影、
-   tabular-nums 数据对齐、深色模式一等公民。零依赖，token 驱动。 */
+   tabular-nums 数据对齐。浅色单主题（不做深浅切换）。零依赖，token 驱动。 */
 
 :root{
-  /* 颜色（浅色，Geist Paper White 基底） */
+  /* 颜色（Geist Paper White 基底） */
   --bg:#fafafa; --card:#ffffff;
   --ink:#171717; --muted:#525252; --faint:#a3a3a3;
   --line:#e5e5e5; --line-strong:#d4d4d4;
@@ -24,11 +24,16 @@
 html{color-scheme:light}
 body{margin:0;padding:0 0 3rem;background:var(--bg);color:var(--ink);
 font:15px/1.65 var(--font);-webkit-font-smoothing:antialiased}
-html[data-theme="dark"]{color-scheme:dark}
 body::before{content:"";display:block;height:2px;
 background:linear-gradient(90deg,#2563eb,#4f46e5 55%,#7c3aed)}
 a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 main{max-width:68rem;margin:0 auto;padding:0 1.2rem}
+
+/* 触感：消除移动端双击缩放延迟（Vercel Guidelines·交互） */
+a,button,input,select,textarea{touch-action:manipulation}
+
+/* 焦点可见（键盘导航必须有清晰指示，用 :focus-visible） */
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
 
 /* 顶栏 */
 .topbar{max-width:68rem;margin:0 auto;padding:.8rem 1.2rem;display:flex;align-items:center;gap:1rem}
@@ -40,18 +45,24 @@ main{max-width:68rem;margin:0 auto;padding:0 1.2rem}
 .navauth{margin-left:auto;display:flex;gap:.5rem;align-items:center;font-size:.9rem}
 .me-link{color:var(--ink);font-weight:600}
 
-/* 焦点可见（Vercel Guidelines：键盘导航必须有清晰指示，用 :focus-visible） */
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px}
+/* 跳转正文（键盘一步到 main；平时不可见，聚焦即出现） */
+.skip{position:absolute;left:-9999px;top:0;background:var(--accent);color:#fff;
+padding:.5rem 1rem;border-radius:0 0 8px 0;z-index:100}
+.skip:focus{left:0}
 
 /* 按钮 */
 .btn{font:inherit;font-size:.9rem;padding:.42rem .95rem;border:1px solid var(--accent);
 border-radius:var(--r-btn);background:var(--accent);color:#fff;cursor:pointer;
 transition:background .15s ease,border-color .15s ease;display:inline-block}
 .btn:hover{background:var(--accent-hover);border-color:var(--accent-hover);text-decoration:none}
-.btn[disabled],button[disabled]{opacity:.55;cursor:not-allowed}
 .btn-ghost{background:var(--card);color:var(--accent);border-color:var(--line)}
 .btn-ghost:hover{background:var(--accent-soft);color:var(--accent)}
+.btn[disabled],button[disabled]{opacity:.55;cursor:not-allowed}
 .btn-xs{font-size:.8rem;padding:.2rem .7rem;border-radius:999px}
+
+/* 按钮在途状态：禁用 + 省略号动画（配合 CL.busy） */
+button[aria-busy="true"]{opacity:.65;pointer-events:none}
+button[aria-busy="true"]::after{content:"…"}
 
 /* 标签/胶囊 */
 .tag{font-size:.78rem;padding:.08rem .55rem;border-radius:999px;border:1px solid var(--line);
@@ -107,6 +118,7 @@ h2{font-size:1.02rem;margin:1.2rem 0 .4rem;font-weight:600;scroll-margin-top:1re
 border-radius:var(--r-input);background:var(--card);color:var(--ink)}
 .field input:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
 .form .btn{margin-top:.5rem;width:100%}
+::placeholder{color:var(--faint);opacity:1}
 .msg{padding:.55rem .8rem;border-radius:8px;font-size:.9rem;margin:.6rem 0}
 .msg.err{background:var(--err-soft);border:1px solid var(--err-line);color:var(--err)}
 .msg.ok{background:var(--ok-soft);border:1px solid var(--ok-line);color:var(--ok)}
@@ -114,7 +126,12 @@ border-radius:var(--r-input);background:var(--card);color:var(--ink)}
 .hint{background:var(--warn-soft);border:1px solid var(--warn-line);color:var(--warn);
 border-radius:8px;padding:.55rem .8rem;font-size:.9rem;margin:.6rem 0}
 
-/* 表格（tabular-nums + 悬停行高亮） */
+/* select 显式配色（Windows 表单控件浅色基底不继承时兜底） */
+select{font:inherit;padding:.45rem .7rem;border:1px solid var(--line);
+border-radius:var(--r-btn);background:var(--card);color:var(--ink)}
+select:focus{outline:2px solid var(--accent);outline-offset:-1px;border-color:var(--accent)}
+
+/* 表格（tabular-nums + 悬停行高亮；数字列右对齐） */
 table.kb{width:100%;border-collapse:separate;border-spacing:0;font-size:.9rem;margin:.4rem 0;
 background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);overflow:hidden;
 font-variant-numeric:tabular-nums}
@@ -123,6 +140,7 @@ text-align:left;vertical-align:top}
 table.kb th{background:var(--bg);color:var(--muted);font-weight:600}
 table.kb tbody tr:hover td{background:var(--accent-soft)}
 table.kb tr:last-child td{border-bottom:none}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* 列表 */
 ul.plain{list-style:none;padding:0;margin:.3rem 0}
@@ -169,6 +187,12 @@ background-size:400% 100%;animation:skeleton 1.2s ease-in-out infinite}
 .skeleton.w60{width:60%}.skeleton.w80{width:80%}
 @keyframes skeleton{0%{background-position:100% 0}100%{background-position:0 0}}
 
+/* 空态：有边界的留白 + 下一步指引，不是一句光秃秃的话 */
+.empty{padding:1.6rem 1rem;text-align:center;color:var(--muted);
+border:1px dashed var(--line-strong);border-radius:var(--r-card);
+background:var(--card);margin:.6rem 0}
+.empty .btn{margin-top:.7rem}
+
 /* Toast 全局通知（aria-live 容器由 app.js 按需创建） */
 .toasts{position:fixed;top:1rem;right:1rem;z-index:99;display:flex;flex-direction:column;
 gap:.5rem;max-width:22rem}
@@ -179,6 +203,13 @@ animation:toast-in .25s ease;word-break:break-word}
 .toast.info{border-left:3px solid var(--accent)}
 .toast.out{opacity:0;transform:translateX(8px);transition:all .3s ease}
 @keyframes toast-in{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
+
+/* 公告发布行内表单（notices.html） */
+.input-row{display:flex;gap:.5rem;flex-wrap:wrap;margin:.4rem 0}
+.input-row input,.input-row select{flex:1 1 10rem;font:inherit;padding:.45rem .7rem;
+border:1px solid var(--line);border-radius:var(--r-btn);background:var(--card);color:var(--ink)}
+.input-row input:focus,.input-row select:focus{outline:2px solid var(--accent);
+outline-offset:-1px;border-color:var(--accent)}
 
 footer{color:var(--faint);font-size:.85rem;max-width:68rem;margin:2.5rem auto 0;
 padding:1rem 1.2rem 0;border-top:1px solid var(--line)}
@@ -210,31 +241,6 @@ border-radius:4px;padding:0 .3rem;background:var(--card)}
   .logbox{max-height:240px;font-size:12px}
   ul.plain li{flex-wrap:wrap}
   .crumb{font-size:.8rem}
+  .input-row{flex-direction:column}
+  .input-row input,.input-row select{width:100%}
 }
-
-/* ================================================================
-   深色模式（Linear 系：深色优先的 token 替换；阴影换成描边为主）
-   data-theme 由 app.js 设置：跟随系统 + 顶栏切换 + localStorage 记忆
-   ================================================================ */
-html[data-theme="dark"]{color-scheme:dark}
-html[data-theme="dark"] body{background:var(--bg)}
-html[data-theme="dark"] body::before{background:linear-gradient(90deg,#3b82f6,#6366f1 55%,#8b5cf6)}
-html[data-theme="dark"] .card,html[data-theme="dark"] .stat,
-html[data-theme="dark"] .chip,html[data-theme="dark"] .field input,
-html[data-theme="dark"] .toolbar input,html[data-theme="dark"] .pane,
-html[data-theme="dark"] table.kb,html[data-theme="dark"] .task-note,
-html[data-theme="dark"] .btn-ghost,html[data-theme="dark"] iframe.demo{background:#141414}
-html[data-theme="dark"] table.kb th,html[data-theme="dark"] .tab.active,
-html[data-theme="dark"] .pill{background:#1c1c1c}
-html[data-theme="dark"] .tab.active{color:var(--ink)}
-html[data-theme="dark"] .logbox{background:#000;border-color:#262626}
-html[data-theme="dark"] .msg.ok,html[data-theme="dark"] .pill.done,
-html[data-theme="dark"] .pill.graded{background:#0c1f14}
-html[data-theme="dark"] .msg.err{background:#1f0c0c}
-html[data-theme="dark"] .hint{background:#1c1408}
-html[data-theme="dark"] .chart{background:#141414}
-html[data-theme="dark"] a.card:hover{box-shadow:0 0 0 1px rgb(255 255 255/.08)}
-html[data-theme="dark"] .skeleton{background:linear-gradient(90deg,#1c1c1c 25%,#262626 37%,#1c1c1c 63%);
-background-size:400% 100%}
-html[data-theme="dark"] .navlinks a.active{color:#93c5fd}
-html[data-theme="dark"] .navlinks a{color:var(--muted)}

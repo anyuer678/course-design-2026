@@ -1,10 +1,14 @@
-# CourseLab 前端设计规范 v2（调研提炼版）
+# CourseLab 前端设计规范 v2.1（调研提炼版）
 
 > 2026-10-05。来源：Vercel Geist 设计系统（vercel.com/geist）、Vercel Web Interface
 > Guidelines（vercel-labs/web-interface-guidelines）、2025 admin dashboard 趋势调研
 > （shadcn/Linear 风格：克制、低饱和强调色、深色优先、密排字体）、LMS 课程卡模式
 > （角色分区视图 + 进度条 + CTA）。本文件是 CourseLab 前端的**规范性依据**——
-> app.css v2 的每条规则都能在这里找到出处。
+> app.css v2.1 的每条规则都能在这里找到出处。
+>
+> **v2.1 决策记录（用户裁定）**：不做深浅色切换，**浅色单主题**交付。原 v2 的深色
+> token 与 `data-theme` 机制已从 app.css / app.js 全部移除；深色取值保留在本文件
+> 第二节作为备查，仅供将来重启多主题时引用。
 
 ## 一、设计方向：克制工程风（Geist/Linear 系）
 
@@ -13,7 +17,7 @@
 - 密排但不拥挤的排版，等宽数字用于数据对比
 - 细边框（1px）+ 半透明阴影分层（模拟环境光 + 直射光）
 - 克制的动效：只在"澄清因果"时动画，全部可被打断
-- 深色优先考虑，浅色为默认态
+- ~~深色优先考虑，浅色为默认态~~ → **v2.1：浅色单主题**（决策见文件头）
 
 ## 二、设计 Token（app.css v2 的 ：root 替换依据）
 
@@ -31,7 +35,7 @@
 | --accent-hover | #1d4ed8 | 按钮悬停 |
 | --accent-soft | #eff6ff | 强调浅底 |
 
-### 颜色（深色，深色优先的 Linear 系）
+### 颜色（深色——v2.1 未采用，备查）
 | Token | 值 |
 |---|---|
 | --bg | #0a0a0a |
@@ -45,8 +49,8 @@
 | --accent-hover | #60a5fa |
 | --accent-soft | #172554 |
 
-### 语义色（两套通用）
-ok #16a34a / warn #d97706 / err #dc2626；深色版各提亮一档。
+### 语义色（浅色版即唯一版本）
+ok #16a34a / warn #d97706 / err #dc2626。
 
 ### 排版
 - 字体栈：system-ui → "Segoe UI" → "PingFang SC" → "Microsoft YaHei"
@@ -63,7 +67,6 @@ ok #16a34a / warn #d97706 / err #dc2626；深色版各提亮一档。
 ### 阴影（两层：环境 + 直射）
 - 卡片静止：`0 1px 2px rgb(0 0 0/.04), 0 0 0 1px rgb(0 0 0/.03)`
 - 卡片悬停：`0 4px 8px rgb(0 0 0/.06), 0 0 0 1px rgb(0 0 0/.04)`
-- 深色模式阴影换成 `0 0 0 1px rgb(255 255 255/.06)` 的描边为主
 
 ## 三、组件规则（Vercel Guidelines 对应实现）
 
@@ -74,7 +77,7 @@ ok #16a34a / warn #d97706 / err #dc2626；深色版各提亮一档。
 - 错误显示在字段旁边；提交时聚焦第一个错误字段
 - autocomplete/name/inputtype 全部正确设置；邮箱/代码关 spellcheck
 - placeholder 用"…"结尾表示占位；永不禁用粘贴
-- select 显式设置 background-color/color（Windows 深色兼容）
+- select 显式设置 background-color/color（不依赖系统表单控件继承）
 
 ### 加载与反馈
 - spinner 延迟 150–300ms 出现、至少停留 300–500ms（防闪烁）
@@ -110,8 +113,8 @@ ok #16a34a / warn #d97706 / err #dc2626；深色版各提亮一档。
 - 状态提示不依赖颜色单独表达——加文字标签
 - 嵌套圆角对齐（子 ≤ 父，同心）
 - 悬停/激活/聚焦态对比度高于静止态
-- `<meta name="theme-color">` 匹配页面背景
-- 深色主题在 `<html>` 设 `color-scheme: dark`
+- `<meta name="viewport">` 与 `<meta name="theme-color" content="#fafafa">` 全部页面必备
+  （v2.1 落地：10 页补齐——没有 viewport，移动端响应式形同虚设）
 
 ## 四、LMS 页面模式（课程平台特有）
 
@@ -122,18 +125,31 @@ ok #16a34a / warn #d97706 / err #dc2626；深色版各提亮一档。
 
 ## 五、对照 CourseLab 现状的差距清单（v2 实施范围）
 
-| # | 差距 | 规范出处 |
-|---|---|---|
-| 1 | 无 tabular-nums（统计/表格数字不对齐） | 排版 |
-| 2 | 单层阴影、无描边分层 | 颜色·阴影 |
-| 3 | index 统计数字重复 | 内容·数字 |
-| 4 | 加载只有文字无骨架屏镜像 | 加载状态 |
-| 5 | 登录按钮提交中不禁用 | 表单 |
-| 6 | 无空态插画/图示（纯文字） | 加载·空态 |
-| 7 | `.chip` 缺 aria-pressed | 无障碍 |
-| 8 | 页面标题无 scroll-margin-top | 排版 |
-| 9 | 深色模式阴影/边框对比不足 | 颜色 |
-| 10 | 表格数字未对齐、无悬停行高亮 | 排版·表格 |
+| # | 差距 | 规范出处 | 状态 |
+|---|---|---|---|
+| 1 | 无 tabular-nums（统计/表格数字不对齐） | 排版 | ✅ v2 |
+| 2 | 单层阴影、无描边分层 | 颜色·阴影 | ✅ v2 |
+| 3 | index 统计数字重复 | 内容·数字 | ✅ v2 |
+| 4 | 加载只有文字无骨架屏镜像 | 加载状态 | ✅ v2 |
+| 5 | 登录按钮提交中不禁用 | 表单 | ✅ v2 |
+| 6 | 无空态（纯文字） | 加载·空态 | ✅ v2.1（.empty + 清除筛选入口） |
+| 7 | `.chip` 缺 aria-pressed | 无障碍 | ✅ v2.1（index/tasks） |
+| 8 | 页面标题无 scroll-margin-top | 排版 | ✅ v2 |
+| 9 | 深色模式阴影/边框对比不足 | 颜色 | ⛔ 决策不做深色（v2.1） |
+| 10 | 表格数字未对齐、无悬停行高亮 | 排版·表格 | ✅ v2 |
+
+## 五·补、v2.1 细节落地清单（本轮）
+
+| 项 | 实现 |
+|---|---|
+| viewport + theme-color | 10 个页面全部补齐（此前缺 viewport，移动端响应式不生效） |
+| `touch-action: manipulation` | 全局交互元素，消除移动端双击缩放延迟 |
+| 按钮在途状态 | `aria-busy` + 省略号动画，配 app.js `CL.busy` |
+| 键盘跳转正文 | `.skip` 链接（聚焦可见）+ app.js 自动给 main 补 id |
+| select / placeholder 显式样式 | 不依赖系统控件默认色 |
+| 空态 `.empty` | 虚线边界 + 指引 + 恢复动作（"清除筛选"） |
+| 表格数字列 `td.num/th.num` | 右对齐 + tabular-nums |
+| 深色机制移除 | app.css 三个 `data-theme` 块、app.js 主题函数与顶栏按钮全删 |
 
 ## 六、参考来源
 

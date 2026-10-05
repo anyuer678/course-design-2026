@@ -1,10 +1,9 @@
-/* CourseLab 共享脚本：API 封装 + 顶栏 + Toast + 主题。（零依赖）
-   本轮前端优化：
+/* CourseLab 共享脚本：API 封装 + 顶栏 + Toast + 细节辅助。（零依赖）
    1. CL.api 把网络错误归一成 {status:0, data:{error}} —— 页面不再因
       fetch 异常卡在"加载中"，统一走错误分支；
    2. CL.toast —— 全局通知（自动消失、aria-live），替代散落的提示；
-   3. 深色模式 —— data-theme 跟随系统 + 顶栏可切换（localStorage 记忆）；
-   4. 导航高亮当前页（aria-current）。 */
+   3. CL.busy —— 按钮在途状态（禁用 + aria-busy，文案由调用方改）；
+   4. 跳转正文链接 + 导航当前页高亮（aria-current）。 */
 (function () {
   "use strict";
   var CL = window.CL = {};
@@ -62,24 +61,6 @@
     }, 3500);
   };
 
-  /* ------------------------------------------------ 主题（深色模式） */
-  CL.themeApply = function () {
-    var saved = null;
-    try { saved = localStorage.getItem("cl-theme"); } catch (e) { /* 隐私模式忽略 */ }
-    var dark = saved === "dark" ||
-      (!saved && window.matchMedia &&
-       window.matchMedia("(prefers-color-scheme: dark)").matches);
-    document.documentElement.dataset.theme = dark ? "dark" : "light";
-    return dark;
-  };
-  CL.themeToggle = function () {
-    var dark = document.documentElement.dataset.theme === "dark";
-    try { localStorage.setItem("cl-theme", dark ? "light" : "dark"); }
-    catch (e) { /* 忽略 */ }
-    CL.themeApply();
-  };
-  try { CL.themeApply(); } catch (e) { /* 忽略 */ }
-
   CL.me = null;
   CL.unread = 0;
 
@@ -96,6 +77,9 @@
 
     function render(user) {
       bar.textContent = "";
+      var skip = CL.el("a", "skip", "跳到主要内容");
+      skip.href = "#main";
+      bar.appendChild(skip);
       var brand = CL.el("a", "brand", "课程工坊 CourseLab");
       brand.href = "/";
       bar.appendChild(brand);
@@ -132,15 +116,6 @@
       }
       bar.appendChild(links);
       var auth = CL.el("div", "navauth");
-      var themeBtn = CL.el("button", "btn btn-ghost theme-btn",
-                           document.documentElement.dataset.theme === "dark" ? "☀" : "🌙");
-      themeBtn.setAttribute("aria-label", "切换深色/浅色模式");
-      themeBtn.addEventListener("click", function () {
-        CL.themeToggle();
-        themeBtn.textContent =
-          document.documentElement.dataset.theme === "dark" ? "☀" : "🌙";
-      });
-      auth.appendChild(themeBtn);
       if (user) {
         var me = CL.el("a", "me-link",
                        user.display_name + "（" + CL.roleName(user.role) + "）");
@@ -163,6 +138,19 @@
         auth.appendChild(rg);
       }
       bar.appendChild(auth);
+      var main = document.querySelector("main");
+      if (main && !main.id) main.id = "main";
     }
+  };
+
+  /* 按钮"在途"状态：禁用 + aria-busy（CSS 侧给省略号动画）。
+     用法：var done = CL.busy(btn); ... ; done(); */
+  CL.busy = function (btn) {
+    btn.disabled = true;
+    btn.setAttribute("aria-busy", "true");
+    return function () {
+      btn.disabled = false;
+      btn.removeAttribute("aria-busy");
+    };
   };
 })();

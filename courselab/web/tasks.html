@@ -2,6 +2,8 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fafafa">
 <title>我的任务 · 课程工坊 CourseLab</title>
 <link rel="stylesheet" href="/assets/app.css">
 </head>
@@ -46,10 +48,13 @@ CL.navbar().then(function () {
     [["all", "全部"], ["doing", "进行中"], ["done", "已完成"],
      ["submitted", "待批阅"], ["graded", "已批阅"]].forEach(function (pair) {
       var c = CL.el("button", "chip" + (filter === pair[0] ? " active" : ""), pair[1]);
+      c.type = "button";
+      c.setAttribute("aria-pressed", filter === pair[0] ? "true" : "false");
       c.addEventListener("click", function () {
         filter = pair[0];
         Array.prototype.forEach.call(chips.children, function (x) {
           x.className = "chip" + (x === c ? " active" : "");
+          x.setAttribute("aria-pressed", x === c ? "true" : "false");
         });
         render();
       });
