@@ -497,6 +497,152 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
 - ✅ **P2 LinkBox M1**（10-04）：产品目录 linkbox/ 桥接 B31 引擎；新增文本暂存
   （TTL + 惰性过期 + XSS 转义回归）；产品页响应式三选项卡；11 项测试全绿；
   run.bat 验收退出码 0、目录快照无新增（data/ 为声明的产品数据目录）。
-- ⏳ 下一轮：P2 M2（二维码 + 访问口令）或 P0 门户框架，视用户指示。
-- 决策提醒：.gitignore 需补 linkbox/data/ 一行（产品数据目录，等用户点头）。
+- ✅ **P2 M2 前半：手写 QR 编码器修复交付**（10-04 本轮）：纯标准库 qr.py（数字/字节模式，
+  V1-5，ECC L/M）。接手时 18/21 过、3 项 IndexError；**探针仲裁出五处实现错误**并全部修复——
+  ① rs_ecc 把按最低次存储的生成多项式当最高次用（除数反了；整除性自测因同源自洽照绿，
+  公开向量仲裁现形）；② 校正图形在 (6,6) 画了规范不画的 5×5 涂坏左上定位图形；
+  ③ 第二份格式信息 bit 7 写进黑模块格被覆盖、(8, size-8) 漏写；④ _place_data 未处理
+  V2+ 的 7 个剩余位（IndexError 根因）；⑤ 字节模式用字符数而非 UTF-8 字节数。
+  **修复后 27 项测试（11 产品 + 16 QR）双入口全绿**；RS 对 Wikiversity 公开向量逐字节一致、
+  生成多项式 α 指数与规范附录一致、ISO 数字例数据码字逐字节吻合；第二份格式信息
+  L/M × 8 掩码 16 组合全部钉住；run.bat 两跑 0/0、目录快照无新增、ruff 体检干净、
+  规范化日志两跑逐字相同。**QR 尚未接进产品页/暂存查看链路**（M2 后半）。
+- ✅ **P2 M2 收官（10-04 同日第二轮）**：二维码接线（`/s/<码>/qr.svg` 独立路由 +
+  查看页内联，编码查看页 URL、不含口令）+ 访问口令（PBKDF2-HMAC-SHA256
+  随机盐 210k 迭代【OWASP 2021 口径，实测 124ms/条】+ 恒时比较；API 401 /
+  页面 200+表单；判定次序 404→410→401；删除也要口令；老库打开即迁移有测试）。
+  **38 项测试（22 产品 + 16 QR）双入口全绿**、run.bat 两跑 0/0 快照无新增、
+  ruff/`node --check` 干净。**顺手修掉 M1 两处潜伏 bug**：`_code_from` problem
+  裸字符串返回（真触发砸分发层）、**410/401 缺席 B11 STATUS 表**（M1 的
+  「410 已过期」真套接字下从未被测过，触发即断连；B11 README 已登记，
+  B11 101 / B31 81 全量重跑无回归，B31 的 urllib 用例改显式无代理 opener）。
+- ✅ **P2 M3 交付（10-04 同日第三轮）**：POST 口令表单（口令走请求体不进 URL/历史，
+  类型不对 415；GET 查询串保留兼容）、过期清扫（`sweep(now)` + sweeper daemon 线程
+  默认 300 秒一轮、删了行才上报、失败只上报；真线程有测试）、.gitignore 收录
+  linkbox/data/。**41 项测试（25 产品 + 16 QR）双入口全绿**、run.bat 两跑 0/0
+  快照无新增、ruff 干净、六段演示。**LinkBox 自动化部分收官**；
+  P-验收（真实使用 ≥1 周 + 3 用户故事）等用户本人。
+- ✅ **轮二（一）：webframe + P0 Studio（10-04 本轮）**：webframe/ 微框架
+  （netlab 之上：路由装饰器/静态守卫/签名会话/JSON 校验 schema/模板转义；
+  30 项测试双入口）+ studio/ P0 门户（跑在 webframe 上：产品目录照抄矩阵、
+  TCP 探活不撒谎、LinkBox 一键启停真子进程、非本门户进程 stop 409；
+  8 项测试含真启停）。check_all 扩到 10 项全过（新增产品层三步）。
+  B28 三处 urllib 换无代理 opener（系统代理假红，与 B31 同修）。
+- ✅ **轮二（二）：门户登录 + 实验台并入（10-04 本轮）**：studio 12 项测试全绿——
+  登录（owner + 初始口令落盘 studio/data/，gitignore 已收录）、会话密钥落盘
+  （重启不掉会话）、启停鉴权（未登录 401）、改口令 + **世代机制**
+  （改口令踢全部旧世代会话；踩出 webframe 登出缺口已补 `reset_session` 并钉回归，31 项全绿）、
+  实验台并入为 managed product（真启停真探活）。run.bat/全仓体检（10 项）全过。
+- ✅ **轮三（一）：SimLab 记录地基（10-04 本轮）**：simlab/——统一运行记录
+  simlab-run/v1（校验一次报全、非有限浮点落盘即炸）+ 三个真实引擎适配器
+  （B12 dijkstra on_settle 帧 / B12 knapsack DP 表帧 / B34 astar 展开序列帧；
+  引擎 import 原项目不重写，metrics 与直接调用对拍同源，确定性钉住；
+  B9 是 C 项目无 Python 引擎，按纪律不接入并登记）。24 项测试双入口全绿，
+  全仓体检扩到 11 项全过。
+- ✅ **轮三（二）：SimLab 播放器（10-04 本轮）**：simlab/server.py（webframe 之上：
+  记录库 API 列/读/现算落盘，记录名白名单 + resolve 双保险，坏记录如实标 invalid）
+  + 帧回放 UI（播放/步进/拖动；Dijkstra 距离表 / 背包累积 DP 表 / A* SVG 网格三渲染器；
+  帧数据零加工）。Studio 收进产品卡（三产品真启停）。simlab 33 项 + studio 13 项
+  双入口全绿，全仓体检 11 项全过。
+- ✅ **轮三（三）：参数可调实时重算（10-04 本轮）**：三引擎 PARAM_SCHEMA
+  （默认值即可跑通，测试钉住）+ `GET /api/params/<exp>` + `POST /api/render`
+  （实时重算不落盘，runs/ 零垃圾）+ 前端 schema 驱动参数表单（即改即算即播）。
+  simlab 37 项双入口全绿，全仓体检 11 项全过。**SimLab 三轮收官**。
+- ✅ **轮四（一）：DataScope 清洗管线（10-04 本轮）**：datascope/——CSV 解析 +
+  列画像（类型推断诚实退化）+ 六件清洗步骤库 + 配方执行器（**报告即账本**，
+  继承 B26 纪律；预检一次报全）+ CLI（profile/clean）。B26 清洗链为销售专用
+  教学件不复用（如实区分），Apriori/K-means 轮四（二）接入。17 项测试双入口
+  全绿，全仓体检扩到 12 项全过。
+- ✅ **轮四（二）：DataScope 挖掘 + 工作台（10-04 本轮）**：mining.py 适配层
+  （import B26 Apriori/K-means 真引擎零重写；坏值报行号、JSON 安全形状）+
+  webframe 工作台服务（profile/clean/mine 三 API + 简单工作台页；CSV 文本进出）
+  + CLI `mine` 子命令。对拍钉住：挖掘结果与直接调用 B26 引擎同源一致。
+  datascope 29 项双入口全绿，全仓体检 12 项全过。
+- ✅ **轮四（三）：DataScope 收官（10-04 本轮）**：report.py SVG 报告渲染
+  （清洗账本逐步成图 + 清洗后画像 + 可选挖掘摘要，文本全转义、高度自适应）+
+  `POST /api/report`（{csv, recipe, mining?} → image/svg+xml）+ Studio 产品卡
+  （第四个 managed 产品，真启停钉住）。datascope 31 项 + studio 14 项双入口全绿，
+  全仓体检 12 项全过。**DataScope 三轮收官**。
+- ✅ **轮五（一）：CacheKV 缓存（10-04 本轮）**：cachekv/——引擎与快照 import
+  B38 真实实现（Store 双策略过期 + dbsnap 原子写），产品层加统计账本/HTTP API
+  （webframe）/快照调度（脏了才写 + 停机强制刷）+ 统计页。复用坑探针定位：
+  计数 dict 覆盖 B38 内部 stats → 惰性过期 KeyError（已注释钉住）。
+  15 项测试双入口全绿（含真套接字真重启：停机刷快照 → 数据与 TTL 保留），
+  全仓体检扩到 12 项全过。
+- ✅ **轮五（二）：CacheKV 收官接入（10-04 本轮）**：Studio 产品卡接入（清理旧
+  planned cachekv 条目——dict 覆盖陷阱再现，靠矩阵测试当场抓住），第五个
+  managed 产品真启停钉住。studio 15 项双入口全绿。矩阵现状：LinkBox/SimLab/
+  DataScope/CacheKV/Studio 五件自动化收官 + webframe 地基；真实使用（P-验收）
+  等用户本人。
+- ✅ **轮六（一）：SensorHub 物联网监测（10-05 本轮）**：sensorhub/——MQTT 全链路
+  零重写（import B35 真件：broker 真套接字 + SensorSimulator 各带真客户端 +
+  Recorder 入库 + svgplot 曲线），产品层补阈值告警台账（严格大于、alerts 幂等
+  主键、与 readings 双向对账、与自报异常两套口径）+ inject 管理口 + webframe
+  监测台（总账/对账表/曲线/告警）。钉值对账：8 拍发出 21==实收 21、自报
+  spike 3/freeze 7==账本、gaps {0,1,1}（断数在首条成功之前 gap 量不到——两账
+  各自都对）。真套接字测试抓真设计错：HTTP 线程跨线程用 SQLite → 服务模式一律
+  节拍线程 + 队列汇入。18 项双入口全绿 + run.bat 两次验收干净，全仓体检扩到 14 项全过。**下一轮：轮六（二）Studio 接入（第六个 managed 产品）**。
+- ✅ **轮六（二）：SensorHub 收官接入（10-05 本轮）**：studio/server.py 注册表
+  sensorhub 转 managed（端口 8022，矩阵测试同步：门户 + 7 实现 + 2 规划）+
+  第六条真启停生命周期用例（真子进程 → 探活在线 → stop 离线幂等）。
+  studio 16 项双入口全绿 + run.bat 两次验收干净；studio/README 滞后计数补齐。
+  **矩阵现状：LinkBox/SimLab/DataScope/CacheKV/SensorHub/Studio 六件自动化
+  收官 + webframe 地基；真实使用（P-验收）等用户本人。**
+- ✅ **轮七：Board 画板桌面应用（10-05 本轮）**：board/——B14 引擎零重写
+  （产品编译产物现跑 7054 项自检钉住引擎完好），产品层补 B14 明说的空白：
+  自动备份（BackupStore 复用 SafeStore/DrawingFormat + AutoBackup 节流监听 +
+  BackupDaemon 目录守护/探活口活账）+ 无头驱动 Cli（JSON 行）+ 父进程看门狗
+  （Studio stop → java 一秒级自觉退出）。Studio 成第七个 managed 产品（矩阵
+  测试同步）；画板的离线断言如实带 8s 截止轮询（契约差异写进测试）。
+  board 11 项 + studio 17 项双入口全绿 + run.bat 两次验收干净，全仓体检扩到
+  15 项全过。**矩阵七件自动化收官；真实使用（P-验收）等用户本人。**
+- ✅ **矩阵收官：CourseLab 接入 Studio（10-05 本轮）**：并行会话交付 M0-M11
+  （132 项自检）后，courselab 成第八个 managed 产品（端口 8024），矩阵测试改
+  "门户 + 八 managed、已规划清零"。顺手修两处代理假红（既定教训再现）：
+  server.py --selftest 与 tools/bench.py 的 urllib 改显式无代理 opener，修后
+  最恶劣环境自检 PASS。studio 17 项双入口全绿。
+  **矩阵：门户 + 八产品全部 managed，自动化收官完成；P-验收等用户本人。**
+- ⏳ **轮七进行中：毕业论文（B41 落地）**（10-05 开工，**草稿全齐**）：`thesis/`
+  工作区——outline.md（六章逐节素材映射）+ 七章草稿：摘要 / ch0 工程背景（矩阵
+  八产品）/ ch1 绪论（选题论证=5 候选全实施）/ ch2 需求 / ch3 设计 / ch4 实现 /
+  ch5 测试与部署 / ch6 总结展望。验证数字当日现算（自检 132 PASS/0 FAIL、
+  bench 779.7 req/s）；素材口径修正 THESIS.md"六表"→ DESIGN 8 张已建表。
+  剩余：学校模板适配（编号/图表/英文摘要）——模板与题目待用户。
+  图表五张已绘（figs/ 手写自包含 SVG，XML 校验过）：产品矩阵/总体架构/数据
+  模型 ER/登录时序/实验时序——编号占位"图 1-1/3-1…"，模板到手即重排。
+  补齐：references.md（GB/T 7714 草稿 6 条真实条目）、英文摘要（摘要.md）、
+  build_fulltext.py → 全文合并稿（粗口径约 1.07 万字，对照学校字数要求）。
+  PRODUCTS.md 新增 §六 P-验收清单（八产品 × 3 用户故事，真实使用周照单执行）。
+  P-验收 **Day-1 预演**：p-验收/walkthrough_day1.py 经门户真启停八产品 +
+  机器可走查故事 21/21 通过（证据 p-验收/day1-预演-2026-10-04.md）；观感类
+  故事留用户。**真实浏览器观感走查**（p-验收/观感走查-2026-10-04.md）：九页
+  全渲染零控制台错误，当场抓出并修复 1 处真实 UI 缺陷（studio/web/app.js
+  门户卡片误标"已规划"→"门户本体（无需启停）"）；start_all.py / stop_all.py
+  成为真实使用周的启停设施。**Board 真窗口走查**（p-验收/Board窗口走查
+  -2026-10-04.md，桌面自动化）：窗口能弹出/完整渲染/干净关闭全过——B14 人工
+  清单第 1 项自动化预演完成；合成拖拽未生效（Swing 前台限制），拖拽手感留用户。
+  论文六章同日扩充 v2（约 1.49 万字，每条主张 grep 源码核对）。
+- ✅ **轮八开工：真功能轮（10-05 本轮）**：用户反馈"不要演示测试脚本，要真
+  功能"→ ①**CourseLab M12 作业提交与批改闭环**：领域层半成品（tasks.submit/
+  grade + task_records 五列迁移）接通 3 条路由（POST /api/tasks/submit、
+  GET /api/teacher/submissions、POST /api/teacher/grade）与四页 UI（course
+  任务板交作业 / teacher 批阅台含待批已批计数 / tasks、me 成绩展示）；
+  重交清分、已批可改分、批改动作入审计；自检 132→**145 项**双入口
+  （任务域 +13，负面六条钉住），浏览器走查 8/8 全过（学生提交→教师批 92 分
+  →学生见成绩评语）。②**LinkBox 文件互传**：原始字节上传（≤32 MiB，
+  max_body 装配放宽）/attachment 下载（中文名 RFC 5987）/口令过期清扫与
+  暂存同语义（惰性 410 行+盘同删）/扫出即下载的 /f/ 二维码/首页文件选项卡；
+  字节落盘 data/files/ 与取件码解耦（穿越结构上不可能）；测试 41→**53 项**
+  双入口（真套接字 1 MiB 往返逐位一致）。③**仓库级脚本归位**：根目录与 p-验收
+  的 7 个脚本统一移入 `scripts/`（check_all.bat/py、scan_refs、lab.bat、
+  start_all、stop_all、walkthrough_day1），路径锚点全改（任意 CWD 可跑），
+  证据文档留 p-验收；改后 check_all.bat 全量 15/15 + lab.bat selftest PASS。
+  同轮补齐**同名 .bat 双击入口 ×4**（scan_refs/start_all/stop_all/walkthrough_day1，
+  ASCII+CRLF+pause+退出码如实传递——`endlocal` 独行抹 EC 恒退 0 的坑实测修掉），
+  scan_refs 补 wsl.exe 白名单；walkthrough 全链实跑 21/21（证据
+  p-验收/day1-预演-2026-10-05.md）；新增 scripts/README.md 入口说明。
+  **下一站**：两产品接入 Studio 后
+  的 P-验收真实使用周（等用户）。
+- 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
+  cachekv/data/、sensorhub/data/、board/data/）。
 

@@ -121,7 +121,7 @@
 | `course_meta` | course, published, sort, teacher_id, summary, outline | 覆盖层：发布/排序/绑定教师 + 教师维护的补充简介/大纲（旧库自动 ALTER 迁移；cover 未做） |
 | `project_meta`（未建） | — | 项目治理并入课程治理：课程:项目=1:1，项目随课程上/下架 |
 | `tasks` | id, course, pid, title, body, due_at, created_by, g2_card | 内容源可挂 g2 卡片 id |
-| `task_records` | task_id, user_id, status, note, created_at | status: todo/doing/done |
+| `task_records` | task_key, user_id, course, status, note, submission, submitted_at, grade, feedback, graded_at, updated_at | status: doing/done/submitted/graded；(task_key, user_id) 主键；重交清分（M12） |
 | `lab_runs` | id, user_id, pid, action, started_at, finished_at, exit, log_tail | 审计与 F14 队列的数据源 |
 | `audit` | id, ts, actor, action, target, detail, ip | 治理动作全量留痕 |
 | `notices` | id, title, body, audience, created_by, created_at | F8 |
@@ -138,6 +138,7 @@
 | projects | `GET /api/projects/{pid}` | F4（详情 + 演示地址 + 动作表） |
 | labs | `POST /api/labs/run`、`GET /api/labs/runs/{id}`、`GET /api/labs/runs/{id}/log`（SSE）、`POST /api/labs/runs/{id}/stop` | F5（动作 id 白名单） |
 | tasks | `GET /api/tasks`、`POST /api/tasks/{id}/claim`、`POST /api/tasks/{id}/done`、`GET /api/tasks/mine` | F6/F7 |
+| tasks（M12） | `POST /api/tasks/submit`（交作业，重交清分）、`GET /api/teacher/submissions?course&key`、`POST /api/teacher/grade`（0-100，已批可改分） | F6/F10 |
 | teacher | `GET /api/teacher/courses`、`GET /api/teacher/course`、`POST /api/teacher/tasks`、`POST /api/teacher/tasks/{id}/delete`、`POST /api/teacher/course/meta` | F9-F11 |
 | admin | `GET/PUT /api/admin/users`、`PUT /api/admin/courses|projects`、`GET /api/admin/labs`、`POST /api/admin/labs/{id}/kill`、`GET /api/admin/dashboard` | F12-F15 |
 | notices | `GET /api/notices`、`POST /api/notices/{id}/read` | F8 |

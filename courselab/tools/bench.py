@@ -11,6 +11,10 @@ import threading
 import time
 import urllib.request
 
+# 显式无代理 opener：本工具打的是本机回环（默认 --url http://127.0.0.1:7900），
+# 走系统代理只会得到"代理不在 → 全部失败"的假压测（仓库既定教训，B31/B28 同款）。
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
 PATHS = ["/api/courses", "/api/courses/B11-net-lab", "/health"]
 
 
@@ -30,7 +34,7 @@ def main(argv) -> int:
             path = PATHS[i % len(PATHS)]
             t0 = time.perf_counter()
             try:
-                with urllib.request.urlopen(args.url + path, timeout=10) as r:
+                with _OPENER.open(args.url + path, timeout=10) as r:
                     r.read()
             except OSError:
                 with lock:

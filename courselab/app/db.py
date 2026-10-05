@@ -56,8 +56,29 @@ CREATE TABLE IF NOT EXISTS task_records (
   course TEXT NOT NULL,
   status TEXT NOT NULL,
   note TEXT DEFAULT '',
+  submission TEXT NOT NULL DEFAULT '',
+  submitted_at TEXT,
+  grade INTEGER,
+  feedback TEXT NOT NULL DEFAULT '',
+  graded_at TEXT,
   updated_at TEXT NOT NULL,
   PRIMARY KEY (task_key, user_id)
+);
+CREATE TABLE IF NOT EXISTS posts (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  course TEXT NOT NULL,
+  author_id INTEGER NOT NULL,
+  title TEXT NOT NULL,
+  body TEXT DEFAULT '',
+  pinned INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS replies (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  post_id INTEGER NOT NULL,
+  author_id INTEGER NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS course_meta (
   course TEXT PRIMARY KEY,
@@ -106,6 +127,12 @@ def _migrate(conn) -> None:
     for name in ("summary", "outline"):
         if name not in cols:
             conn.execute(f"ALTER TABLE course_meta ADD COLUMN {name} TEXT NOT NULL DEFAULT ''")
+    tcols = {r[1] for r in conn.execute("PRAGMA table_info(task_records)")}
+    for name, decl in (("submission", "TEXT NOT NULL DEFAULT ''"), ("submitted_at", "TEXT"),
+                       ("grade", "INTEGER"), ("feedback", "TEXT NOT NULL DEFAULT ''"),
+                       ("graded_at", "TEXT")):
+        if name not in tcols:
+            conn.execute(f"ALTER TABLE task_records ADD COLUMN {name} {decl}")
 
 
 class DB:

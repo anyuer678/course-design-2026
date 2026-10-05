@@ -16,6 +16,7 @@
 <script>
 "use strict";
 var curCourse = "";
+var gradeArea = null;
 var box = document.getElementById("box");
 
 CL.navbar().then(function () {
@@ -152,6 +153,30 @@ function load(course) {
     form.appendChild(row);
     panel.appendChild(form);
 
+    // 作业批阅（M12）：选任务 → 看提交 → 打分与评语（已批可改分）
+    var gCard = CL.el("div", "card");
+    gCard.appendChild(CL.el("h3", null, "作业批阅"));
+    var gRow = CL.el("div", "toolbar");
+    var gSel = document.createElement("select");
+    gSel.style.cssText = "font:inherit;padding:.45rem .7rem;border:1px solid #e2e8f0;border-radius:8px;background:#fff;max-width:24rem";
+    function taskOption(key, label, x) {
+      var o = document.createElement("option");
+      o.value = key;
+      o.textContent = label + "（待批 " + x.submitted + " · 已批 " + x.graded + "）";
+      gSel.appendChild(o);
+    }
+    d.builtin_stats.forEach(function (x) { taskOption(x.key, x.title, x); });
+    d.custom.forEach(function (x) { taskOption("T" + x.id, x.title, x); });
+    var gBtn = CL.el("button", "btn", "查看提交");
+    var gArea = CL.el("div");
+    gBtn.addEventListener("click", function () { loadSubmissions(gSel.value); });
+    gRow.appendChild(gSel);
+    gRow.appendChild(gBtn);
+    gCard.appendChild(gRow);
+    gCard.appendChild(gArea);
+    panel.appendChild(gCard);
+    gradeArea = gArea;
+
     // 教师布置的任务
     var card = CL.el("div", "card");
     card.appendChild(CL.el("h3", null, "本课自定义任务（" + d.custom.length + "）"));
@@ -162,7 +187,8 @@ function load(course) {
       li.appendChild(document.createTextNode(t.title));
       if (t.body) li.appendChild(CL.el("span", "from", "　" + t.body));
       if (t.due_at) li.appendChild(CL.el("span", "from", "　截止 " + t.due_at));
-      li.appendChild(CL.el("span", "from", "　进行中 " + t.doing + " · 完成 " + t.done));
+      li.appendChild(CL.el("span", "from",
+        "　进行中 " + t.doing + " · 完成 " + t.done + " · 待批 " + t.submitted + " · 已批 " + t.graded));
       var del = CL.el("button", "btn btn-ghost btn-xs", "删除");
       del.style.marginLeft = ".5rem";
       del.addEventListener("click", function () {
@@ -178,13 +204,24 @@ function load(course) {
     // 内置任务统计
     var t = CL.el("table", "kb");
     var head = CL.el("tr");
-    ["内置任务", "进行中", "已完成"].forEach(function (h) { head.appendChild(CL.el("th", null, h)); });
+    ["内置任务", "进行中", "已完成", "待批", "已批", ""].forEach(function (h) { head.appendChild(CL.el("th", null, h)); });
     t.appendChild(head);
     d.builtin_stats.forEach(function (x) {
       var tr = CL.el("tr");
       tr.appendChild(CL.el("td", null, x.title));
       tr.appendChild(CL.el("td", null, String(x.doing)));
       tr.appendChild(CL.el("td", null, String(x.done)));
+      tr.appendChild(CL.el("td", null, String(x.submitted)));
+      tr.appendChild(CL.el("td", null, String(x.graded)));
+      var td = CL.el("td");
+      var g = CL.el("button", "btn btn-ghost btn-xs", "批阅");
+      g.addEventListener("click", function () {
+        gSel.value = x.key;
+        loadSubmissions(x.key);
+        gCard.scrollIntoView({ behavior: "smooth" });
+      });
+      td.appendChild(g);
+      tr.appendChild(td);
       t.appendChild(tr);
     });
     var card2 = CL.el("div", "card");
@@ -220,6 +257,77 @@ function input(placeholder) {
   var i = document.createElement("input");
   i.placeholder = placeholder;
   return i;
+}
+
+// ---------------- 作业批阅（M12）：列出提交、打分与评语（已批可改分）
+function loadSubmissions(key) {
+  if (!gradeArea || !key) return;
+  gradeArea.textContent = "";
+  gradeArea.appendChild(CL.el("p", "note", "加载中…"));
+  CL.api("/api/teacher/submissions?course=" + encodeURIComponent(curCourse)
+         + "&key=" + encodeURIComponent(key)).then(function (res) {
+    gradeArea.textContent = "";
+    var d = res.data;
+    if (!d || !d.ok) {
+      gradeArea.appendChild(CL.el("p", "note", (d && d.error) || "读取失败"));
+      return;
+    }
+    if (!d.rows.length) {
+      gradeArea.appendChild(CL.el("p", "note", "这个任务还没有学生提交。"));
+      return;
+    }
+    d.rows.forEach(function (r) { gradeArea.appendChild(submissionRow(key, r)); });
+  }).catch(function () {
+    gradeArea.textContent = "";
+    gradeArea.appendChild(CL.el("p", "note", "网络错误，请重试。"));
+  });
+}
+
+function submissionRow(key, r) {
+  var wrap = CL.el("div");
+  wrap.style.cssText = "padding:.55rem 0;border-bottom:1px dashed #e2e8f0";
+  var head = CL.el("div");
+  head.appendChild(CL.el("span", "pill " + r.status,
+                         r.status === "graded" ? "已批 " + r.grade + " 分" : "待批阅"));
+  head.appendChild(document.createTextNode(r.who));
+  head.appendChild(CL.el("span", "from", "　提交于 " + (r.submitted_at || "—")));
+  wrap.appendChild(head);
+  var pre = CL.el("pre", "note");
+  pre.textContent = r.submission || "（空）";
+  pre.style.cssText = "white-space:pre-wrap;margin:.35rem 0";
+  wrap.appendChild(pre);
+  var row = CL.el("div", "toolbar");
+  var score = document.createElement("input");
+  score.type = "number"; score.min = "0"; score.max = "100";
+  score.placeholder = "分数 0-100";
+  score.value = r.grade === null || r.grade === undefined ? "" : r.grade;
+  var fb = input("评语（可选，≤500 字）");
+  fb.value = r.feedback || "";
+  var save = CL.el("button", "btn btn-xs", r.status === "graded" ? "改分" : "批阅");
+  var msg = CL.el("span", "from");
+  save.addEventListener("click", function () {
+    save.disabled = true;
+    msg.textContent = "";
+    CL.api("/api/teacher/grade", { method: "POST", body: {
+      course: curCourse, key: key, user_id: r.user_id,
+      score: score.value === "" ? null : Number(score.value), feedback: fb.value } })
+      .then(function (res2) {
+        if (!res2.data || !res2.data.ok) {
+          msg.textContent = (res2.data && res2.data.error) || "批阅失败";
+          return;
+        }
+        msg.textContent = "已记录。";
+        loadSubmissions(key);
+      })
+      .catch(function () { msg.textContent = "网络错误，请重试。"; })
+      .then(function () { save.disabled = false; });
+  });
+  row.appendChild(score);
+  row.appendChild(fb);
+  row.appendChild(save);
+  row.appendChild(msg);
+  wrap.appendChild(row);
+  return wrap;
 }
 
 function stat(text) {

@@ -38,10 +38,13 @@ CL.navbar().then(function () {
     stats.textContent = "";
     stats.appendChild(stat("进行中 " + DATA.filter(function (x) { return x.status === "doing"; }).length));
     stats.appendChild(stat("已完成 " + DATA.filter(function (x) { return x.status === "done"; }).length));
+    stats.appendChild(stat("待批阅 " + DATA.filter(function (x) { return x.status === "submitted"; }).length));
+    stats.appendChild(stat("已批阅 " + DATA.filter(function (x) { return x.status === "graded"; }).length));
     stats.appendChild(stat("全部 " + DATA.length));
     var chips = document.getElementById("chips");
     chips.textContent = "";
-    [["all", "全部"], ["doing", "进行中"], ["done", "已完成"]].forEach(function (pair) {
+    [["all", "全部"], ["doing", "进行中"], ["done", "已完成"],
+     ["submitted", "待批阅"], ["graded", "已批阅"]].forEach(function (pair) {
       var c = CL.el("button", "chip" + (filter === pair[0] ? " active" : ""), pair[1]);
       c.addEventListener("click", function () {
         filter = pair[0];
@@ -72,12 +75,18 @@ function render() {
   }
   hit.forEach(function (x) {
     var li = CL.el("li");
-    li.appendChild(CL.el("span", "pill " + x.status, x.status === "done" ? "已完成" : "进行中"));
+    var label = x.status === "done" ? "已完成"
+      : (x.status === "submitted" ? "待批阅"
+         : (x.status === "graded" ? "已批 " + (x.grade === null ? "" : x.grade) + " 分" : "进行中"));
+    li.appendChild(CL.el("span", "pill " + x.status, label));
     li.appendChild(document.createTextNode(x.title));
     var a = CL.el("a", "from", "（" + x.course + "）");
     a.href = "/course.html?id=" + encodeURIComponent(x.course);
     a.style.marginLeft = ".4rem";
     li.appendChild(a);
+    if (x.status === "graded") {
+      li.appendChild(CL.el("span", "from", "　评语：" + (x.feedback || "（无）")));
+    }
     li.appendChild(CL.el("span", "from", x.updated_at + (x.note ? "　备注：" + x.note : "")));
     list.appendChild(li);
   });

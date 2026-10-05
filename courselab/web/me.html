@@ -84,6 +84,42 @@ CL.api("/api/me").then(function (res) {
   pwCard.appendChild(pwMsg);
   box.appendChild(pwCard);
 
+  // 我的任务（M12：显示提交、成绩与教师评语）
+  var taskCard = CL.el("div", "card");
+  taskCard.appendChild(CL.el("h3", null, "我的任务与成绩"));
+  var taskList = CL.el("ul", "plain");
+  taskList.appendChild(CL.el("li", "note", "加载中…"));
+  taskCard.appendChild(taskList);
+  box.appendChild(taskCard);
+  CL.api("/api/tasks/mine").then(function (res2) {
+    taskList.textContent = "";
+    var items = (res2.data && res2.data.tasks) || [];
+    if (!items.length) {
+      taskList.appendChild(CL.el("li", "note",
+        "还没有任务记录——去课程工作区领取一个练习任务吧。"));
+      return;
+    }
+    var pillText = { doing: "进行中", done: "已完成", submitted: "待批阅" };
+    items.forEach(function (x) {
+      var li = CL.el("li");
+      var label = x.status === "graded"
+        ? "已批 " + (x.grade === null ? "" : x.grade) + " 分" : (pillText[x.status] || x.status);
+      li.appendChild(CL.el("span", "pill " + x.status, label));
+      li.appendChild(document.createTextNode(x.title || x.key));
+      li.appendChild(CL.el("span", "from", "　" + x.course));
+      if (x.status === "graded") {
+        li.appendChild(CL.el("span", "from", "　评语：" + (x.feedback || "（无）")));
+      } else if (x.submission) {
+        li.appendChild(CL.el("span", "from", "　已交：" + x.submission.slice(0, 40) +
+                             (x.submission.length > 40 ? "…" : "")));
+      }
+      taskList.appendChild(li);
+    });
+  }).catch(function () {
+    taskList.textContent = "";
+    taskList.appendChild(CL.el("li", "note", "任务记录读取失败。"));
+  });
+
   var later = CL.el("div", "card");
   later.appendChild(CL.el("h3", null, "我的实验记录"));
   var list = CL.el("ul", "plain");

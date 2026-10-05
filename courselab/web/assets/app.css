@@ -111,6 +111,8 @@ iframe.demo{width:100%;height:72vh;border:1px solid var(--line);border-radius:10
 background:#f8fafc;color:var(--muted);margin-right:.4rem;white-space:nowrap}
 .pill.doing{color:var(--warn);border-color:var(--warnline);background:var(--warnbg)}
 .pill.done{color:var(--ok);border-color:var(--okline);background:var(--okbg)}
+.pill.submitted{color:var(--primary-deep);border-color:#bfdbfe;background:#eff6ff}
+.pill.graded{color:#6d28d9;border-color:#ddd6fe;background:#f5f3ff}
 .bar{height:8px;border-radius:999px;background:#e2e8f0;overflow:hidden;margin:.45rem 0 .2rem}
 .bar-fill{height:100%;background:linear-gradient(90deg,#3b82f6,#6366f1);border-radius:999px}
 .task-note{width:12rem;font:inherit;font-size:.82rem;padding:.15rem .5rem;

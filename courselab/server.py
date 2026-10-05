@@ -31,6 +31,11 @@ from urllib.parse import unquote, urlparse
 from app import admin, auth, can, courses, labs, notices, tasks
 from app.db import DB, now_str
 
+# 自检的 HTTP 客户端一律直连（显式无代理 opener）：系统代理（如 :7890）没开时，
+# urllib 默认 opener 会把 127.0.0.1 的请求也交给代理 → "连接被拒"假红。
+# 这是本仓库的既定教训（B31/B28 同款修法），2026-10-05 Studio 接入验收时坐实。
+_OPENER = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+
 ROOT = Path(__file__).resolve().parent          # courselab/
 REPO = ROOT.parent                              # 课设仓库根（内容源）
 WEB = ROOT / "web"
@@ -274,6 +279,19 @@ class Handler(SimpleHTTPRequestHandler):
             except tasks.TaskError as exc:
                 return self.send_error_json(exc.http, exc.message, exc.code)
 
+        if path == "/api/teacher/submissions":
+            user = self.current_user()
+            if user is None:
+                return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+            cid = (query.get("course") or [""])[0]
+            key = (query.get("key") or [""])[0]
+            if not admin.teacher_can_manage(self.db, user, cid):
+                return self.send_error_json(403, "该课未绑定给你（联系管理员在管理端绑定）", "FORBIDDEN")
+            try:
+                return self.send_json({"ok": True, "rows": tasks.submissions(self.db, cid, key)})
+            except tasks.TaskError as exc:
+                return self.send_error_json(exc.http, exc.message, exc.code)
+
         if path.startswith("/api/admin/"):
             user = self.current_user()
             if user is None:
@@ -385,6 +403,10 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._task_action(data, "claim")
             if path == "/api/tasks/done":
                 return self._task_action(data, "done")
+            if path == "/api/tasks/submit":
+                return self._task_submit(data)
+            if path == "/api/teacher/grade":
+                return self._teacher_grade(data)
             if path == "/api/teacher/tasks":
                 return self._teacher_create(data)
             if path.startswith("/api/teacher/tasks/") and path.endswith("/delete"):
@@ -448,6 +470,30 @@ class Handler(SimpleHTTPRequestHandler):
             rec = tasks.claim(self.db, user["id"], course, key)
         else:
             rec = tasks.complete(self.db, user["id"], course, key, str(data.get("note") or ""))
+        return self.send_json({"ok": True, "record": rec})
+
+    def _task_submit(self, data):
+        user = self.current_user()
+        if user is None:
+            return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+        if not can.can(user, "task_claim"):
+            return self.send_error_json(403, "没有任务权限", "FORBIDDEN")
+        rec = tasks.submit(self.db, user["id"], str(data.get("course") or ""),
+                           str(data.get("key") or ""), str(data.get("text") or ""))
+        return self.send_json({"ok": True, "record": rec})
+
+    def _teacher_grade(self, data):
+        user = self.current_user()
+        if user is None:
+            return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+        course = str(data.get("course") or "")
+        if not admin.teacher_can_manage(self.db, user, course):
+            return self.send_error_json(403, "该课未绑定给你（联系管理员在管理端绑定）", "FORBIDDEN")
+        rec = tasks.grade(self.db, course, str(data.get("key") or ""),
+                          data.get("user_id"), data.get("score"),
+                          str(data.get("feedback") or ""))
+        admin.audit(self.db, user["id"], "task_grade", f"{course}:{data.get('key')}",
+                    f"user {data.get('user_id')} score {data.get('score')}")
         return self.send_json({"ok": True, "record": rec})
 
     def _teacher_create(self, data):
@@ -670,7 +716,7 @@ def selftest(port: int = 7901) -> int:
     t0 = time.time()
     while time.time() - t0 < 10:
         try:
-            urllib.request.urlopen(base + "/health", timeout=1).read()
+            _OPENER.open(base + "/health", timeout=1).read()
             break
         except OSError:
             time.sleep(0.1)
@@ -680,7 +726,7 @@ def selftest(port: int = 7901) -> int:
         if cookie:
             req.add_header("Cookie", cookie)
         try:
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with _OPENER.open(req, timeout=10) as r:
                 return r.status, json.loads(r.read().decode("utf-8")), r.headers
         except urllib.error.HTTPError as e:
             return e.code, json.loads(e.read().decode("utf-8")), e.headers
@@ -693,7 +739,7 @@ def selftest(port: int = 7901) -> int:
         if origin:
             req.add_header("Origin", origin)
         try:
-            with urllib.request.urlopen(req, timeout=10) as r:
+            with _OPENER.open(req, timeout=10) as r:
                 return r.status, json.loads(r.read().decode("utf-8")), r.headers
         except urllib.error.HTTPError as e:
             return e.code, json.loads(e.read().decode("utf-8")), e.headers
@@ -786,7 +832,7 @@ def selftest(port: int = 7901) -> int:
 
     req = urllib.request.Request(base + f"/api/labs/runs/{rid}/log")
     req.add_header("Cookie", cookie)
-    with urllib.request.urlopen(req, timeout=10) as r:
+    with _OPENER.open(req, timeout=10) as r:
         sse = r.read().decode("utf-8", "replace")
     check("SSE 日志流（回放含 log 与 done 事件）",
           "event: log" in sse and "event: done" in sse, f"{len(sse)}B")
@@ -817,7 +863,7 @@ def selftest(port: int = 7901) -> int:
     check("启动真实服务 B31（:8312）", s == 200 and d.get("port") == 8312, str(d)[:80])
     if s == 200:
         try:
-            with urllib.request.urlopen("http://127.0.0.1:8312/", timeout=5) as r:
+            with _OPENER.open("http://127.0.0.1:8312/", timeout=5) as r:
                 page = r.read(120)
             check("服务页面可打开（「打开」目标）", r.status == 200 and len(page) > 20)
         finally:
@@ -889,6 +935,70 @@ def selftest(port: int = 7901) -> int:
     check("教师删除自定义任务", status == 200)
     status, data, _ = get("/api/tasks/mine", cookie=cookie)
     check("删除后学生记录同步消失", all(x["key"] != f"T{tid}" for x in data["tasks"]))
+
+    # -- 作业提交与批改（M12：学生交、教师批、重交清分）
+    stu_id = db.one("SELECT id FROM users WHERE username='stu_a'")["id"]
+    status, data, _ = post("/api/tasks/submit",
+                           {"course": "B11-net-lab", "key": "B11-net-lab#0", "text": "x"},
+                           cookie=None)
+    check("匿名提交作业 401", status == 401)
+    status, data, _ = post("/api/tasks/submit",
+                           {"course": "B11-net-lab", "key": "B11-net-lab#0", "text": "   "},
+                           cookie=cookie)
+    check("空文本提交 400", status == 400 and data["code"] == "BAD_SUBMISSION")
+    status, data, _ = get("/api/teacher/submissions?course=B11-net-lab&key=B11-net-lab%230",
+                          cookie=tcookie)
+    check("教师提交列表初始为空", status == 200 and data["rows"] == [])
+    status, data, _ = post("/api/tasks/submit",
+                           {"course": "B11-net-lab", "key": "B11-net-lab#0",
+                            "text": "完成了 B11 的 echo 与并发两问，遇到粘包坑见 README。"},
+                           cookie=cookie)
+    check("学生提交作业 -> submitted",
+          status == 200 and data["record"]["status"] == "submitted")
+    status, data, _ = get("/api/teacher/submissions?course=B11-net-lab&key=B11-net-lab%230",
+                          cookie=tcookie)
+    check("教师可见提交（含文本与提交时间）",
+          status == 200 and len(data["rows"]) == 1
+          and "粘包" in data["rows"][0]["submission"] and data["rows"][0]["grade"] is None)
+    status, data, _ = post("/api/teacher/grade",
+                           {"course": "B11-net-lab", "key": "B11-net-lab#0",
+                            "user_id": stu_id, "score": 99}, cookie=cookie)
+    check("学生调批改接口 403", status == 403)
+    status, data, _ = post("/api/teacher/grade",
+                           {"course": "B3-logic-lab", "key": "B3-logic-lab#0",
+                            "user_id": stu_id, "score": 99}, cookie=tcookie)
+    check("教师批改未绑定课 403", status == 403)
+    status, data, _ = post("/api/teacher/grade",
+                           {"course": "B11-net-lab", "key": "B11-net-lab#0",
+                            "user_id": stu_id, "score": 101}, cookie=tcookie)
+    check("分数越界 400", status == 400 and data["code"] == "BAD_GRADE")
+    status, data, _ = post("/api/teacher/grade",
+                           {"course": "B11-net-lab", "key": "B11-net-lab#0",
+                            "user_id": stu_id, "score": 88, "feedback": "粘包分析到位，注意超时分支。"},
+                           cookie=tcookie)
+    check("教师批改 -> graded 含分数与评语",
+          status == 200 and data["record"]["status"] == "graded"
+          and data["record"]["grade"] == 88)
+    status, data, _ = get("/api/tasks/mine", cookie=cookie)
+    check("我的任务显示成绩与评语",
+          any(x["key"] == "B11-net-lab#0" and x["grade"] == 88 and "粘包分析" in x["feedback"]
+              for x in data["tasks"]))
+    status, data, _ = post("/api/tasks/submit",
+                           {"course": "B11-net-lab", "key": "B11-net-lab#0",
+                            "text": "补充了超时分支的对拍用例，重新提交。"},
+                           cookie=cookie)
+    check("重交回到待批阅且清分",
+          status == 200 and data["record"]["status"] == "submitted"
+          and data["record"]["grade"] is None and data["record"]["feedback"] == "")
+    status, data, _ = post("/api/teacher/grade",
+                           {"course": "B11-net-lab", "key": "B11-net-lab#0",
+                            "user_id": stu_id, "score": 91}, cookie=tcookie)
+    check("已批阅可重批改分", status == 200 and data["record"]["grade"] == 91)
+    post("/api/tasks/claim", {"course": "B11-net-lab", "key": "B11-net-lab#1"}, cookie=cookie)
+    status, data, _ = post("/api/teacher/grade",
+                           {"course": "B11-net-lab", "key": "B11-net-lab#1",
+                            "user_id": stu_id, "score": 60}, cookie=tcookie)
+    check("未提交的任务批阅 409", status == 409 and data["code"] == "NOT_SUBMITTED")
 
     # -- 管理端（M5）
     status, data, _ = get("/api/admin/overview", cookie=cookie)
@@ -1170,8 +1280,8 @@ def selftest(port: int = 7901) -> int:
           removed >= 1 and not old_log.exists() and bool(logs) and logs[-1].exists())
     status, data, _ = get("/api/admin/overview", cookie=acookie)
     v0 = int(data.get("visits_today", 0))
-    urllib.request.urlopen(base + "/", timeout=5).read()
-    urllib.request.urlopen(base + "/me.html", timeout=5).read()
+    _OPENER.open(base + "/", timeout=5).read()
+    _OPENER.open(base + "/me.html", timeout=5).read()
     status, data, _ = get("/api/admin/overview", cookie=acookie)
     v1 = int(data.get("visits_today", 0))
     check("访问计数：匿名访问 2 个页面 +2", v1 == v0 + 2, f"{v0} -> {v1}")
@@ -1238,11 +1348,11 @@ def selftest(port: int = 7901) -> int:
 
     for page in ("/", "/login.html", "/register.html", "/course.html", "/project.html",
                  "/me.html", "/tasks.html", "/notices.html", "/teacher.html", "/admin.html"):
-        with urllib.request.urlopen(base + page, timeout=5) as r:
+        with _OPENER.open(base + page, timeout=5) as r:
             body = r.read()
         check(f"页面 {page} 200", r.status == 200 and len(body) > 300)
 
-    with urllib.request.urlopen(base + "/repo/projects/B13-tinylang/web/showcase.html", timeout=10) as r:
+    with _OPENER.open(base + "/repo/projects/B13-tinylang/web/showcase.html", timeout=10) as r:
         body = r.read(400)
         check("项目演示页经 /repo/ 可打开", r.status == 200 and len(body) > 50)
 

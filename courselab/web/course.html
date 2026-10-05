@@ -155,8 +155,7 @@ function renderTasks(course) {
 
 function taskRow(t, text, sub) {
   var li = CL.el("li");
-  li.appendChild(CL.el("span", "pill " + (t.my || ""),
-                       t.my === "done" ? "已完成" : (t.my === "doing" ? "进行中" : "未领取")));
+  li.appendChild(CL.el("span", "pill " + (t.my || ""), pillText(t)));
   li.appendChild(document.createTextNode(text));
   if (sub) li.appendChild(CL.el("span", "from", "（" + sub + "）"));
   if (t.done_count) li.appendChild(CL.el("span", "from", "已 " + t.done_count + " 人完成"));
@@ -175,16 +174,58 @@ function taskRow(t, text, sub) {
       done.addEventListener("click", function () { taskAct("done", t.key, input.value, done); });
       li.appendChild(input);
       li.appendChild(done);
-    } else if (t.note) {
-      li.appendChild(CL.el("span", "from", "（备注：" + t.note + "）"));
+    } else if (t.my === "graded") {
+      li.appendChild(CL.el("span", "from", "　评语：" + (t.feedback || "（教师未写评语）")));
+    }
+    if ((t.my === "submitted" || t.my === "graded") && t.submission) {
+      var prev = CL.el("div", "from", "已交：" + t.submission);
+      prev.style.cssText = "margin:.3rem 0 0;white-space:pre-wrap";
+      li.appendChild(prev);
+    }
+    // 交作业：doing 首次提交；done/submitted/graded 可重交（重交清空原成绩）
+    if (t.my) {
+      var label = t.my === "doing" ? "提交作业"
+        : (t.my === "done" ? "交作业" : (t.my === "submitted" ? "修改重交" : "重新提交"));
+      var sb = CL.el("button", "btn btn-ghost btn-xs", label);
+      sb.style.marginLeft = ".4rem";
+      var box = CL.el("div");
+      box.style.cssText = "display:none;margin:.45rem 0 0";
+      var ta = document.createElement("textarea");
+      ta.placeholder = "作业内容（1-2000 字" + (t.my === "submitted" || t.my === "graded"
+        ? "；重交会清空原成绩" : "") + "）";
+      ta.style.cssText = "font:inherit;min-height:3.5em;width:100%;padding:.45rem .7rem;" +
+        "border:1px solid #e2e8f0;border-radius:8px;background:#fff";
+      var go = CL.el("button", "btn btn-xs", "提交给教师批阅");
+      go.style.marginTop = ".4rem";
+      go.addEventListener("click", function () { taskAct("submit", t.key, ta.value, go); });
+      box.appendChild(ta);
+      box.appendChild(go);
+      sb.addEventListener("click", function () {
+        var show = box.style.display === "none";
+        box.style.display = show ? "" : "none";
+        if (show && !ta.value && t.submission) ta.value = t.submission;
+      });
+      li.appendChild(sb);
+      li.appendChild(box);
     }
   }
   return li;
 }
 
+function pillText(t) {
+  if (t.my === "done") return "已完成";
+  if (t.my === "doing") return "进行中";
+  if (t.my === "submitted") return "待批阅";
+  if (t.my === "graded") {
+    return "已批阅 " + (t.grade === null || t.grade === undefined ? "" : t.grade) + " 分";
+  }
+  return "未领取";
+}
+
 function taskAct(kind, key, note, btn) {
   btn.disabled = true;
-  CL.api("/api/tasks/" + kind, { method: "POST", body: { course: cid, key: key, note: note } })
+  CL.api("/api/tasks/" + kind,
+         { method: "POST", body: { course: cid, key: key, note: note, text: note } })
     .then(function (res) {
       if (!res.data || !res.data.ok) { alert((res.data && res.data.error) || "操作失败"); }
       refreshTaskboard();

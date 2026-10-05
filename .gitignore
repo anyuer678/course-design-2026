@@ -19,9 +19,28 @@ todos.txt
 demo_todos.txt
 .zcode/
 
-# IDE
+# LinkBox 产品数据（server 运行时生成，见 linkbox/README；2026-10-04 M3 起入库）
+linkbox/data/
+
+# Studio 门户凭据（会话密钥 + 登录口令，见 studio/auth.py；2026-10-04 轮二起）
+studio/data/
+
+# SimLab 运行记录（播放器现算落盘，见 simlab/README；2026-10-04 轮三起）
+simlab/runs/
+
+# CacheKV 快照（引擎数据落盘，见 cachekv/README；2026-10-04 轮五起）
+cachekv/data/
+
+# SensorHub 运行数据（读数库 + 曲线缓存，见 sensorhub/README；2026-10-05 轮六起）
+sensorhub/data/
+
+# board 画板运行数据（文档/备份/状态，见 board/README；2026-10-05 轮七起）
+board/data/
+
+# IDE / 工具 scratch
 .idea/
 .vscode/
+.qoder-tmp/
 
 # Java / Maven 构建产物（B18）
 target/
