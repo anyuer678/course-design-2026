@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="620" viewBox="0 0 960 620" font-family="system-ui,'Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="pm" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect width="960" height="620" fill="#ffffff"/>
+  <text x="480" y="30" text-anchor="middle" font-size="19" font-weight="650" fill="#16181d">产品矩阵：Studio 门户统一管理的八个 managed 产品（2026-10-06）</text>
+
+  <rect x="280" y="56" width="400" height="76" rx="10" fill="#1d4ed8"/>
+  <text x="480" y="86" text-anchor="middle" font-size="16" font-weight="650" fill="#ffffff">Studio 门户 :8017</text>
+  <text x="480" y="110" text-anchor="middle" font-size="12" fill="#dbe7ff">产品目录 / 一键启停（真子进程）/ TCP 探活 / 状态面板</text>
+
+  <!-- connectors -->
+  <line x1="480" y1="132" x2="140" y2="196" stroke="#334155" stroke-width="1.2"/>
+  <line x1="480" y1="132" x2="365" y2="196" stroke="#334155" stroke-width="1.2"/>
+  <line x1="480" y1="132" x2="590" y2="196" stroke="#334155" stroke-width="1.2"/>
+  <line x1="480" y1="132" x2="815" y2="196" stroke="#334155" stroke-width="1.2"/>
+  <line x1="480" y1="132" x2="140" y2="336" stroke="#334155" stroke-width="1.2"/>
+  <line x1="480" y1="132" x2="365" y2="336" stroke="#334155" stroke-width="1.2"/>
+  <line x1="480" y1="132" x2="590" y2="336" stroke="#334155" stroke-width="1.2"/>
+  <line x1="480" y1="132" x2="815" y2="336" stroke="#334155" stroke-width="1.2"/>
+
+  <!-- row 1 -->
+  <rect x="40" y="200" width="200" height="116" rx="10" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.4"/>
+  <text x="56" y="226" font-size="13.5" font-weight="650" fill="#16181d">LinkBox 工具站 :8018</text>
+  <text x="56" y="248" font-size="11.5" fill="#5f6773">短链 / 文本暂存 / 文件互传 / 口令</text>
+  <text x="56" y="268" font-size="11.5" fill="#16181d">引擎：B31 + B11（零重写）</text>
+  <text x="56" y="288" font-size="11.5" fill="#16181d">测试：53 项（双入口）</text>
+  <text x="56" y="308" font-size="11.5" fill="#0f766e">2026-10-04 收官</text>
+
+  <rect x="265" y="200" width="200" height="116" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="281" y="226" font-size="13.5" font-weight="650" fill="#16181d">展示层实验台 :7788</text>
+  <text x="281" y="248" font-size="11.5" fill="#5f6773">33 页展示页的本地控制台</text>
+  <text x="281" y="268" font-size="11.5" fill="#16181d">引擎：showcase lab.py</text>
+  <text x="281" y="288" font-size="11.5" fill="#16181d">固定命令表 + 日志环</text>
+  <text x="281" y="308" font-size="11.5" fill="#0f766e">2026-10-04 收官</text>
+
+  <rect x="490" y="200" width="200" height="116" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="506" y="226" font-size="13.5" font-weight="650" fill="#16181d">SimLab 仿真馆 :8019</text>
+  <text x="506" y="248" font-size="11.5" fill="#5f6773">真实引擎运行记录回放</text>
+  <text x="506" y="268" font-size="11.5" fill="#16181d">引擎：B33 / B5 / B9 / B12 / B34</text>
+  <text x="506" y="288" font-size="11.5" fill="#16181d">测试：37 项</text>
+  <text x="506" y="308" font-size="11.5" fill="#0f766e">2026-10-04 收官</text>
+
+  <rect x="715" y="200" width="200" height="116" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="731" y="226" font-size="13.5" font-weight="650" fill="#16181d">DataScope :8020</text>
+  <text x="731" y="248" font-size="11.5" fill="#5f6773">CSV 画像 / 清洗 / 挖掘 / SVG 报告</text>
+  <text x="731" y="268" font-size="11.5" fill="#16181d">引擎：B26（清洗链+挖掘）</text>
+  <text x="731" y="288" font-size="11.5" fill="#16181d">测试：31 项</text>
+  <text x="731" y="308" font-size="11.5" fill="#0f766e">2026-10-04 收官</text>
+
+  <!-- row 2 -->
+  <rect x="40" y="340" width="200" height="116" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="56" y="366" font-size="13.5" font-weight="650" fill="#16181d">CacheKV 缓存 :8021</text>
+  <text x="56" y="388" font-size="11.5" fill="#5f6773">自托管键值缓存（TTL + 快照）</text>
+  <text x="56" y="408" font-size="11.5" fill="#16181d">引擎：B38 Store + dbsnap</text>
+  <text x="56" y="428" font-size="11.5" fill="#16181d">测试：17 项</text>
+  <text x="56" y="448" font-size="11.5" fill="#0f766e">2026-10-04 收官</text>
+
+  <rect x="265" y="340" width="200" height="116" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="281" y="366" font-size="13.5" font-weight="650" fill="#16181d">SensorHub :8022</text>
+  <text x="281" y="388" font-size="11.5" fill="#5f6773">传感器 → MQTT → SQLite → 曲线 → 告警</text>
+  <text x="281" y="408" font-size="11.5" fill="#16181d">引擎：B35 全链路（真套接字）</text>
+  <text x="281" y="428" font-size="11.5" fill="#16181d">测试：18 项</text>
+  <text x="281" y="448" font-size="11.5" fill="#0f766e">2026-10-05 收官</text>
+
+  <rect x="490" y="340" width="200" height="116" rx="10" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.6"/>
+  <text x="506" y="366" font-size="13.5" font-weight="650" fill="#16181d">CourseLab :8024</text>
+  <text x="506" y="388" font-size="11.5" fill="#5f6773">课程 / 实验 / 作业 / 任务 / 管理端</text>
+  <text x="506" y="408" font-size="11.5" fill="#16181d">B32 扫描器 + B28 看板 + 33 项目内容源</text>
+  <text x="506" y="428" font-size="11.5" fill="#16181d">自检：145 项（M0-M12）</text>
+  <text x="506" y="448" font-size="11.5" fill="#0f766e">2026-10-05 接入（本论文主体）</text>
+
+  <rect x="715" y="340" width="200" height="116" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="731" y="366" font-size="13.5" font-weight="650" fill="#16181d">Board 画板 :8023</text>
+  <text x="731" y="388" font-size="11.5" fill="#5f6773">绘图 + PNG 导出 + 自动备份</text>
+  <text x="731" y="408" font-size="11.5" fill="#16181d">引擎：B14（7054 项自检）</text>
+  <text x="731" y="428" font-size="11.5" fill="#16181d">测试：11 项（含自检+守护契约）</text>
+  <text x="731" y="448" font-size="11.5" fill="#0f766e">2026-10-05 收官</text>
+
+  <rect x="40" y="486" width="875" height="110" rx="10" fill="#f5f6f8" stroke="#d5d9e0" stroke-width="1.2"/>
+  <text x="58" y="514" font-size="13" font-weight="650" fill="#16181d">三条纪律（贯穿全部产品与本文平台）</text>
+  <text x="58" y="540" font-size="12" fill="#5f6773">① 零件库零重写：产品引擎一律 import 原项目真实实现，产品层只做编排与新增能力；</text>
+  <text x="58" y="562" font-size="12" fill="#5f6773">② 测试双入口 + run.bat 两次验收（退出码 0 / 目录快照无新增 / 无静默失败）；</text>
+  <text x="58" y="584" font-size="12" fill="#5f6773">③ 引数字先复算：全仓体检 check_all.py 15 项一条命令（2026-10-06 全过），已规划清零。</text>
+</svg>

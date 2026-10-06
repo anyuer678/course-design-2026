@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="560" viewBox="0 0 900 560" font-family="system-ui,'Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="arr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect width="900" height="560" fill="#ffffff"/>
+  <text x="450" y="30" text-anchor="middle" font-size="19" font-weight="650" fill="#16181d">CourseLab 总体架构：五层单向依赖</text>
+
+  <rect x="120" y="56" width="620" height="74" rx="10" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.4"/>
+  <text x="140" y="86" font-size="15" font-weight="650" fill="#16181d">web —— 三端页面（原生 HTML/CSS/JS，零构建）</text>
+  <text x="140" y="110" font-size="12" fill="#5f6773">学生端（响应式，≤720px 断点） · 教师台 · 管理端 —— 共享同一份 API 与设计 token</text>
+
+  <line x1="430" y1="130" x2="430" y2="152" stroke="#334155" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="445" y="147" font-size="12" fill="#5f6773">HTTP + JSON API + SSE</text>
+
+  <rect x="120" y="154" width="620" height="74" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="140" y="184" font-size="15" font-weight="650" fill="#16181d">HTTP 服务层 —— 标准库 ThreadingHTTPServer + 自研路由表</text>
+  <text x="140" y="208" font-size="12" fill="#5f6773">会话（Cookie + 服务端会话表） · 请求校验（畸形类型 16 类全 4xx） · 错误统一 JSON</text>
+
+  <line x1="430" y1="228" x2="430" y2="250" stroke="#334155" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <rect x="120" y="252" width="620" height="74" rx="10" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.4"/>
+  <text x="140" y="282" font-size="15" font-weight="650" fill="#16181d">领域层 app/ —— auth · courses · labs · tasks · notices · admin · can</text>
+  <text x="140" y="306" font-size="12" fill="#5f6773">权限矩阵落成唯一函数 can(user, action, target)；页面只读判定结果，不复制规则</text>
+
+  <line x1="430" y1="326" x2="430" y2="348" stroke="#334155" stroke-width="1.6" marker-end="url(#arr)"/>
+  <text x="445" y="343" font-size="12" fill="#5f6773">参数化 SQL（?）/ 文件读写</text>
+
+  <rect x="120" y="350" width="620" height="74" rx="10" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="140" y="380" font-size="15" font-weight="650" fill="#16181d">存储层 —— SQLite（平台态 12 表） + 文件系统</text>
+  <text x="140" y="404" font-size="12" fill="#5f6773">data/app.db · logs/（保留 14 天）· backup/ · uploads/ —— 均不进版本库</text>
+
+  <line x1="430" y1="424" x2="430" y2="446" stroke="#334155" stroke-width="1.6" marker-end="url(#arr)"/>
+
+  <rect x="120" y="448" width="620" height="74" rx="10" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.4"/>
+  <text x="140" y="478" font-size="15" font-weight="650" fill="#16181d">运行时 —— 子进程管理器（在线实验）</text>
+  <text x="140" y="502" font-size="12" fill="#5f6773">固定命令表（客户端只选动作 id） · 日志环 → SSE · 并发限额 max_labs · 超时与整树杀 taskkill /F /T</text>
+
+  <text x="770" y="250" font-size="13" fill="#5f6773" transform="rotate(90 770 250)">依赖方向：只向下（单向）</text>
+  <text x="450" y="545" text-anchor="middle" font-size="12" fill="#8b93a1">内容源（manifest + README + 练习卡）在领域层现算，不落库 —— 见 ER 图虚线部分</text>
+</svg>

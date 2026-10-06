@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="640" viewBox="0 0 960 640" font-family="system-ui,'Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="arr2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+  </defs>
+  <rect width="960" height="640" fill="#ffffff"/>
+  <text x="480" y="30" text-anchor="middle" font-size="19" font-weight="650" fill="#16181d">CourseLab 数据模型：平台态 12 表（核心 8 + 支撑 4）+ 现算内容源</text>
+
+  <rect x="60" y="48" width="300" height="66" rx="8" fill="#fffbeb" stroke="#b45309" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="76" y="74" font-size="13" font-weight="650" fill="#92400e">现算内容源（不落库，唯一口径）</text>
+  <text x="76" y="96" font-size="11.5" fill="#92400e">课程 / 项目：showcase manifest + 各 README</text>
+  <text x="76" y="112" font-size="11.5" fill="#92400e">练习任务内容：g2/ 练习卡 40 张</text>
+
+  <!-- users -->
+  <rect x="60" y="150" width="220" height="150" rx="8" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.4"/>
+  <rect x="60" y="150" width="220" height="28" rx="8" fill="#1d4ed8"/>
+  <text x="170" y="169" text-anchor="middle" font-size="13.5" font-weight="650" fill="#ffffff">users 用户</text>
+  <text x="74" y="198" font-size="11.5" fill="#16181d">id PK · username · display_name</text>
+  <text x="74" y="218" font-size="11.5" fill="#16181d">role: student/teacher/admin</text>
+  <text x="74" y="238" font-size="11.5" fill="#16181d">pwd_hash/salt/iter（PBKDF2 参数入库）</text>
+  <text x="74" y="258" font-size="11.5" fill="#16181d">status: pending/active/banned</text>
+  <text x="74" y="278" font-size="11.5" fill="#5f6773">created_at · last_login</text>
+
+  <!-- sessions -->
+  <rect x="370" y="150" width="200" height="120" rx="8" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <rect x="370" y="150" width="200" height="28" rx="8" fill="#334155"/>
+  <text x="470" y="169" text-anchor="middle" font-size="13.5" font-weight="650" fill="#ffffff">sessions 会话</text>
+  <text x="384" y="198" font-size="11.5" fill="#16181d">token PK（256-bit 随机）</text>
+  <text x="384" y="218" font-size="11.5" fill="#16181d">user_id FK · expires_at</text>
+  <text x="384" y="238" font-size="11.5" fill="#16181d">ip · ua</text>
+  <text x="384" y="258" font-size="11.5" fill="#5f6773">登出/改密/封禁即失效</text>
+
+  <!-- course_meta -->
+  <rect x="650" y="150" width="250" height="120" rx="8" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.4"/>
+  <rect x="650" y="150" width="250" height="28" rx="8" fill="#0f766e"/>
+  <text x="775" y="169" text-anchor="middle" font-size="13.5" font-weight="650" fill="#ffffff">course_meta 课程覆盖层</text>
+  <text x="664" y="198" font-size="11.5" fill="#16181d">course · published · sort</text>
+  <text x="664" y="218" font-size="11.5" fill="#16181d">teacher_id FK（绑定式教师授权）</text>
+  <text x="664" y="238" font-size="11.5" fill="#16181d">summary · outline（教师维护）</text>
+  <text x="664" y="258" font-size="11.5" fill="#5f6773">旧库自动 ALTER 迁移</text>
+
+  <!-- tasks -->
+  <rect x="60" y="360" width="220" height="130" rx="8" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <rect x="60" y="360" width="220" height="28" rx="8" fill="#334155"/>
+  <text x="170" y="379" text-anchor="middle" font-size="13.5" font-weight="650" fill="#ffffff">tasks 教师自建任务</text>
+  <text x="74" y="408" font-size="11.5" fill="#16181d">id PK · course · title · body</text>
+  <text x="74" y="428" font-size="11.5" fill="#16181d">due_at · created_by · created_at</text>
+  <text x="74" y="448" font-size="11.5" fill="#5f6773">内置任务来自 g2 练习卡</text>
+  <text x="74" y="468" font-size="11.5" fill="#5f6773">（key=course#序号），不落库</text>
+
+  <!-- task_records -->
+  <rect x="370" y="360" width="200" height="120" rx="8" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <rect x="370" y="360" width="200" height="28" rx="8" fill="#334155"/>
+  <text x="470" y="379" text-anchor="middle" font-size="13.5" font-weight="650" fill="#ffffff">task_records 完成记录</text>
+  <text x="384" y="408" font-size="11.5" fill="#16181d">task_key · user_id（复合主键）</text>
+  <text x="384" y="428" font-size="11.5" fill="#16181d">status: doing/done/submitted/graded</text>
+  <text x="384" y="448" font-size="11.5" fill="#16181d">submission · grade · feedback</text>
+  <text x="384" y="468" font-size="11.5" fill="#5f6773">note≤200 字 · 重交清分 · upsert 幂等</text>
+
+  <!-- lab_runs -->
+  <rect x="650" y="360" width="250" height="130" rx="8" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.4"/>
+  <rect x="650" y="360" width="250" height="28" rx="8" fill="#b91c1c"/>
+  <text x="775" y="379" text-anchor="middle" font-size="13.5" font-weight="650" fill="#ffffff">lab_runs 实验审计</text>
+  <text x="664" y="408" font-size="11.5" fill="#16181d">id PK · user_id FK · pid · action · kind</text>
+  <text x="664" y="428" font-size="11.5" fill="#16181d">started_at · finished_at · exit_code</text>
+  <text x="664" y="448" font-size="11.5" fill="#16181d">log_tail（日志尾）</text>
+  <text x="664" y="468" font-size="11.5" fill="#5f6773">F14 队列与强停的数据源</text>
+
+  <!-- audit & notices -->
+  <rect x="60" y="530" width="300" height="80" rx="8" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="76" y="558" font-size="13" font-weight="650" fill="#16181d">admin_audit 治理审计（全量留痕）</text>
+  <text x="76" y="580" font-size="11.5" fill="#5f6773">ts · actor_id→users · action · target · detail</text>
+  <text x="76" y="598" font-size="11.5" fill="#5f6773">角色/状态/课程覆盖/公告/批阅五类动作留痕</text>
+
+  <rect x="420" y="530" width="240" height="80" rx="8" fill="#f8fafc" stroke="#334155" stroke-width="1.4"/>
+  <text x="436" y="558" font-size="13" font-weight="650" fill="#16181d">notices 通知与公告</text>
+  <text x="436" y="580" font-size="11.5" fill="#5f6773">title · body · audience · created_by</text>
+  <text x="436" y="598" font-size="11.5" fill="#5f6773">未读计数 / 已读标记（F8）</text>
+
+  <rect x="720" y="530" width="180" height="80" rx="8" fill="#fffbeb" stroke="#b45309" stroke-width="1.2" stroke-dasharray="6 4"/>
+  <text x="736" y="558" font-size="12.5" font-weight="650" fill="#92400e">不在库中</text>
+  <text x="736" y="580" font-size="11.5" fill="#92400e">project_meta 未建：项目</text>
+  <text x="736" y="598" font-size="11.5" fill="#92400e">治理并入课程（1:1）</text>
+
+  <!-- relations -->
+  <line x1="280" y1="205" x2="370" y2="205" stroke="#334155" stroke-width="1.3" marker-end="url(#arr2)"/>
+  <text x="325" y="198" text-anchor="middle" font-size="10.5" fill="#5f6773">1 : N</text>
+  <line x1="170" y1="300" x2="170" y2="360" stroke="#334155" stroke-width="0"/>
+  <path d="M 170 300 L 170 330 L 440 330 L 440 360" fill="none" stroke="#334155" stroke-width="1.3" marker-end="url(#arr2)"/>
+  <text x="300" y="324" font-size="10.5" fill="#5f6773">users 1:N task_records（user_id）</text>
+  <path d="M 280 250 L 320 250 L 320 320 L 750 320 L 750 360" fill="none" stroke="#334155" stroke-width="1.3" marker-end="url(#arr2)"/>
+  <text x="560" y="314" font-size="10.5" fill="#5f6773">users 1:N lab_runs（user_id）</text>
+  <line x1="280" y1="420" x2="370" y2="420" stroke="#334155" stroke-width="1.3" marker-end="url(#arr2)"/>
+  <text x="325" y="413" text-anchor="middle" font-size="10.5" fill="#5f6773">1 : N</text>
+  <line x1="470" y1="270" x2="470" y2="360" stroke="#0f766e" stroke-width="1.3" stroke-dasharray="5 4"/>
+  <text x="478" y="300" font-size="10.5" fill="#0f766e">teacher_id 绑定</text>
+  <line x1="775" y1="114" x2="775" y2="150" stroke="#b45309" stroke-width="1.3" stroke-dasharray="5 4"/>
+  <text x="783" y="136" font-size="10.5" fill="#b45309">course 现算关联</text>
+  <line x1="210" y1="114" x2="210" y2="360" stroke="#b45309" stroke-width="0"/>
+  <path d="M 160 114 L 160 342 L 96 342 L 96 360" fill="none" stroke="#b45309" stroke-width="1.3" stroke-dasharray="5 4"/>
+  <text x="176" y="348" font-size="10.5" fill="#b45309">course/pid 现算关联</text>
+
+  <text x="480" y="630" text-anchor="middle" font-size="11" fill="#5f6773">支撑表（图中未画出）：posts / replies（讨论区）· notice_reads（通知已读）· visits（访问计数）</text>
+</svg>

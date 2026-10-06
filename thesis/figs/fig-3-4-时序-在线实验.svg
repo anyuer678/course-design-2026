@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" font-family="system-ui,'Microsoft YaHei',sans-serif">
+  <defs>
+    <marker id="sq" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#334155"/>
+    </marker>
+    <marker id="sqr" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#8b93a1"/>
+    </marker>
+  </defs>
+  <rect width="960" height="600" fill="#ffffff"/>
+  <text x="480" y="28" text-anchor="middle" font-size="18" font-weight="650" fill="#16181d">时序图：在线实验（F5/F14）—— 白名单发起、SSE 日志流与整树杀</text>
+
+  <!-- lifelines -->
+  <rect x="40" y="46" width="130" height="34" rx="7" fill="#eff6ff" stroke="#1d4ed8" stroke-width="1.3"/>
+  <text x="105" y="68" text-anchor="middle" font-size="13" font-weight="650" fill="#16181d">浏览器（实验页）</text>
+  <rect x="250" y="46" width="140" height="34" rx="7" fill="#f8fafc" stroke="#334155" stroke-width="1.3"/>
+  <text x="320" y="68" text-anchor="middle" font-size="13" font-weight="650" fill="#16181d">HTTP 服务层</text>
+  <rect x="460" y="46" width="150" height="34" rx="7" fill="#f0fdfa" stroke="#0f766e" stroke-width="1.3"/>
+  <text x="535" y="68" text-anchor="middle" font-size="13" font-weight="650" fill="#16181d">Labs 运行时</text>
+  <rect x="680" y="46" width="110" height="34" rx="7" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.3"/>
+  <text x="735" y="68" text-anchor="middle" font-size="13" font-weight="650" fill="#16181d">实验子进程</text>
+  <rect x="840" y="46" width="90" height="34" rx="7" fill="#f8fafc" stroke="#334155" stroke-width="1.3"/>
+  <text x="885" y="68" text-anchor="middle" font-size="13" font-weight="650" fill="#16181d">SQLite</text>
+  <line x1="105" y1="80" x2="105" y2="560" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <line x1="320" y1="80" x2="320" y2="560" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <line x1="535" y1="80" x2="535" y2="560" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <line x1="735" y1="80" x2="735" y2="560" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+  <line x1="885" y1="80" x2="885" y2="560" stroke="#cbd5e1" stroke-width="1.2" stroke-dasharray="5 4"/>
+
+  <line x1="320" y1="112" x2="105" y2="112" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="212" y="104" text-anchor="middle" font-size="12" fill="#16181d">动作表 = 固定命令表渲染的按钮（客户端只选 id）</text>
+
+  <line x1="105" y1="146" x2="320" y2="146" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="212" y="138" text-anchor="middle" font-size="12" fill="#16181d">POST /api/labs/run {pid, action}</text>
+
+  <line x1="320" y1="180" x2="535" y2="180" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="428" y="172" text-anchor="middle" font-size="12" fill="#16181d">can() 判定 + 并发限额检查（max_labs；满 → 429）</text>
+
+  <line x1="535" y1="214" x2="735" y2="214" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="635" y="206" text-anchor="middle" font-size="12" fill="#16181d">按命令表 spawn 子进程（命令/参数/路径服务端写死）</text>
+
+  <line x1="535" y1="248" x2="885" y2="248" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="710" y="240" text-anchor="middle" font-size="12" fill="#16181d">INSERT lab_runs（谁/何时/项目/动作）</text>
+
+  <line x1="105" y1="282" x2="320" y2="282" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="212" y="274" text-anchor="middle" font-size="12" fill="#16181d">GET /api/labs/runs/{id}/log （SSE）</text>
+
+  <!-- loop frame -->
+  <rect x="180" y="306" width="700" height="90" fill="none" stroke="#0f766e" stroke-width="1.2"/>
+  <rect x="180" y="306" width="70" height="24" fill="#0f766e"/>
+  <text x="215" y="323" text-anchor="middle" font-size="12" font-weight="650" fill="#ffffff">loop</text>
+  <text x="262" y="323" font-size="11.5" fill="#0f766e">[子进程运行中]</text>
+  <line x1="735" y1="346" x2="535" y2="346" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="635" y="338" text-anchor="middle" font-size="12" fill="#16181d">日志行 → 日志环</text>
+  <line x1="535" y1="378" x2="105" y2="378" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="320" y="370" text-anchor="middle" font-size="12" fill="#16181d">event: log（逐帧 flush，断线静默容忍；重连同端点回放）</text>
+
+  <line x1="735" y1="420" x2="535" y2="420" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="635" y="412" text-anchor="middle" font-size="12" fill="#16181d">进程退出（exit）</text>
+  <line x1="535" y1="448" x2="105" y2="448" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="320" y="440" text-anchor="middle" font-size="12" fill="#16181d">event: done {exit, 耗时}</text>
+  <line x1="535" y1="476" x2="885" y2="476" stroke="#334155" stroke-width="1.5" marker-end="url(#sq)"/>
+  <text x="710" y="468" text-anchor="middle" font-size="12" fill="#16181d">UPDATE lab_runs（finished_at · exit · log_tail）</text>
+
+  <rect x="40" y="506" width="890" height="56" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.1"/>
+  <text x="54" y="528" font-size="11.5" fill="#b91c1c">强停（F14，可选）：POST /api/labs/runs/{id}/stop → taskkill /F /T 整树杀（Windows）/
+  terminate（POSIX）—— "cmd /c run.bat 的子进程会活下来"是实验台同款教训，必须整树；</text>
+  <text x="54" y="548" font-size="11.5" fill="#b91c1c">超时（默认 600s）由监控线程到点触发同一路径；atexit 保证平台退出时无孤儿。</text>
+</svg>
