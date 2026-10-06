@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SimLab · 仿真馆控制台</title>
+<link rel="stylesheet" href="/static/assets/kb.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand"><span class="logo">SL</span>SimLab<span class="dot" id="live-dot"></span></div>
+    <div class="side-section">工作区</div>
+    <a class="side-link active" href="#lab" data-nav="lab">① 实验台</a>
+    <a class="side-link" href="#library" data-nav="library">② 回放库<span class="cnt" id="nav-rec-cnt">0</span></a>
+    <div class="side-section">快捷</div>
+    <a class="side-link" id="nav-demo-lib">生成演示回放库</a>
+    <div class="side-foot">
+      <div>127.0.0.1:8019</div>
+      <div>引擎 import B12/B34（零重写）</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="pagebar">
+      <div class="crumb">SimLab / <b id="crumb-page">实验台</b></div>
+      <span class="spacer"></span>
+      <button id="btn-demo-lib" class="btn btn-sm">生成演示回放库</button>
+    </div>
+
+    <div class="page">
+      <div class="overline">Live Lab</div>
+      <h1 id="lab">实验台</h1>
+      <p class="note">每一帧都是引擎现算的产出，不是画出来的演示——改参数即改即算即播。</p>
+
+      <div class="card">
+        <h3>参数（schema 由服务端下发）</h3>
+        <div class="toolbar">
+          <select id="experiment-list" style="flex:none;width:auto"></select>
+          <button id="btn-render" class="btn btn-sm">⟳ 重算并播放</button>
+          <button id="btn-save" class="btn btn-ghost btn-sm">保存到回放库</button>
+          <span class="note" id="form-msg"></span>
+        </div>
+        <div id="params-form" class="params"></div>
+      </div>
+
+      <div id="player" class="card" hidden>
+        <h3 id="rec-title">—</h3>
+        <p class="note" id="rec-meta">—</p>
+        <div id="stage" class="stage"></div>
+        <p class="caption" id="frame-caption"></p>
+        <div class="controls">
+          <button id="btn-first" class="btn btn-ghost btn-xs">⏮</button>
+          <button id="btn-prev" class="btn btn-ghost btn-xs">◀</button>
+          <button id="btn-play" class="btn btn-sm">▶ 播放</button>
+          <button id="btn-next" class="btn btn-ghost btn-xs">▶</button>
+          <button id="btn-last" class="btn btn-ghost btn-xs">⏭</button>
+          <input id="slider" type="range" min="0" value="0" class="slider">
+          <span class="note time" id="pos"></span>
+        </div>
+      </div>
+
+      <div class="overline">Library</div>
+      <h2 id="library">回放库 <span class="pill info" id="lib-count">—</span></h2>
+      <table class="kb">
+        <thead><tr><th>记录</th><th>实验</th><th>帧数</th><th>生成时间</th><th style="width:6rem">操作</th></tr></thead>
+        <tbody id="record-rows"><tr><td colspan="5" class="note">加载中…</td></tr></tbody>
+      </table>
+      <div class="empty" id="lib-empty" hidden>
+        回放库还是空的——点右上角「生成演示回放库」，为每个引擎各现算一份记录。
+      </div>
+    </div>
+
+    <footer>SimLab P5 · 跑在自研 webframe 上 · 记录格式 simlab-run/v1 自家校验器把关 · runs/ 即改即见</footer>
+  </div>
+</div>
+<div class="toast-wrap" id="toast-wrap"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

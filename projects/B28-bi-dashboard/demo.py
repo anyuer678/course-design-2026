@@ -146,14 +146,16 @@ def main() -> int:
     show("血缘自检", LG.problems() or "无问题（每个指标都能追到清洗步骤与数据源）")
     SV.BUNDLE = (conn, data)
     server, thread, port = SV.start(0)
+    # 显式无代理：系统代理（如 127.0.0.1:7890）没开时不许把本机请求也劫走
+    opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
     try:
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api/summary",
-                                    timeout=20) as resp:
+        with opener.open(f"http://127.0.0.1:{port}/api/summary",
+                         timeout=20) as resp:
             body = json.loads(resp.read().decode("utf-8"))
         show("真起服务真发请求 /api/summary",
              f"status 200，对拍干净={body['reconcile_clean']}，成交额 {body['metrics']['gmv']['sql']}")
         try:
-            urllib.request.urlopen(f"http://127.0.0.1:{port}/api/summary?evil=1", timeout=10)
+            opener.open(f"http://127.0.0.1:{port}/api/summary?evil=1", timeout=10)
         except urllib.error.HTTPError as exc:
             show("未知参数走 HTTP", f"{exc.code} "
                                     f"{json.loads(exc.read().decode('utf-8'))['reason'][:40]}")

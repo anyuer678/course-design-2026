@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#fafafa">
+<title>Studio · 产品矩阵门户</title>
+<link rel="stylesheet" href="/static/assets/kb.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand"><span class="logo">ST</span>Studio</div>
+    <div class="side-section">门户</div>
+    <a class="side-link active" href="#cards" data-nav="cards">产品矩阵</a>
+    <a class="side-link" href="#account" data-nav="account">账户</a>
+    <div class="side-foot">
+      <div class="badge-dot" id="foot-state">只绑 127.0.0.1</div>
+      <div>门户跑在自研 webframe 上</div>
+      <div>初始口令在 studio/data/password.txt</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="pagebar">
+      <div class="crumb">Studio / <b id="crumb-page">产品矩阵</b></div>
+      <span class="spacer"></span>
+      <div id="authbox" class="authbox" style="display:flex;gap:.5rem;align-items:center">
+        <div id="auth-guest" style="display:flex;gap:.5rem;align-items:center">
+          <input id="login-pass" type="password" placeholder="口令（owner）" class="inp"
+                 style="width:11rem;flex:none">
+          <button id="btn-login" class="btn btn-sm">登录</button>
+        </div>
+        <div id="auth-user" style="display:flex;gap:.5rem;align-items:center" hidden>
+          <span class="note" id="whoami"></span>
+          <button id="btn-logout" class="btn btn-ghost btn-sm">登出</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="overline">Product Matrix</div>
+      <h1>产品矩阵</h1>
+      <p class="note">目录 · 一键启停 · 状态面板 · 导航。管理动作（启停）需登录；
+        "在线 = 端口连得上"，不撒谎。</p>
+      <section id="cards" class="grid" style="margin-top:1rem"></section>
+
+      <div class="overline">Account</div>
+      <h2 id="account">改口令</h2>
+      <div class="card">
+        <div class="toolbar">
+          <input id="old-pass" type="password" placeholder="旧口令" class="inp"
+                 style="flex:none;width:12rem" autocomplete="current-password">
+          <input id="new-pass" type="password" placeholder="新口令（至少 8 位）" class="inp"
+                 style="flex:none;width:14rem" autocomplete="new-password">
+          <button id="btn-passwd" class="btn btn-ghost btn-sm">改口令</button>
+        </div>
+        <p class="note" id="passwd-msg"></p>
+      </div>
+
+      <div class="overline">Guides</div>
+      <h2>讲解层</h2>
+      <div class="card">
+        <p class="note">每个课设项目"怎么实现的"看仓库根 <span class="kbd">showcase/index.html</span>
+          （33 页全绿）。实验台已并入上面的卡片（"展示层实验台"），启动后打开
+          <span class="kbd">http://127.0.0.1:7788/showcase/index.html</span> 就是项目群控制台。</p>
+      </div>
+    </div>
+
+    <footer>Studio P0 · 数据只在本机 · 只绑 127.0.0.1 · UI 共享设计系统 kb.css 2.1</footer>
+  </div>
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

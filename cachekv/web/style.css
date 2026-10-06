@@ -1,0 +1,7 @@
+/* CacheKV 页面级补充（设计系统在 kb.css 2.1；这里只放本页专属细节） */
+.donut-wrap svg text{font-family:system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
+table.kb td{vertical-align:middle}
+table.kb .btn-xs{margin:0}
+#out{min-height:3.2rem}
+.kv dd{word-break:break-all}
+.side-link .cnt{font-variant-numeric:tabular-nums}

@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CacheKV · 控制台</title>
+<link rel="stylesheet" href="/static/assets/kb.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand"><span class="logo">KV</span>CacheKV<span class="dot" id="live-dot"></span></div>
+    <div class="side-section">缓存</div>
+    <a class="side-link active" href="#overview" data-nav="overview">总览</a>
+    <a class="side-link" href="#keys" data-nav="keys">键空间<span class="cnt" id="nav-key-cnt">0</span></a>
+    <a class="side-link" href="#ops" data-nav="ops">命令行</a>
+    <div class="side-section">运维</div>
+    <a class="side-link" id="nav-demo">注入演示数据</a>
+    <a class="side-link" id="nav-save">立即快照</a>
+    <div class="side-foot">
+      <div class="badge-dot" id="foot-state">运行中</div>
+      <div id="foot-uptime">uptime —</div>
+      <div>127.0.0.1:8021 · 引擎 B38 Store</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="pagebar">
+      <div class="crumb">CacheKV / <b id="crumb-page">总览</b></div>
+      <span class="spacer"></span>
+      <div class="searchbox"><input id="search" placeholder="按键名过滤键空间…" autocomplete="off"></div>
+      <button id="btn-demo" class="btn btn-sm">注入演示数据</button>
+    </div>
+
+    <div class="page">
+      <div class="overline">Overview</div>
+      <h1 id="overview">总览</h1>
+      <div class="tiles">
+        <div class="tile c-blue"><div class="t-label">存活键</div>
+          <div class="t-value time" id="t-keys">—</div><div class="t-sub" id="t-keys-sub">—</div></div>
+        <div class="tile c-green"><div class="t-label">命中</div>
+          <div class="t-value time" id="t-hits">—</div><div class="t-sub">GET 成功</div></div>
+        <div class="tile c-rose"><div class="t-label">未命中</div>
+          <div class="t-value time" id="t-misses">—</div><div class="t-sub">GET 落空</div></div>
+        <div class="tile c-violet"><div class="t-label">写入</div>
+          <div class="t-value time" id="t-sets">—</div><div class="t-sub">SET 累计</div></div>
+        <div class="tile c-amber"><div class="t-label">快照</div>
+          <div class="t-value time" id="t-snaps">—</div><div class="t-sub" id="t-snaps-sub">—</div></div>
+      </div>
+
+      <div class="grid">
+        <div class="card">
+          <h3>读取趋势（客户端采样，最近 90 个周期）</h3>
+          <svg id="sparkline" class="chart" width="100%" height="110" viewBox="0 0 560 110"
+               preserveAspectRatio="none" role="img" aria-label="读取趋势曲线"></svg>
+          <div class="note" id="spark-note">采集两个周期后开始画线——命中/未命中增量实时可见。</div>
+        </div>
+        <div class="card">
+          <h3>命中率</h3>
+          <div class="donut-wrap">
+            <svg id="donut" width="112" height="112" viewBox="0 0 120 120" role="img" aria-label="命中率">
+              <circle cx="60" cy="60" r="45" fill="none" stroke="var(--line-soft)" stroke-width="12"/>
+              <circle id="donut-arc" cx="60" cy="60" r="45" fill="none" stroke="#2563eb"
+                      stroke-width="12" stroke-linecap="round" stroke-dasharray="0 282.7"
+                      transform="rotate(-90 60 60)" style="transition:stroke-dasharray .5s ease"/>
+              <text id="donut-text" x="60" y="66" text-anchor="middle" font-size="19"
+                    font-weight="750" fill="var(--ink)">—</text>
+            </svg>
+            <div class="note" id="donut-note">读取为 0。注入演示数据或执行 GET 后开始记账。</div>
+          </div>
+        </div>
+        <div class="card">
+          <h3>快照</h3>
+          <dl class="kv">
+            <dt>文件</dt><dd class="kbd" id="snap-path">—</dd>
+            <dt>状态</dt><dd id="snap-state">—</dd>
+            <dt>最近大小</dt><dd id="snap-bytes" class="time">—</dd>
+          </dl>
+          <p class="note">定时「脏了才写」+ 停机自动保存（B38 dbsnap 原子写）。</p>
+        </div>
+      </div>
+
+      <div class="overline">Keyspace</div>
+      <h2 id="keys">键空间
+        <span class="pill info" id="ks-count">—</span>
+        <span class="chips" style="margin:0 0 0 .4rem">
+          <button class="chip active" data-filter="all">全部</button>
+          <button class="chip" data-filter="ttl">带 TTL</button>
+          <button class="chip" data-filter="forever">永久</button>
+        </span>
+        <select id="sort" class="chip" style="margin-left:auto;width:auto">
+          <option value="ttl">按 TTL 升序</option>
+          <option value="size">按大小降序</option>
+          <option value="key">按键名 A-Z</option>
+        </select>
+      </h2>
+      <table class="kb">
+        <thead><tr><th>键</th><th>大小</th><th>剩余 TTL</th><th style="width:8.5rem">操作</th></tr></thead>
+        <tbody id="key-rows"></tbody>
+      </table>
+      <div class="empty" id="empty-hint" hidden>
+        还没有任何键。注入演示数据或用下方命令行写入第一个键。
+      </div>
+      <p class="note" id="page-note"></p>
+
+      <div class="overline">Command</div>
+      <h2 id="ops">命令行</h2>
+      <div class="card">
+        <div class="toolbar">
+          <input id="key" placeholder="键名">
+          <input id="value" placeholder="值（文本）" style="flex:2">
+          <input id="ttl" placeholder="TTL 秒（可空=永久）" style="width:11rem;flex:none">
+        </div>
+        <div class="toolbar">
+          <button id="btn-put" class="btn btn-sm">SET 写入</button>
+          <button id="btn-get" class="btn btn-ghost btn-sm">GET 读取</button>
+          <button id="btn-del" class="btn btn-danger btn-sm">DEL 删除</button>
+        </div>
+        <pre id="out" class="logbox">（命令结果在这里）</pre>
+      </div>
+    </div>
+
+    <footer>CacheKV P3 · 自研 webframe · 快照 data/snapshot.bin（B38 dbsnap 原子写）· 数据只在本机 127.0.0.1</footer>
+  </div>
+</div>
+
+<div class="drawer-mask" id="drawer-mask"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h3 class="mono" id="drawer-key">—</h3>
+    <button class="btn btn-ghost btn-xs" id="drawer-copy">复制值</button>
+    <button class="btn btn-danger btn-xs" id="drawer-del">删除</button>
+    <button class="btn btn-ghost btn-xs" id="drawer-close">关闭</button>
+  </div>
+  <div class="drawer-body">
+    <dl class="kv" id="drawer-meta"></dl>
+    <div class="overline">Value</div>
+    <pre id="drawer-value" class="logbox" style="max-height:none">—</pre>
+  </div>
+</div>
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,6 @@
+/* DataScope 页面级补充（设计系统在 kb.css 2.1；这里只放向导专属细节） */
+table.kb td{vertical-align:middle}
+#csv-text{font:12.5px ui-monospace,Consolas,monospace}
+#mine-out img{background:#fff}
+#mine-out table.kb{margin-top:.6rem}
+.chips .chip input[type=checkbox]{vertical-align:-1px}

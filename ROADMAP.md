@@ -641,8 +641,25 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   ASCII+CRLF+pause+退出码如实传递——`endlocal` 独行抹 EC 恒退 0 的坑实测修掉），
   scan_refs 补 wsl.exe 白名单；walkthrough 全链实跑 21/21（证据
   p-验收/day1-预演-2026-10-05.md）；新增 scripts/README.md 入口说明。
-  **下一站**：两产品接入 Studio 后
-  的 P-验收真实使用周（等用户）。
+- ✅ **轮九：UI 2.1 生产控制台化（10-05/06）**：用户"UI 急需大改/对齐生产"→
+  设计依据收敛到 **courselab/docs/DESIGN-SPEC.md v2.1**（Geist/Linear 克制工程
+  风，浅色单主题）；共享样式 `webkit/kb.css` 唯一源 + `scripts/sync_assets.py`
+  同步七产品 + scan_refs 第三遍新鲜度核验。**六产品前端重排为生产控制台形态**：
+  CacheKV（命中率环/TTL 倒计时/演示注入）、DataScope（四步向导+示例 CSV+挖掘
+  参数对齐 mining.py）、SimLab（回放库+一键生成演示回放库）、SensorHub（统计
+  瓦片+Toast）、LinkBox（侧边栏四页签）、Studio（侧边栏+登录页头）。测试服务
+  清理改 TaskStop/CommandLine 精确匹配（按端口杀曾误伤 IDE 宿主致会话闪退，
+  用户点破入库 Hard Constraints）；studio 测试端口运行时探测；12 入口 bat 补
+  pause。**全矩阵回归 215/215**（webframe 31/studio 17/linkbox 53/simlab 37/
+  datascope 31/cachekv 17/sensorhub 18/board 11，10-06 逐套实测合计）。
+  **Board 专项（10-06 收官）**：Nimbus 换肤两步到位——首试 JVM 属性注入无效
+  （App.java 显式 setLookAndFeel(系统 LAF) 优先级更高，computer-use 走查抓出），
+  终改 **App.java 显式 Nimbus（B14 引擎一行配置）+ launch.py 撤属性**，board
+  全量验收（编译+7054 自检+11 测试）全绿，重启窗口 computer-use 复验 Nimbus 生效。
+  **CourseLab 评估结论（定案）**：不套用 kb.css——其 app.css v2.1 就是
+  DESIGN-SPEC 的源头实现且更完整（145 项自检护航），kb.css 已与其 token 对齐；
+  两套样式同源同规，各管各的页面。
+  **全仓体检 15/15 + --deep 48/48（10-06 终验，33 项目展示页套件同绿）——轮九收官。**
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
   cachekv/data/、sensorhub/data/、board/data/）。
 

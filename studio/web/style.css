@@ -1,0 +1,21 @@
+/* Studio 门户页面级补充（设计系统在 kb.css 2.1） */
+.authbox .inp{font:inherit;font-size:.88rem;padding:.42rem .8rem;border:1px solid var(--line);
+border-radius:8px;background-color:var(--card);color:var(--ink)}
+.authbox .inp:focus{outline:none;border-color:var(--accent);
+box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+
+/* 产品卡（app.js 生成：.card .head .dot .row .badge） */
+#cards .card .head{display:flex;align-items:center;justify-content:space-between;gap:.5rem}
+#cards .card .head b{font-size:.98rem}
+#cards .card .dot{width:.55rem;height:.55rem;border-radius:999px;background:var(--faint);flex:none}
+#cards .card .dot.on{background:var(--ok);box-shadow:0 0 0 3px rgba(10,158,110,.15)}
+#cards .card.online{border-color:var(--okline)}
+#cards .card .row{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;margin-top:.55rem}
+#cards .card .badge{font-size:.74rem;padding:.06rem .55rem;border-radius:999px;
+border:1px solid var(--line);background:var(--bg);color:var(--faint)}
+#cards .card .btn{font-size:.82rem;padding:.3rem .75rem}
+.btn.ghost{background:var(--card);color:var(--muted);border-color:var(--line);box-shadow:none}
+.btn.ghost:hover{color:var(--accent);border-color:var(--accent)}
+.inp{font:inherit;font-size:.88rem;padding:.42rem .8rem;border:1px solid var(--line);
+border-radius:8px;background-color:var(--card);color:var(--ink)}
+.inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}

@@ -1,0 +1,31 @@
+/* SimLab 页面级补充（设计系统在 kb.css 2.1；这里只放渲染器专属样式） */
+.stage{background:var(--card);border:1px solid var(--line);border-radius:10px;
+padding:.8rem;overflow:auto;min-height:6rem}
+.caption{font-weight:600;margin:.6rem 0}
+.controls{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap}
+.slider{flex:1 1 12rem}
+.params{margin-top:.4rem}
+.prow{display:flex;gap:.6rem;align-items:center;margin:.3rem 0;flex-wrap:wrap}
+.plabel{min-width:9rem;font-size:.88rem;color:var(--muted)}
+textarea.inp{font-family:ui-monospace,Consolas,monospace;font-size:.85rem;flex:1 1 22rem}
+.inp{font:inherit;font-size:.9rem;padding:.35rem .6rem;border:1px solid var(--line);
+border-radius:8px;background:var(--card);color:var(--ink);min-width:10rem}
+.inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+.msg{color:var(--ok);font-size:.85rem}
+
+/* 渲染器：距离表 / 背包表 */
+table.grid{border-collapse:collapse;font-size:.86rem}
+table.grid th,table.grid td{border:1px solid var(--line);padding:.25rem .55rem;
+text-align:center;font-variant-numeric:tabular-nums}
+table.grid tr.cur td,table.grid tr.cur th{background:var(--accent-soft);font-weight:650}
+td.cur{background:var(--accent-soft);font-weight:650}
+td.settled{background:var(--okbg)}
+
+/* 渲染器：A* 迷宫 */
+svg.maze .cell{fill:#fafbfc;stroke:#e3e6ec}
+svg.maze .wall{fill:#3b4252}
+svg.maze .expanded{fill:#c7dbf7}
+svg.maze .path{fill:#9fe3b8}
+svg.maze .start{fill:#b8f2c9;stroke:#1faa59}
+svg.maze .goal{fill:#fde68a;stroke:#d97706}
+svg.maze .current{fill:#f59e0b}

@@ -10,7 +10,7 @@ from pathlib import Path
 root = Path(sys.argv[1] if len(sys.argv) > 1 else ".")
 missing = []
 TOOLS = {"g++.exe", "python", "python3", "javac", "java", "node", "mvn",
-         "objdump", "gcc", "make", "pip"}
+         "objdump", "gcc", "make", "pip", "wsl.exe"}
 
 for bat in sorted(root.glob("*/run.bat")):
     d = bat.parent
@@ -68,3 +68,24 @@ for d in sorted(x for x in root.iterdir() if x.is_dir() and x.name[0] in "Bb" an
               + (f"；{'；'.join(notes)}" if notes and not missing_hard else ""))
 print("全部项目的硬性交付物齐全" if hard_gaps == 0
       else f"共 {hard_gaps} 个项目需要处理（上面已标明是缺硬性交付物，还是软性入口待人工确认）")
+
+# 第三遍：webkit 共享资产新鲜度（2026-10-05 轮九起）。
+# 各产品的 web/assets/kb.css 是 webkit/kb.css 的同步副本——引用了一份过期的
+# 共享样式与引用一个不存在的文件同样危险，所以并入本扫描：不一致即列出，
+# 同步动作交给 scripts/sync_assets.py（本遍只报不写）。
+print()
+print("共享资产新鲜度（webkit/ -> 各产品 web/assets/）：")
+src = Path(__file__).resolve().parents[1] / "webkit" / "kb.css"
+if not src.is_file():
+    print("  [缺] webkit/kb.css 不存在（共享样式唯一源丢失）")
+    shared_stale = True
+else:
+    shared_stale = False
+    for product in ("linkbox", "simlab", "datascope", "cachekv",
+                    "sensorhub", "courselab", "studio"):
+        dst = src.parent.parent / product / "web" / "assets" / "kb.css"
+        if not dst.is_file() or dst.read_bytes() != src.read_bytes():
+            print(f"  [过期/缺] {dst.relative_to(src.parent.parent)}")
+            shared_stale = True
+print("全部产品与 webkit/kb.css 一致" if not shared_stale
+      else "存在过期副本（跑 python scripts/sync_assets.py 同步）")

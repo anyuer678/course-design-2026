@@ -102,7 +102,7 @@ python -m unittest discover -s showcase/tests
 用户反馈"前端相当于 PPT，缺少对真实后端的控制"后的补齐：展示页默认仍是**静态自包含**（双击即看），
 另外提供一台**本地实验台**，页面接上它就从"录像"变成"控制台"：
 
-- **启动**：双击仓库根 `lab.bat`（Windows 双击即用：起 7788 并自动打开总入口；`lab.bat no-open`
+- **启动**：双击 `scripts\lab.bat`（Windows 双击即用：起 7788 并自动打开总入口；`lab.bat no-open`
   只起服务，`lab.bat lan` 局域网模式，`lab.bat selftest` 复跑自检；**参数顺序无关**；正文纯 ASCII + CRLF，
   沿用全仓 .bat 规矩），或 `python showcase/lab.py`（纯标准库，只绑 127.0.0.1:7788；
   `--open` 才自动开浏览器——lab.bat 默认传）。之后从

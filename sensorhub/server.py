@@ -1,0 +1,182 @@
+"""sensorhub/server.py —— SensorHub 服务（轮六之一）：跑在自研 webframe 上。
+
+API：
+    GET  /                           监测台页面（自刷新；静态资产在 /static）
+    GET  /api/status                 总账：broker 统计 + 设备账本 vs 入库对账 + 告警汇总
+    GET  /api/series?device&metric   曲线数据 [(seq, 值)]（metric = temp/vib）
+    GET  /api/chart?device&metric    自包含 SVG（B35 svgplot 现算，温度曲线叠异常点）
+    GET  /api/alerts?limit=100       告警台账（最新在前）
+    POST /api/tick                   手动推一拍（返回本轮账；自动节拍不受影响）
+    POST /api/inject                 管理口注入一条读数（JSON；走 broker 真实订阅表）
+只绑回环。引擎节拍默认 1s 一拍（--interval 可调，须 > 0）。
+"""
+from __future__ import annotations
+
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+REPO = ROOT.parent
+for p in (str(REPO),):
+    if p not in sys.path:
+        sys.path.insert(0, p)
+
+from webframe import HttpFail, MicroApp, MicroServer, Response  # noqa: E402
+
+from sensorhub import METRICS, SensorHub                        # noqa: E402
+from mqttlite.svgplot import line_chart                         # noqa: E402
+
+WEB_ROOT = ROOT / "web"
+DATA_DIR = ROOT / "data"
+DEFAULT_PORT = 8022   # 8017 studio / 8018 linkbox / 8019 simlab / 8020 datascope / 8021 cachekv
+
+_INJECT_SCHEMA = {
+    "device": (str, True), "seq": (int, True),
+    "temp": (float, True), "vib": (float, True),
+    "anomaly": (str, False),
+}
+_SAFE_NAME = re.compile(r"[^A-Za-z0-9_.-]")
+
+
+class SensorHubServer(MicroServer):
+    """停机即收摊：broker/客户端/库连接都要体面关闭，不留半开套接字。"""
+
+    def stop(self) -> None:
+        engine = getattr(self, "engine", None)
+        if engine is not None:
+            try:
+                engine.stop()
+            except Exception:
+                pass                             # 停机路径不许被引擎异常卡住
+        super().stop()
+
+
+def build_app(engine: SensorHub, *, charts_dir: str | Path) -> MicroApp:
+    app = MicroApp()
+    charts = Path(charts_dir)
+
+    def metric_of(ctx) -> str:
+        metric = ctx.query.get("metric", "temp")
+        if metric not in METRICS:
+            raise HttpFail(400, f"metric 只支持 {'/'.join(METRICS)}")
+        return metric
+
+    def device_of(ctx) -> str:
+        device = ctx.query.get("device", "")
+        if not device:
+            raise HttpFail(400, "缺 device 参数")
+        if device not in engine.known_devices():
+            raise HttpFail(404, f"没有叫 {device!r} 的设备")
+        return device
+
+    @app.get("/api/status")
+    def status(ctx):
+        return ctx.json(engine.status())
+
+    @app.get("/api/series")
+    def series(ctx):
+        device, metric = device_of(ctx), metric_of(ctx)
+        return ctx.json({"device": device, "metric": metric,
+                         "points": engine.series(device, metric)})
+
+    @app.get("/api/chart")
+    def chart(ctx):
+        device, metric = device_of(ctx), metric_of(ctx)
+        points = [(float(s), float(v)) for s, v in engine.series(device, metric)]
+        if not points:
+            raise HttpFail(400, f"设备 {device!r} 暂无 {metric} 数据")
+        anomalies = None
+        if metric == "temp":                     # B35 的异常点标注的是温度
+            anomalies = [(float(s), float(v), label) for s, v, label
+                         in engine.anomaly_points(device)]
+        charts.mkdir(parents=True, exist_ok=True)
+        name = _SAFE_NAME.sub("_", device)       # 设备名进文件名前先消毒
+        out = charts / f"curve-{name}-{metric}.svg"
+        line_chart(out, {device: points}, anomalies=anomalies,
+                   title=f"{device} · {metric}", y_label=metric)
+        return Response(out.read_bytes(), content_type="image/svg+xml",
+                        headers=[("Cache-Control", "no-store")])
+
+    @app.get("/api/alerts")
+    def alerts(ctx):
+        raw = ctx.query.get("limit", "100")
+        try:
+            limit = int(raw)
+        except ValueError:
+            raise HttpFail(400, "limit 要是整数") from None
+        return ctx.json({"rules": {name: spec[1] for name, spec in engine.rules.items()},
+                         "alerts": engine.alerts(limit)})
+
+    @app.post("/api/tick")
+    def tick(ctx):
+        return ctx.json(engine.tick())
+
+    @app.post("/api/inject")
+    def inject(ctx):
+        body = ctx.json_body(_INJECT_SCHEMA)
+        try:
+            engine.inject(body["device"], body["seq"], body["temp"], body["vib"],
+                          body.get("anomaly", ""))
+        except ValueError as exc:
+            raise HttpFail(400, str(exc)) from None
+        return ctx.json({"injected": True})
+
+    @app.get("/")
+    def index(ctx):
+        page = (WEB_ROOT / "index.html").read_bytes()
+        return Response(page, content_type="text/html; charset=utf-8")
+
+    app.static("/static", WEB_ROOT)
+    return app
+
+
+def build_server(*, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
+                 data_dir: str | Path | None = None,
+                 devices=None, seed: int = 2026, interval: float | None = 1.0,
+                 temp_max: float = 85.0, vib_max: float = 4.0,
+                 plan=None) -> tuple[SensorHubServer, SensorHub]:
+    """组装服务。服务器永远跑节拍线程（HTTP 线程与引擎线程不同源，手动模式的
+    内联执行只属于测试/脚本——SQLite 连接跟人走，跨线程用就是 ProgrammingError）。"""
+    data = Path(data_dir) if data_dir else DATA_DIR
+    kwargs = {"seed": seed, "interval": 1.0 if interval is None else interval,
+              "temp_max": temp_max, "vib_max": vib_max}
+    if devices is not None:
+        kwargs["devices"] = devices
+    if plan is not None:
+        kwargs["plan"] = plan
+    engine = SensorHub(data / "readings.sqlite3", **kwargs)
+    server = SensorHubServer(build_app(engine, charts_dir=data / "charts"),
+                             host=host, port=port)
+    server.engine = engine
+    return server, engine
+
+
+def main(argv=None) -> int:
+    import argparse
+    import threading
+    ap = argparse.ArgumentParser(description="SensorHub 物联网监测（只绑回环）")
+    ap.add_argument("--port", type=int, default=DEFAULT_PORT)
+    ap.add_argument("--interval", type=float, default=1.0,
+                    help="节拍秒数（必须 > 0；服务模式下引擎跑在节拍线程里）")
+    args = ap.parse_args(argv)
+    if args.interval <= 0:
+        ap.error("--interval 必须 > 0（服务模式不能关节拍线程）")
+    server, engine = build_server(port=args.port, interval=args.interval)
+    engine.start()
+    port = server.start()
+    status = engine.status()
+    print(f"SensorHub 已启动： http://127.0.0.1:{port}/   （Ctrl+C 退出）")
+    print(f"链路： {len(status['devices'])} 台模拟设备 → broker :{status['broker']['port']}"
+          f" → SQLite → 阈值告警 {status['rules']}"
+          f"（节拍 {args.interval}s）")
+    try:
+        threading.Event().wait()
+    except KeyboardInterrupt:
+        print("\n再见（收摊：断设备 → 停 broker → 关库）")
+        server.stop()
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

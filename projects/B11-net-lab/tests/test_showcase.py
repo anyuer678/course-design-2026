@@ -97,7 +97,8 @@ class TestRenderedPage(unittest.TestCase):
 
     def test_pinned_numbers_appear_in_page(self):
         text = sc.OUT.read_text(encoding="utf-8")
-        for token in ("91 项", "状态码表 23 条", "HTTP/1.1 414 URI Too Long", "189"):
+        # 状态码表 25 条 = 原 23 + 401/410（2026-10-04 LinkBox 产品层需要，见 B11 README）
+        for token in ("91 项", "状态码表 25 条", "HTTP/1.1 414 URI Too Long", "189"):
             self.assertIn(token, text)
 
     def test_no_external_references(self):

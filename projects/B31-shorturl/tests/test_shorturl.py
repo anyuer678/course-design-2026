@@ -624,11 +624,13 @@ class TestOverRealSocket(ServerCase):
             return json.loads(self.post(c, {"url": target}).text())["code"]
 
     def test_stdlib_client_follows_our_redirect(self):
-        """标准库客户端跟着我们的 302 真的落到了目标——不是只有我们自己的客户端认。"""
+        """标准库客户端跟着我们的 302 真的落到了目标——不是只有我们自己的客户端认。
+        用显式无代理的 opener：系统代理（如 127.0.0.1:7890）没开时不许假红。"""
         import urllib.request
         home = f"http://127.0.0.1:{self.port}/"
         code = self.make_code(home)
-        with urllib.request.urlopen(f"{home}l/{code}", timeout=5) as resp:
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(f"{home}l/{code}", timeout=5) as resp:
             self.assertEqual(resp.status, 200)
             self.assertTrue(resp.geturl().endswith("/"))
             self.assertIn(b"<!DOCTYPE html>", resp.read())

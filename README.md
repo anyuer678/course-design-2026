@@ -276,6 +276,18 @@
      wsl.exe 工具白名单（B8 误报缺失）；walkthrough 全链实跑 21/21、今日证据
      `p-验收/day1-预演-2026-10-05.md`；本目录新增 README 说明各入口与典型组合；
      历史快照条目按纪律不回改。
+14y. **轮九：UI 2.1 生产控制台化（10-05/06，用户"UI 急需大改/对齐生产"驱动）**：
+     ①设计依据收敛到 **courselab/docs/DESIGN-SPEC.md v2.1**（Geist/Linear 克制工程
+     风，浅色单主题）——共享样式 `webkit/kb.css` 为唯一源，`scripts/sync_assets.py`
+     同步七产品，scan_refs 第三遍字节级核验新鲜度；②六产品前端全部重排为**生产
+     控制台形态**（侧边栏+页头工具条+高密度表格+抽屉+Toast）：CacheKV（命中率环/
+     TTL 倒计时/演示数据注入）、DataScope（四步向导+示例 CSV+挖掘参数对齐
+     mining.py 真形状）、SimLab（回放库表+一键生成演示回放库）、SensorHub（统计
+     瓦片+Toast）、LinkBox（侧边栏四页签）、Studio（侧边栏+登录页头）；③测试服务
+     清理改为 TaskStop/按 CommandLine 精确匹配（按端口杀进程曾误伤 IDE 宿主致
+     会话闪退——用户点破，已入库 Hard Constraints）；studio 测试端口改运行时探测；
+     ④12 个入口 bat 补 pause（`endlocal & exit /b %EC%` 退出码惯用法）；
+     ⑤全矩阵回归 **215/215**。
 15. **方向探索**：主线稳定后选一个方向深挖；其余课程基础实验随开课安排，不全部同时启动。
 
 排期暂按每周 8～10 小时估算，尚未确认个人时间预算；先用 2～4 周完成 B9/B10 收尾并校准后续安排，不承诺两学期做完所有扩展。

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SensorHub · 物联网监测</title>
+<link rel="stylesheet" href="/static/assets/kb.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand"><span class="logo">SH</span>SensorHub<span class="dot" id="live-dot"></span></div>
+    <div class="side-section">监测</div>
+    <a class="side-link active" href="#overview" data-nav="overview">总账与对账</a>
+    <a class="side-link" href="#chart-sec" data-nav="chart">曲线</a>
+    <a class="side-link" href="#alerts" data-nav="alerts">告警台账<span class="cnt" id="nav-alert-cnt">0</span></a>
+    <div class="side-section">操作</div>
+    <a class="side-link" id="nav-tick">手动推一拍</a>
+    <a class="side-link" id="nav-inject">注入越限样本</a>
+    <div class="side-foot">
+      <div class="badge-dot" id="foot-state">检测中…</div>
+      <div>127.0.0.1:8022</div>
+      <div>链路 = B35 手写 broker 真件</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="pagebar">
+      <div class="crumb">SensorHub / <b>监测台</b></div>
+      <span class="spacer"></span>
+      <select id="device" class="inp" style="flex:none;width:auto"></select>
+      <select id="metric" class="inp" style="flex:none;width:auto">
+        <option value="temp">温度 temp</option>
+        <option value="vib">振动 vib</option>
+      </select>
+      <button id="btn-chart" class="btn btn-sm">看曲线</button>
+      <button id="btn-tick" class="btn btn-ghost btn-sm">推一拍</button>
+      <button id="btn-inject" class="btn btn-ghost btn-sm">注入越限样本</button>
+      <label class="note" style="flex:none"><input type="checkbox" id="auto" checked> 自动刷新（2s）</label>
+    </div>
+
+    <div class="page">
+      <div class="overline">Overview</div>
+      <h1 id="overview">总账</h1>
+      <div class="tiles" id="stats"></div>
+      <p class="note" id="rules">—</p>
+
+      <div class="overline">Ledger</div>
+      <h2>对账（设备账本 vs 入库实收）</h2>
+      <table id="ledger" class="kb">
+        <thead><tr>
+          <th>设备</th><th class="num">发出</th><th class="num">尖峰</th><th class="num">卡值</th>
+          <th class="num">断数</th><th class="num">实收入库</th><th class="num">seq 缺口</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="note">发出 = 传感器真实发出（dropout 不发）；缺口 = seq 空档数（应等于断数账）。</p>
+
+      <div class="overline">Chart</div>
+      <h2 id="chart-sec">曲线</h2>
+      <div class="card" id="chartbox">
+        <img id="chart" alt="选择设备后点「看曲线」" hidden
+             style="width:100%;border-radius:8px">
+        <p class="note" id="chartnote">选择设备与指标后点「看曲线」。</p>
+      </div>
+
+      <div class="overline">Alerts</div>
+      <h2 id="alerts">告警台账</h2>
+      <table id="alerttable" class="kb">
+        <thead><tr>
+          <th>时间</th><th>设备</th><th class="num">seq</th><th>规则</th>
+          <th>指标</th><th class="num">值</th><th class="num">阈值</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <p class="note">告警由产品侧阈值规则独立评估（严格大于才算），与设备自报的异常标记互相独立。</p>
+    </div>
+
+    <footer>SensorHub P6 · 跑在自研 webframe 上 · broker 真套接字 + SQLite 入库 + SVG 现算</footer>
+  </div>
+</div>
+<div class="toast-wrap" id="toast-wrap"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

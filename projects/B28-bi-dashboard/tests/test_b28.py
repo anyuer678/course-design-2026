@@ -313,8 +313,10 @@ class TestServerRoutes(unittest.TestCase):
         SV.stop(cls.server, cls.thread)
 
     def get(self, path):
-        with urllib.request.urlopen(f"http://127.0.0.1:{self.port}{path}",
-                                    timeout=20) as resp:
+        # 显式无代理：系统代理没开时不许把 127.0.0.1 的请求劫走（与 B31 同修）
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(f"http://127.0.0.1:{self.port}{path}",
+                         timeout=20) as resp:
             return resp.status, resp.read().decode("utf-8")
 
     def code(self, path):

@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DataScope · 数据工作台</title>
+<link rel="stylesheet" href="/static/assets/kb.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand"><span class="logo">DS</span>DataScope</div>
+    <div class="side-section">工作流</div>
+    <a class="side-link active" href="#source" data-nav="source">① 数据源</a>
+    <a class="side-link" href="#profile" data-nav="profile">② 列画像</a>
+    <a class="side-link" href="#clean" data-nav="clean">③ 清洗配方</a>
+    <a class="side-link" href="#mine" data-nav="mine">④ 挖掘与报告</a>
+    <div class="side-section">快捷</div>
+    <a class="side-link" id="nav-sample">加载示例数据</a>
+    <div class="side-foot">
+      <div class="badge-dot" id="foot-state">未加载数据</div>
+      <div>127.0.0.1:8020</div>
+      <div>挖掘引擎 B26（零重写）</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="pagebar">
+      <div class="crumb">DataScope / <b id="crumb-page">数据源</b></div>
+      <span class="spacer"></span>
+      <button id="btn-sample" class="btn btn-sm">加载示例数据</button>
+    </div>
+
+    <div class="page">
+      <div class="overline">Step 1</div>
+      <h1 id="source">数据源</h1>
+      <div class="card">
+        <div class="toolbar">
+          <input type="file" id="file" accept=".csv,text/csv,text/plain" style="flex:none">
+          <button id="btn-sample-card" class="btn btn-sm">加载示例数据</button>
+        </div>
+        <div class="field">
+          <label>或直接粘贴 CSV（首行表头）</label>
+          <textarea id="csv-text" rows="6" placeholder="订单号,商品,数量,金额&#10;1001,键盘,2,199.90"></textarea>
+        </div>
+        <div class="toolbar">
+          <button id="btn-load" class="btn btn-sm">解析并载入</button>
+          <span class="meta" id="source-state">未加载</span>
+        </div>
+      </div>
+
+      <div class="overline">Step 2</div>
+      <h2 id="profile">列画像 <span class="pill" id="profile-state">待载入数据</span></h2>
+      <table class="kb">
+        <thead><tr><th>列名</th><th>类型</th><th>缺失</th><th>去重数</th><th>min</th><th>max</th></tr></thead>
+        <tbody id="profile-rows"><tr><td colspan="6" class="note">载入数据后自动生成</td></tr></tbody>
+      </table>
+
+      <div class="overline">Step 3</div>
+      <h2 id="clean">清洗配方</h2>
+      <div class="card">
+        <div class="toolbar">
+          <select id="op" style="flex:none;width:auto">
+            <option value="drop_duplicates">去重行</option>
+            <option value="trim">去首尾空格</option>
+            <option value="to_number">转数值（指定列）</option>
+            <option value="drop_empty_rows">删空行（指定列）</option>
+            <option value="fill_missing">填充缺失（指定列）</option>
+            <option value="drop_column">删列</option>
+          </select>
+          <select id="op-col" style="flex:none;width:auto"></select>
+          <select id="op-param" style="flex:none;width:auto;display:none">
+            <option value="mean">均值</option><option value="median">中位数</option>
+            <option value="zero">零</option><option value="blank">留空</option>
+          </select>
+          <button id="btn-add-step" class="btn btn-ghost btn-sm">加入配方</button>
+          <span class="note" id="op-hint">转数值/删空行/填充/删列需要选列</span>
+        </div>
+        <div class="chips" id="recipe-chips">
+          <span class="note">配方为空——加入步骤后执行清洗（示例：去重行 → 去首尾空格 → 转数值 → 删空行）</span>
+        </div>
+        <div class="toolbar">
+          <button id="btn-clean" class="btn btn-sm">执行清洗</button>
+          <button id="btn-download-csv" class="btn btn-ghost btn-sm" disabled>下载清洗后 CSV</button>
+        </div>
+        <div class="tiles" id="clean-tiles" hidden>
+          <div class="tile c-blue"><div class="t-label">清洗前</div>
+            <div class="t-value time" id="ct-before">—</div><div class="t-sub">行</div></div>
+          <div class="tile c-green"><div class="t-label">清洗后</div>
+            <div class="t-value time" id="ct-after">—</div><div class="t-sub">行</div></div>
+          <div class="tile c-amber"><div class="t-label">配方步骤</div>
+            <div class="t-value time" id="ct-steps">—</div><div class="t-sub">全部生效</div></div>
+        </div>
+        <pre id="clean-out" class="logbox" hidden></pre>
+      </div>
+
+      <div class="overline">Step 4</div>
+      <h2 id="mine">挖掘与报告 <span class="note">（可选，作用于清洗后数据）</span></h2>
+      <div class="card">
+        <div class="toolbar" id="apriori-params">
+          <label class="note" style="flex:none">聚篮列</label>
+          <select id="ap-group" style="flex:none;width:auto"></select>
+          <label class="note" style="flex:none">商品列</label>
+          <select id="ap-item" style="flex:none;width:auto"></select>
+          <input id="ap-support" placeholder="min_support=0.5" style="width:11rem;flex:none">
+          <input id="ap-conf" placeholder="min_confidence=0.6" style="width:13rem;flex:none">
+        </div>
+        <div class="toolbar" id="kmeans-params" style="display:none">
+          <span class="note" style="flex:none">数值特征列（可多选）：</span>
+          <span class="chips" id="km-cols" style="margin:0"></span>
+          <input id="km-k" placeholder="k=3" style="width:6rem;flex:none">
+        </div>
+        <div class="toolbar">
+          <select id="task" style="flex:none;width:auto">
+            <option value="apriori">Apriori 关联规则</option>
+            <option value="kmeans">K-means 聚类</option>
+          </select>
+          <button id="btn-mine" class="btn btn-ghost btn-sm">运行挖掘</button>
+          <button id="btn-report" class="btn btn-sm">生成 SVG 报告</button>
+          <button id="btn-download-svg" class="btn btn-ghost btn-sm" disabled>下载报告</button>
+        </div>
+        <div id="mine-out"></div>
+      </div>
+    </div>
+
+    <footer>DataScope P4 · CSV 以文本进出（类型显式转换）· 清洗账本逐步可追溯 · 挖掘引擎 B26 原项目 import</footer>
+  </div>
+</div>
+<div class="toast-wrap" id="toast-wrap"></div>
+<script src="/static/app.js"></script>
+</body>
+</html>

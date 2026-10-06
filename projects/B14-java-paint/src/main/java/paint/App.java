@@ -37,7 +37,9 @@ public final class App {
             return;
         }
         try {
-            javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
+            // 轮九 UI 专项：显式 Nimbus（产品矩阵观感统一；此前为系统 LAF）。
+            // 换肤失败不影响功能，用默认观感继续
+            javax.swing.UIManager.setLookAndFeel("javax.swing.plaf.nimbus.NimbusLookAndFeel");
         } catch (Exception lookAndFeelProblem) {
             // 换肤失败不影响功能，用默认观感继续
         }

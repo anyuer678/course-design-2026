@@ -1,0 +1,8 @@
+/* SensorHub 页面级补充（设计系统在 kb.css 2.1；这里只放监测台专属细节） */
+table.kb td.warn,table.kb td.rose{color:var(--err);font-weight:650}
+td.settled{background:var(--okbg)}
+#chartbox{text-align:center}
+#chart{max-width:100%}
+.inp{font:inherit;font-size:.88rem;padding:.4rem .8rem;border:1px solid var(--line);
+border-radius:8px;background:var(--card);color:var(--ink)}
+.inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}

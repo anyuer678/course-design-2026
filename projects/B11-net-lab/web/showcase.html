@@ -97,7 +97,7 @@ footer,.sw-footer{color:var(--kb-text-3);border-top:1px solid var(--kb-border)}
 （演示里四处随环境波动的数字按可审计规则规范化，见页脚）。</p>
 
 <h2>实测数字（本页现算）</h2>
-<section id="facts" class="cards"><div class="card"><b>测试</b><span>91 项（tests/ 两个核心文件的 def test_ 现数；run.bat 一趟是权威）</span></div><div class="card"><b>HTTP 子集</b><span>状态码表 23 条；硬上限：目标 2048 字节 / 单行 8192 字节 / 头 100 条·32KiB / 体 1024KiB</span></div><div class="card"><b>边界拒绝</b><span>越界请求 8 种现场回放（414/431/400/501/413/505…），解析层错误 3 类同规则两侧一致</span></div><div class="card"><b>GBN 实验</b><span>丢包 0%→40% 五档扫描、窗口 1/2/4/8 对照、回绕 space=8 逐字节一致（种子固定，可复跑）</span></div><div class="card"><b>真回环</b><span>同一套代码跑真 127.0.0.1 UDP：30000 字节发送完成 / 收完 / 字节一致 全为 True</span></div></section>
+<section id="facts" class="cards"><div class="card"><b>测试</b><span>91 项（tests/ 两个核心文件的 def test_ 现数；run.bat 一趟是权威）</span></div><div class="card"><b>HTTP 子集</b><span>状态码表 25 条；硬上限：目标 2048 字节 / 单行 8192 字节 / 头 100 条·32KiB / 体 1024KiB</span></div><div class="card"><b>边界拒绝</b><span>越界请求 8 种现场回放（414/431/400/501/413/505…），解析层错误 3 类同规则两侧一致</span></div><div class="card"><b>GBN 实验</b><span>丢包 0%→40% 五档扫描、窗口 1/2/4/8 对照、回绕 space=8 逐字节一致（种子固定，可复跑）</span></div><div class="card"><b>真回环</b><span>同一套代码跑真 127.0.0.1 UDP：30000 字节发送完成 / 收完 / 字节一致 全为 True</span></div></section>
 
 <h2>展示区</h2>
 <section id="demo" class="panel">

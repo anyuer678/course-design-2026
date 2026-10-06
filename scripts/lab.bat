@@ -12,7 +12,7 @@ rem If a hub is already running, lab.bat reuses it and just reopens the page
 rem (exit 0, not an error).
 chcp 65001 >nul
 setlocal
-cd /d %~dp0
+cd /d %~dp0..
 set PYTHONUTF8=1
 
 python -c "import shutil,sys; sys.exit(0 if shutil.which('python') else 1)"
@@ -30,15 +30,18 @@ shift
 goto :parse
 
 :selftest
-python showcase\lab.py --selftest || exit /b 1
-exit /b 0
+python showcase\lab.py --selftest
+set EC=%ERRORLEVEL%
+pause
+exit /b %EC%
 
 :parsed
 echo [1/2] checks passed: python in PATH, catalog and pages ready to serve
 echo [2/2] lab hub on http://127.0.0.1:7788/   (Ctrl+C stops it; child processes are cleaned up)
 if defined LANFLAG echo [!] LAN mode: static pages bound to 0.0.0.0; control APIs stay loopback-only (remote GET/POST get 403).
-python showcase\lab.py %LANFLAG% %OPENFLAG% || (echo [!] lab exited with an error ^(port 7788 busy? see the message above^) & exit /b 1)
+python showcase\lab.py %LANFLAG% %OPENFLAG% || (echo [!] lab exited with an error ^(port 7788 busy? see the message above^) & pause & exit /b 1)
 echo.
 echo Lab stopped. All child processes were cleaned up.
+pause
 endlocal
 exit /b 0

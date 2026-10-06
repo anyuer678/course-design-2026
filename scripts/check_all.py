@@ -8,6 +8,8 @@
   5. dorm 事实台账：27 键现算（PLAN 改动的联动哨兵）
   6. dorm 管理文档核对：check_pm（台账引用/风险登记/复盘分类）
   7. 交付齐全性：scan_refs.py projects（README + run.bat 引用扫描）
+  8. 产品层：webframe（31）/ studio（17，八产品真启停）/ linkbox（53）/ simlab（37）
+     / datascope（31）/ cachekv（17）/ sensorhub（18）/ board（11）
 --deep 追加：33 个项目的展示页测试套件（各项目 tests/test_showcase.py）。
 
 不覆盖（如实声明）：各项目核心测试套件（Python/C++/Java，见各项目 run.bat）、
@@ -20,12 +22,13 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import subprocess
 import sys
 import time
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]   # scripts/ 的上一级 = 仓库根
 PY = sys.executable
 
 
@@ -37,7 +40,15 @@ def steps(deep: bool) -> list:
         ("B41 种子核验（行数/探针/锚点）", [PY, "projects/B41-thesis-seeds/tools/check_seeds.py"]),
         ("dorm 事实台账（27 键现算）", [PY, "projects/dorm-repair/tools/project_ledger.py", "--check"]),
         ("dorm 管理文档核对（check_pm）", [PY, "projects/dorm-repair/checks/check_pm.py"]),
-        ("交付齐全性（README+run.bat 引用扫描）", [PY, "scan_refs.py", "projects"]),
+        ("交付齐全性（README+run.bat 引用扫描）", [PY, "scripts/scan_refs.py", "projects"]),
+        ("产品层：webframe 微框架（31 项双入口）", [PY, "-m", "pytest", "webframe/tests", "-q"]),
+        ("产品层：Studio 门户（17 项：认证+矩阵+八产品真启停）", [PY, "-m", "pytest", "studio/tests", "-q"]),
+        ("产品层：LinkBox（53 项双入口）", [PY, "-m", "pytest", "linkbox/tests", "-q"]),
+        ("产品层：SimLab 仿真馆（37 项：记录+引擎+播放器+实时重算）", [PY, "-m", "pytest", "simlab/tests", "-q"]),
+        ("产品层：DataScope 工作台（31 项：清洗+挖掘+报告+服务）", [PY, "-m", "pytest", "datascope/tests", "-q"]),
+        ("产品层：CacheKV 缓存（17 项：TTL+快照+HTTP+概览演示）", [PY, "-m", "pytest", "cachekv/tests", "-q"]),
+        ("产品层：SensorHub 物联网监测（18 项：MQTT 链路+对账+告警+服务）", [PY, "-m", "pytest", "sensorhub/tests", "-q"]),
+        ("产品层：board 画板（11 项：B14 自检 7054+备份+守护+启动器契约）", [PY, "-m", "pytest", "board/tests", "-q"]),
     ]
     if deep:
         for g in sorted((ROOT / "projects").glob("*/")):
@@ -56,6 +67,16 @@ def run_step(label: str, cmd: list) -> bool:
                           encoding="utf-8", errors="replace", env=env, timeout=600)
     dt = time.time() - t0
     ok = proc.returncode == 0
+    # 标签钉值对拍：标签里声明"（N 项"的 pytest 步骤，实跑 passed 数必须相等。
+    # 标签是写给人看的数字，加测试后最容易忘改（webframe 30→31 / cachekv 15→17
+    # 都实测漂移过）——让"改了代码不改文档就红"的纪律也覆盖标签本身。
+    m = re.search(r"（(\d+) 项", label)
+    if m and "-m" in cmd and "pytest" in cmd:
+        claimed = int(m.group(1))
+        ran = sum(int(x) for x in re.findall(r"(\d+) passed", proc.stdout or ""))
+        if ok and ran != claimed:
+            ok = False
+            print(f"      | 标签对拍失败：标签声明 {claimed} 项，pytest 实跑 {ran} 项——改标签或改套件，二者必须一致")
     print(f"[{'PASS' if ok else 'FAIL'}] {label}（{dt:.1f}s）")
     if not ok:
         merged = (proc.stdout or "") + "\n" + (proc.stderr or "")
