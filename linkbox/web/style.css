@@ -1,27 +1,14 @@
-:root{--ink:#16181d;--muted:#5f6773;--line:#d5d9e0;--card:#fff;--bg:#f5f6f8;--accent:#1d4ed8;--ok:#14603a;--bad:#a41f1f}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 system-ui,"Segoe UI","Microsoft YaHei",sans-serif}
-header{padding:1.2rem 1rem .6rem;max-width:52rem;margin:0 auto}
-h1{margin:0;font-size:1.6rem}
-.sub{margin:.1rem 0 .6rem;color:var(--muted);font-size:.9rem}
-nav{display:flex;gap:.4rem}
-.tab{font:inherit;font-size:.92rem;padding:.3rem .9rem;border:1px solid var(--line);border-radius:8px 8px 0 0;background:#fff;cursor:pointer;color:var(--muted)}
-.tab.active{color:var(--accent);border-color:var(--line);border-bottom-color:#fff;font-weight:600}
-main{max-width:52rem;margin:0 auto;padding:.9rem 1rem 3rem;background:var(--card);border:1px solid var(--line);border-radius:0 10px 10px}
-h2{font-size:1.05rem;margin:.2rem 0 .6rem}
-form{display:flex;flex-wrap:wrap;gap:.5rem;margin:.4rem 0 .8rem}
-input,textarea,select,button{font:inherit}
-input[type=url],input[type=text],textarea{flex:1 1 16rem;border:1px solid var(--line);border-radius:8px;padding:.5rem .7rem;background:#fff}
-textarea{width:100%;resize:vertical}
-button{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:8px;padding:.45rem 1rem;cursor:pointer}
-button:hover{filter:brightness(1.1)}
-.result{background:#eef3ff;border:1px solid #c6d4f0;border-radius:8px;padding:.6rem .8rem;margin:.4rem 0;word-break:break-all}
-.result a{color:var(--accent);font-weight:600}
-.list{list-style:none;padding:0;margin:.3rem 0}
-.list li{display:flex;justify-content:space-between;gap:.6rem;border-bottom:1px dashed var(--line);padding:.3rem 0}
-.list code{background:#eef1f6;padding:.05rem .35rem;border-radius:4px}
-.note{color:var(--muted);font-size:.87rem}
-.err{color:var(--bad)}
-footer{max-width:52rem;margin:1rem auto 2rem;color:var(--muted);font-size:.85rem;padding:0 1rem}
-code{font-family:ui-monospace,Consolas,monospace}
-@media (max-width:520px){header,main,footer{padding-left:.7rem;padding-right:.7rem}}
+/* LinkBox 页面级补充（设计系统在 kb.css 2.1；这里只放结果框与列表细节） */
+.result{background:var(--card);border:1px solid var(--line);border-radius:10px;
+padding:.7rem .95rem;margin:.6rem 0;box-shadow:var(--shadow-card);font-size:.9rem;
+word-break:break-all}
+.result.err{border-color:var(--errline);background:var(--errbg);color:var(--err)}
+.result a{font-weight:650}
+.list li{display:flex;justify-content:space-between;gap:.6rem}
+.statcard{display:flex;flex-direction:column}
+table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:.86rem;
+background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+table.grid th,table.grid td{padding:.48rem .75rem;border-bottom:1px solid var(--line-soft);
+text-align:left}
+table.grid th{background:var(--bg);color:var(--faint);font-weight:650;font-size:.7rem;
+letter-spacing:.08em;text-transform:uppercase}

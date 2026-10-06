@@ -20,13 +20,13 @@
 | 论文要素 | 素材出处 |
 |---|---|
 | 总体架构 | DESIGN §五 分层图（web -> HTTP+SSE -> 领域层 -> 存储 -> 运行时） |
-| 模块划分 | 代码即分层：`server.py`（路由/会话/SSE）、`app/db.py`、`app/auth.py`、`app/courses.py`、`app/tasks.py`、`app/labs.py`、`app/admin.py`、`app/can.py` |
-| 数据库设计 | DESIGN §五 表清单 + `app/db.py` 建表语句（users/sessions/lab_runs/tasks/task_records/course_meta 六张表） |
-| 接口设计 | DESIGN §六 路由表（auth/courses/projects/labs/tasks/teacher/admin/notices 共 24 条，含 SSE 事件格式） |
+| 模块划分 | 代码即分层：`server.py`（路由/会话/SSE）、`app/db.py`、`app/auth.py`、`app/courses.py`、`app/tasks.py`、`app/labs.py`、`app/admin.py`、`app/notices.py`、`app/can.py`（领域层八模块） |
+| 数据库设计 | `app/db.py` SCHEMA 为唯一口径（2026-10-06 核对：12 张已建表——users/sessions/lab_runs/tasks/task_records/course_meta/notices/admin_audit + 支撑 posts/replies/notice_reads/visits；本文档早前"六张表"口径过期） |
+| 接口设计 | DESIGN §六 路由表（auth/courses/projects/labs/tasks/teacher/admin/notices 八组，v1 冻结 24 条、现随里程碑扩展至 30 余条，含 SSE 事件格式；条目以 server.py 现行为准） |
 | 关键机制设计 | **现算内容源**（manifest + g2 卡片 -> 不落库）；**固定命令表沙箱**；**SSE 日志流**；**整树杀**；**绑定式教师授权** |
 | 安全设计 | `docs/SECURITY.md` 全文（网络边界/账号/权限/沙箱/注入 五节均可成小节） |
 
-**建议图表**：架构分层图、ER 图（六表）、核心时序图（登录 / 跑实验 SSE 两条最值得画）。
+**建议图表**：架构分层图、ER 图（12 表：核心 8 + 支撑 4）、核心时序图（登录 / 跑实验 SSE 两条最值得画）。
 
 ## 第三章 系统实现
 

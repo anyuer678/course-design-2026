@@ -4,55 +4,113 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>LinkBox · 自托管工具站</title>
+<link rel="stylesheet" href="assets/kb.css">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>
-  <h1>LinkBox</h1>
-  <p class="sub">自托管工具站：短链 / 文本暂存</p>
-  <nav>
-    <button class="tab active" data-tab="links">短链</button>
-    <button class="tab" data-tab="stash">暂存</button>
-    <button class="tab" data-tab="stats">统计</button>
-  </nav>
-</header>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand"><span class="logo">LB</span>LinkBox<span class="dot"></span></div>
+    <div class="side-section">工具</div>
+    <a class="side-link tab active" data-tab="links" href="#links">短链</a>
+    <a class="side-link tab" data-tab="stash" href="#stash">文本暂存</a>
+    <a class="side-link tab" data-tab="files" href="#files">文件互传</a>
+    <div class="side-section">数据</div>
+    <a class="side-link tab" data-tab="stats" href="#stats">统计</a>
+    <div class="side-foot">
+      <div>127.0.0.1:8018</div>
+      <div>引擎 B31 短链 + B11 netlab</div>
+    </div>
+  </aside>
 
-<main>
-<section id="tab-links" class="tabpage">
-  <h2>新建短链</h2>
-  <form id="link-form">
-    <input id="link-url" type="url" placeholder="https://example.com/…" required>
-    <input id="link-alias" type="text" placeholder="自定义短码（可选，base62）" pattern="[A-Za-z0-9]{1,12}">
-    <button type="submit">创建</button>
-  </form>
-  <div id="link-result" class="result" hidden></div>
-  <h2>最近链接</h2>
-  <ul id="link-list" class="list"></ul>
-</section>
+  <div class="main">
+    <div class="pagebar">
+      <div class="crumb">LinkBox / <b id="crumb-page">短链</b></div>
+      <span class="spacer"></span>
+      <span class="badge-dot">数据只在本机</span>
+    </div>
 
-<section id="tab-stash" class="tabpage" hidden>
-  <h2>新建文本暂存</h2>
-  <form id="stash-form">
-    <textarea id="stash-content" rows="6" placeholder="粘贴要暂存的文本（代码/日志/地址…），可含换行" required></textarea>
-    <select id="stash-ttl">
-      <option value="1">1 小时后过期</option>
-      <option value="24" selected>1 天后过期</option>
-      <option value="168">7 天后过期</option>
-      <option value="720">30 天后过期</option>
-    </select>
-    <button type="submit">暂存</button>
-  </form>
-  <div id="stash-result" class="result" hidden></div>
-  <p class="note">暂存到期自动清除；查看页是 <code>/s/短码</code>，把链接发给需要的人即可。</p>
-</section>
+    <div class="page">
+      <section id="tab-links" class="tabpage">
+        <div class="overline">Short Links</div>
+        <h1>短链</h1>
+        <div class="card">
+          <form id="link-form">
+            <div class="toolbar">
+              <input id="link-url" type="url" placeholder="https://example.com/…" required>
+              <input id="link-alias" type="text" placeholder="自定义短码（可选，base62）"
+                     pattern="[A-Za-z0-9]{1,12}" style="flex:none;width:14rem">
+              <button type="submit" class="btn">创建</button>
+            </div>
+          </form>
+          <div id="link-result" class="result" hidden></div>
+          <div class="overline">Recent</div>
+          <ul id="link-list" class="plain"></ul>
+        </div>
+      </section>
 
-<section id="tab-stats" class="tabpage" hidden>
-  <h2>总览</h2>
-  <div id="stats"></div>
-</section>
-</main>
+      <section id="tab-stash" class="tabpage" hidden>
+        <div class="overline">Stash</div>
+        <h1>文本暂存</h1>
+        <div class="card">
+          <form id="stash-form">
+            <div class="field">
+              <textarea id="stash-content" rows="6"
+                placeholder="粘贴要暂存的文本（代码/日志/地址…），可含换行" required></textarea>
+            </div>
+            <div class="toolbar">
+              <select id="stash-ttl" style="flex:none;width:auto">
+                <option value="1">1 小时后过期</option>
+                <option value="24" selected>1 天后过期</option>
+                <option value="168">7 天后过期</option>
+                <option value="720">30 天后过期</option>
+              </select>
+              <input id="stash-pass" type="password" placeholder="访问口令（可选）"
+                     maxlength="128" autocomplete="new-password" style="flex:none;width:13rem">
+              <button type="submit" class="btn">暂存</button>
+            </div>
+          </form>
+          <div id="stash-result" class="result" hidden></div>
+          <p class="note">暂存到期自动清除；查看页是 <span class="kbd">/s/短码</span>，
+            页面自带扫码二维码。设了口令的暂存，打开时需先输口令。</p>
+        </div>
+      </section>
 
-<footer><p>LinkBox M1 · 引擎复用课程任务 B31（短链）与 B11（netlab）· 数据只在本机</p></footer>
+      <section id="tab-files" class="tabpage" hidden>
+        <div class="overline">Files</div>
+        <h1>文件互传</h1>
+        <div class="card">
+          <form id="file-form">
+            <div class="toolbar">
+              <input id="file-input" type="file" required style="flex:none">
+              <select id="file-ttl" style="flex:none;width:auto">
+                <option value="1">1 小时后过期</option>
+                <option value="24" selected>1 天后过期</option>
+                <option value="168">7 天后过期</option>
+                <option value="720">30 天后过期</option>
+              </select>
+              <input id="file-pass" type="password" placeholder="取件口令（可选）"
+                     maxlength="128" autocomplete="new-password" style="flex:none;width:13rem">
+              <button type="submit" class="btn">上传</button>
+            </div>
+          </form>
+          <div id="file-result" class="result" hidden></div>
+          <p class="note">单个文件上限 32 MiB，到期连文件带记录一起清除。上传后得到
+            <span class="kbd">/f/短码</span> 下载链接，页面自带二维码——手机扫码直接下载；
+            设了口令的文件，扫码后先输口令再下载。</p>
+        </div>
+      </section>
+
+      <section id="tab-stats" class="tabpage" hidden>
+        <div class="overline">Stats</div>
+        <h1>统计</h1>
+        <div id="stats"></div>
+      </section>
+    </div>
+
+    <footer>LinkBox · 引擎复用课程任务 B31（短链）与 B11（netlab）· 数据只在本机 · UI 共享设计系统 kb.css 2.1</footer>
+  </div>
+</div>
 <script src="app.js"></script>
 </body>
 </html>

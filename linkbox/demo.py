@@ -1,12 +1,10 @@
-"""LinkBox 四段演示：短链 → 暂存 → 过期 → 回归（短链能力不因产品化受损）
+"""LinkBox 六段演示：短链 → 暂存 → 过期 → 回归 → 口令+二维码（M2）→ 清扫（M3）
 
-段 1-3 直接驱动应用对象（时钟可注入）；段 4 起真套接字服务器走一遍完整链路。
+段 1-6 直接驱动应用对象（时钟可注入）；真套接字链路由 tests 覆盖。
 断言失败计入退出码。
 """
-import http.client
 import json
 import sys
-import threading
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -21,13 +19,14 @@ from linkbox.stash import StashStore                   # noqa: E402
 class R:
     """最小请求替身（app 处理器只用到这些字段）。"""
 
-    def __init__(self, method, path, body=b""):
+    def __init__(self, method, path, body=b"", query=None, headers=None):
         self.method = method
         self.target = path
         self.path = path.split("?")[0]
-        self.query = []
+        self.query = list(query or [])
         self.body = body
-        self.headers = [("Content-Type", "application/json")] if body else []
+        self.headers = list(headers) if headers is not None else \
+            ([("Content-Type", "application/json")] if body else [])
         self.content_length = len(body)
         self.keep_alive = False
         self.version = "1.1"
@@ -95,13 +94,44 @@ def main() -> int:
     show("第四段：回归 —— 短链能力不因产品化受损")
     check(True, "段 1 已验证（create/redirect 全链路）")
 
+    show("第五段：M2 —— 访问口令与二维码")
+    status, _, body = app.create_stash(R("POST", "/api/stash",
+        json.dumps({"content": "带锁的便签", "passcode": "demo-pw"}).encode()))
+    info = json.loads(body)
+    check(info.get("protected") is True, "创建时声明 protected（不回显口令）")
+    status, _, body = app.stash_api(R("GET", f"/api/stash/{info['code']}"))
+    check(status == 401, "API 缺口令 → 401")
+    status, _, body = app.stash_api(
+        R("GET", f"/api/stash/{info['code']}", query=[("passcode", "demo-pw")]))
+    check(status == 200, "API 带对口令 → 200")
+    status, _, page = app.stash_page(
+        R("GET", f"/s/{info['code']}", query=[("passcode", "demo-pw")]))
+    check(status == 200 and b"<svg" in page,
+          "解锁后的查看页内联二维码（编码本页 URL）")
+    status, _, svg = app.stash_qr(R("GET", f"/s/{info['code']}/qr.svg"))
+    check(status == 200 and svg.startswith(b"<svg"),
+          "/s/<码>/qr.svg 独立二维码路由")
+    status, _, page = app.stash_page_post(R(
+        "POST", f"/s/{info['code']}", b"passcode=demo-pw",
+        headers=[("Content-Type", "application/x-www-form-urlencoded")]))
+    check(status == 200 and "带锁的便签" in page.decode("utf-8"),
+          "M3：POST 口令表单解锁（口令不进 URL）")
+
+    show("第六段：M3 —— 过期清扫")
+    before = stash.count()
+    status, _, body = app.create_stash(R("POST", "/api/stash",
+        json.dumps({"content": "短命便签", "ttl_hours": 0.02}).encode()))
+    n = stash.sweep(now=now + 3600)             # 时钟推 1 小时后清
+    check(n == 1 and stash.count() == before,
+          f"清扫删了 {n} 条过期行，未过期的不动")
+
     print(f"\n{'=' * 62}")
     if FAILS:
         print(f"演示存在 {len(FAILS)} 处失败：")
         for f in FAILS:
             print(f"  ✘ {f}")
         return 1
-    print("四段演示全部通过 ✔")
+    print("六段演示全部通过 ✔")
     return 0
 
 

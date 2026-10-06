@@ -135,13 +135,14 @@
 |---|---|---|
 | auth | `POST /api/auth/register|login|logout`、`POST /api/auth/password`、`GET /api/me` | F1/F16/F7 |
 | courses | `GET /api/courses`、`GET /api/courses/{code}` | F2/F3（现算 + 覆盖层合并） |
-| projects | `GET /api/projects/{pid}` | F4（详情 + 演示地址 + 动作表） |
+| projects | 项目详情与"项目 × 动作"表随 `GET /api/courses/{code}` 返回（**无独立 /api/projects 路由**，F4 数据经课程详情负载下发） | F4（详情 + 演示地址 + 动作表） |
 | labs | `POST /api/labs/run`、`GET /api/labs/runs/{id}`、`GET /api/labs/runs/{id}/log`（SSE）、`POST /api/labs/runs/{id}/stop` | F5（动作 id 白名单） |
 | tasks | `GET /api/tasks`、`POST /api/tasks/{id}/claim`、`POST /api/tasks/{id}/done`、`GET /api/tasks/mine` | F6/F7 |
 | tasks（M12） | `POST /api/tasks/submit`（交作业，重交清分）、`GET /api/teacher/submissions?course&key`、`POST /api/teacher/grade`（0-100，已批可改分） | F6/F10 |
 | teacher | `GET /api/teacher/courses`、`GET /api/teacher/course`、`POST /api/teacher/tasks`、`POST /api/teacher/tasks/{id}/delete`、`POST /api/teacher/course/meta` | F9-F11 |
 | admin | `GET/PUT /api/admin/users`、`PUT /api/admin/courses|projects`、`GET /api/admin/labs`、`POST /api/admin/labs/{id}/kill`、`GET /api/admin/dashboard` | F12-F15 |
 | notices | `GET /api/notices`、`POST /api/notices/{id}/read` | F8 |
+| 补充端点 | `GET /api/labs/active`、`GET /api/labs/runs/mine`、`GET /api/admin/overview`、`GET /api/admin/audit`、`POST /api/notices/read-all` | F5/F14/F15/F8 |
 
 上表为 v1 草案（24 条含 SSE）；M3–M8 实际扩展多处（通知/审计/口令/课程维护/服务页面等），
 路由以 `server.py` 现行为准。
