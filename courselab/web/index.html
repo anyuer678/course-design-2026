@@ -104,6 +104,7 @@ function render(q) {
   grid.textContent = "";
   if (!hit.length) {
     var empty = CL.el("div", "empty");
+    empty.style.gridColumn = "1 / -1";          // 空态跨满整行（2026-10-07 走查：曾只占 1/3）
     empty.appendChild(CL.el("p", null, "没有匹配「" + q + "」的课程。"));
     var tip = CL.el("p", "note", "换个关键词，或清除筛选查看全部批次。");
     empty.appendChild(tip);
@@ -124,11 +125,12 @@ function render(q) {
     a.href = "/course.html?id=" + encodeURIComponent(c.id);
     a.appendChild(CL.el("h3", null, c.course));
     a.appendChild(CL.el("div", "meta", c.id + " · " + c.title));
-    if (c.summary) a.appendChild(CL.el("p", "clamp", c.summary));
+    if (c.summary) a.appendChild(CL.el("p", "clamp", c.summary.replace(/[，、；：,;]+$/, "…")));
     var foot = CL.el("div", "meta");
     foot.style.marginTop = ".35rem";
     var dot = CL.el("span", "batch-dot");
-    dot.style.background = "hsl(" + ((Number(c.batch) * 47 + 202) % 360) + " 72% 46%)";
+    // 黄金角 137.5°：相邻批次色相始终错开（旧 47° 步长让批次 5/6 同落绿区）
+    dot.style.background = "hsl(" + ((Number(c.batch) * 137.5 + 202) % 360) + " 72% 46%)";
     dot.title = "批次 " + c.batch;
     foot.appendChild(dot);
     var tag = CL.el("span", "tag ok", "批次 " + c.batch + " · 已交付");

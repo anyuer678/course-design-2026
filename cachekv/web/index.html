@@ -30,8 +30,6 @@
     <div class="pagebar">
       <div class="crumb">CacheKV / <b id="crumb-page">总览</b></div>
       <span class="spacer"></span>
-      <div class="searchbox"><input id="search" placeholder="按键名过滤键空间…" autocomplete="off"></div>
-      <button id="btn-demo" class="btn btn-sm">注入演示数据</button>
     </div>
 
     <div class="page">
@@ -90,6 +88,7 @@
           <button class="chip" data-filter="ttl">带 TTL</button>
           <button class="chip" data-filter="forever">永久</button>
         </span>
+        <span class="searchbox" style="margin:0 0 0 .6rem"><input id="search" placeholder="按键名过滤…" autocomplete="off"></span>
         <select id="sort" class="chip" style="margin-left:auto;width:auto">
           <option value="ttl">按 TTL 升序</option>
           <option value="size">按大小降序</option>

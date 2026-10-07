@@ -147,20 +147,31 @@
     });
   }
 
-  // ------------------------------------------------ 选项卡（侧边栏导航）
+  // ------------------------------------------------ 选项卡（侧边栏导航 + hash 深链接）
+  function activateTab(name) {
+    var tab = document.querySelector('.tab[data-tab="' + name + '"]');
+    if (!tab) { return false; }
+    document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("active"); });
+    document.querySelectorAll(".tabpage").forEach(function (p) { p.hidden = true; });
+    tab.classList.add("active");
+    var page = $("tab-" + name);
+    page.hidden = false;
+    var crumb = document.getElementById("crumb-page");
+    if (crumb) crumb.textContent = tab.textContent.trim();
+    if (name === "links") refreshLinks();
+    if (name === "stats") refreshStats();
+    return true;
+  }
   document.querySelectorAll(".tab").forEach(function (tab) {
     tab.addEventListener("click", function () {
-      document.querySelectorAll(".tab").forEach(function (t) { t.classList.remove("active"); });
-      document.querySelectorAll(".tabpage").forEach(function (p) { p.hidden = true; });
-      tab.classList.add("active");
-      var page = $("tab-" + tab.dataset.tab);
-      page.hidden = false;
-      var crumb = document.getElementById("crumb-page");
-      if (crumb) crumb.textContent = tab.textContent.trim();
-      if (tab.dataset.tab === "links") refreshLinks();
-      if (tab.dataset.tab === "stats") refreshStats();
+      activateTab(tab.dataset.tab);
     });
   });
-
-  refreshLinks();
+  // hash 深链接（2026-10-07 走查：直开 /#stash 曾停在短链视图）
+  function locFromHash() {
+    var name = (location.hash || "").replace("#", "");
+    if (!activateTab(name)) { activateTab("links"); }
+  }
+  window.addEventListener("hashchange", locFromHash);
+  locFromHash();
 })();

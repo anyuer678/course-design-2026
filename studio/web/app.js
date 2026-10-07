@@ -27,10 +27,18 @@
   function renderAuth() {
     $("auth-guest").hidden = !!user;
     $("auth-user").hidden = !user;
+    // hidden 属性压不过内联 display:flex——display 一并切换
+    // （2026-10-07 走查：登录后表单曾与"已登录"并排显示）
+    $("auth-guest").style.display = user ? "none" : "flex";
+    $("auth-user").style.display = user ? "flex" : "none";
     if (user) $("whoami").textContent = "已登录：" + user;
   }
 
+  function authMsg(text) { $("auth-msg").textContent = text || ""; }
+
   function login() {
+    var btn = $("btn-login");
+    btn.disabled = true; btn.textContent = "登录中…"; authMsg("");
     postJSON("/api/login", { username: "owner", password: $("login-pass").value })
       .then(function (r) {
         if (r.status === 200) {
@@ -39,20 +47,26 @@
           renderAuth();
           refresh();
         } else {
-          alert(r.data.error || "登录失败");
+          authMsg(r.data.error || "登录失败");
         }
-      });
+      })
+      .finally(function () { btn.disabled = false; btn.textContent = "登录"; });
   }
 
   function logout() {
+    var btn = $("btn-logout");
+    btn.disabled = true; btn.textContent = "登出中…";
     postJSON("/api/logout").then(function () {
       user = null;
       renderAuth();
+      authMsg("已登出");
       refresh();
-    });
+    }).finally(function () { btn.disabled = false; btn.textContent = "登出"; });
   }
 
   function changePassword() {
+    var btn = $("btn-passwd");
+    btn.disabled = true; btn.textContent = "提交中…";
     postJSON("/api/password", { old: $("old-pass").value, new: $("new-pass").value })
       .then(function (r) {
         var msg = $("passwd-msg");
@@ -63,7 +77,8 @@
         } else {
           msg.textContent = r.data.error || "改口令失败";
         }
-      });
+      })
+      .finally(function () { btn.disabled = false; btn.textContent = "改口令"; });
   }
 
   $("btn-login").addEventListener("click", login);
@@ -146,4 +161,29 @@
 
   refresh();
   setInterval(refresh, 3000);
+
+  // ------------------------------------------------ 侧栏导航（高亮跟随 + hash 定位）
+  function activateNav(key) {
+    document.querySelectorAll(".side-link").forEach(function (a) {
+      var on = a.getAttribute("data-nav") === key;
+      a.classList.toggle("active", on);
+      if (on) $("crumb-page").textContent = a.textContent.trim();
+    });
+  }
+  document.querySelectorAll(".side-link").forEach(function (a) {
+    a.addEventListener("click", function () {
+      activateNav(a.getAttribute("data-nav"));
+    });
+  });
+  function locFromHash() {
+    if (location.hash === "#account") {
+      activateNav("account");
+      var t = $("account");
+      if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      activateNav("cards");
+    }
+  }
+  window.addEventListener("hashchange", locFromHash);
+  locFromHash();
 })();

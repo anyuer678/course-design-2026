@@ -19,3 +19,9 @@ border:1px solid var(--line);background:var(--bg);color:var(--faint)}
 .inp{font:inherit;font-size:.88rem;padding:.42rem .8rem;border:1px solid var(--line);
 border-radius:8px;background-color:var(--card);color:var(--ink)}
 .inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+
+/* hidden 属性压过任何 display（2026-10-07 走查：内联 display:flex 曾让登录表单登录后仍显示） */
+[hidden] { display: none !important; }
+
+#account { scroll-margin-top: 4.5rem; }
+
