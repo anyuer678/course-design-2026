@@ -7,20 +7,29 @@
 <meta name="theme-color" content="#fafafa">
 <title>登录 · 课程工坊 CourseLab</title>
 <link rel="stylesheet" href="/assets/app.css">
+<style>
+  .pass-row{display:flex;gap:.5rem;align-items:stretch}
+  .pass-row input{flex:1}
+  .pass-row .btn-xs{flex:none;align-self:center}
+</style>
 </head>
 <body>
 <header class="topbar" id="topbar"></header>
 <main>
 <h1>登录</h1>
 <div class="form">
-  <div class="msg err" id="msg" style="display:none"></div>
+  <div class="msg err" id="msg" role="alert" style="display:none"></div>
   <div class="field">
     <label for="username">用户名</label>
-    <input id="username" autocomplete="username" autofocus>
+    <input id="username" name="username" autocomplete="username" autofocus>
   </div>
   <div class="field">
     <label for="password">口令</label>
-    <input id="password" type="password" autocomplete="current-password">
+    <div class="pass-row">
+      <input id="password" name="password" type="password" autocomplete="current-password">
+      <button type="button" class="btn btn-ghost btn-xs" id="toggle-pass"
+              aria-label="显示口令" aria-pressed="false">显示</button>
+    </div>
   </div>
   <button class="btn" id="submit">登录</button>
   <p class="note" style="margin-top:.8rem">还没有账号？<a href="/register.html">注册一个</a></p>
@@ -32,6 +41,17 @@
 CL.navbar();
 var msg = document.getElementById("msg");
 function show(text) { msg.textContent = text; msg.style.display = ""; }
+(function () {   // 口令可见性切换（Vercel Guidelines：密码框标配）
+  var input = document.getElementById("password");
+  var btn = document.getElementById("toggle-pass");
+  btn.addEventListener("click", function () {
+    var showIt = input.type === "password";
+    input.type = showIt ? "text" : "password";
+    btn.textContent = showIt ? "隐藏" : "显示";
+    btn.setAttribute("aria-pressed", showIt ? "true" : "false");
+    input.focus();
+  });
+})();
 function submit() {
   var username = document.getElementById("username").value.trim();
   var password = document.getElementById("password").value;

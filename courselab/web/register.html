@@ -7,28 +7,43 @@
 <meta name="theme-color" content="#fafafa">
 <title>注册 · 课程工坊 CourseLab</title>
 <link rel="stylesheet" href="/assets/app.css">
+<style>
+  .pass-row{display:flex;gap:.5rem;align-items:stretch}
+  .pass-row input{flex:1}
+  .pass-row .btn-xs{flex:none;align-self:center}
+  .field .field-err{color:var(--err);font-size:.82rem;margin-top:.25rem;display:none}
+</style>
 </head>
 <body>
 <header class="topbar" id="topbar"></header>
 <main>
 <h1>注册</h1>
 <div class="form">
-  <div class="msg err" id="msg" style="display:none"></div>
+  <div class="msg err" id="msg" role="alert" style="display:none"></div>
+  <div class="msg ok" id="okmsg" role="status" style="display:none"></div>
   <div class="field">
     <label for="username">用户名（3-32 位字母/数字/下划线）</label>
-    <input id="username" autocomplete="username" autofocus>
+    <input id="username" name="username" autocomplete="username" autofocus>
+    <div class="field-err" id="err-username"></div>
   </div>
   <div class="field">
     <label for="display_name">昵称（可留空）</label>
-    <input id="display_name" autocomplete="nickname">
+    <input id="display_name" name="display_name" autocomplete="nickname">
+    <div class="field-err" id="err-display_name"></div>
   </div>
   <div class="field">
     <label for="password">口令（至少 8 位，含字母与数字）</label>
-    <input id="password" type="password" autocomplete="new-password">
+    <div class="pass-row">
+      <input id="password" name="password" type="password" autocomplete="new-password">
+      <button type="button" class="btn btn-ghost btn-xs" id="toggle-pass"
+              aria-label="显示口令" aria-pressed="false">显示</button>
+    </div>
+    <div class="field-err" id="err-password"></div>
   </div>
   <div class="field">
     <label for="password2">再输一遍</label>
-    <input id="password2" type="password" autocomplete="new-password">
+    <input id="password2" name="password2" type="password" autocomplete="new-password">
+    <div class="field-err" id="err-password2"></div>
   </div>
   <button class="btn" id="submit">注册并登录</button>
   <p class="note" style="margin-top:.8rem">已有账号？<a href="/login.html">直接登录</a></p>
@@ -38,23 +53,82 @@
 <script>
 "use strict";
 CL.navbar();
+
+/* 与服务端 auth.py 同一条规则（客户端先拦，省一次往返；服务端仍是权威） */
+var USERNAME_RE = /^[A-Za-z0-9_]{3,32}$/;
+
 var msg = document.getElementById("msg");
-function show(text) { msg.textContent = text; msg.style.display = ""; }
-function submit() {
+var okmsg = document.getElementById("okmsg");
+function show(text) { msg.textContent = text; msg.style.display = ""; okmsg.style.display = "none"; }
+function showOk(text) { okmsg.textContent = text; okmsg.style.display = ""; msg.style.display = "none"; }
+function fieldErr(id, text) {
+  var box = document.getElementById("err-" + id);
+  if (!box) return;
+  box.textContent = text || "";
+  box.style.display = text ? "" : "none";
+}
+
+(function () {   // 口令可见性切换
+  var input = document.getElementById("password");
+  var btn = document.getElementById("toggle-pass");
+  btn.addEventListener("click", function () {
+    var showIt = input.type === "password";
+    input.type = showIt ? "text" : "password";
+    btn.textContent = showIt ? "隐藏" : "显示";
+    btn.setAttribute("aria-pressed", showIt ? "true" : "false");
+    input.focus();
+  });
+})();
+
+function validate() {
+  /* 返回 {username, display_name, password} 或 null（错误已就地显示） */
   var username = document.getElementById("username").value.trim();
   var displayName = document.getElementById("display_name").value.trim();
   var password = document.getElementById("password").value;
   var password2 = document.getElementById("password2").value;
-  if (password !== password2) { show("两次输入的口令不一致。"); return; }
+  var bad = false;
+  fieldErr("username", null); fieldErr("display_name", null);
+  fieldErr("password", null); fieldErr("password2", null);
+  if (!USERNAME_RE.test(username)) {
+    fieldErr("username", "用户名需为 3-32 位字母/数字/下划线"); bad = true;
+  }
+  if (displayName.length > 32) {
+    fieldErr("display_name", "昵称最长 32 个字符"); bad = true;
+  }
+  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    fieldErr("password", "口令至少 8 位，且需同时包含字母与数字"); bad = true;
+  }
+  if (password2 !== password) {
+    fieldErr("password2", "两次输入的口令不一致"); bad = true;
+  }
+  if (bad) return null;
+  return { username: username, display_name: displayName, password: password };
+}
+
+function submit() {
+  var body = validate();
+  if (!body) { show("请按上面的提示修正后再提交。"); return; }
   var btn = document.getElementById("submit");
   if (btn.disabled) return;                    // 防连点
   btn.disabled = true; btn.textContent = "注册中…";
-  CL.api("/api/auth/register", { method: "POST", body: { username: username, display_name: displayName, password: password } })
+  CL.api("/api/auth/register", { method: "POST", body: body })
     .then(function (res) {
-      if (res.data && res.data.ok) { location.href = "/me.html"; return; }
+      if (res.data && res.data.ok) {
+        if (res.data.user && res.data.user.status === "pending") {
+          // 审批模式：注册成功但没有会话——就地说明，不再跳 me.html
+          showOk(res.data.notice || "注册成功，等待管理员审批后即可登录");
+          btn.textContent = "已提交，等待审批";
+          return;
+        }
+        location.href = "/me.html";
+        return;
+      }
       show((res.data && res.data.error) || "注册失败");
-    }).catch(function () { show("网络错误，请重试。"); })
-    .then(function () { btn.disabled = false; btn.textContent = "注册并登录"; });
+    })
+    .catch(function () { show("网络错误，请重试。"); })
+    .then(function () {
+      if (btn.textContent === "注册中…") { btn.disabled = false; btn.textContent = "注册并登录"; }
+    });
 }
 document.getElementById("submit").addEventListener("click", submit);
 document.addEventListener("keydown", function (e) { if (e.key === "Enter") submit(); });

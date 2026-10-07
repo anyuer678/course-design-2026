@@ -131,7 +131,10 @@
         auth.appendChild(out);
       } else {
         var lg = CL.el("a", "btn btn-ghost", "登录");
-        lg.href = "/login.html?next=" + encodeURIComponent(location.pathname + location.search);
+        // next 自指修正：在登录/注册页上点导航"登录"，登录成功应回首页而不是弹回本页
+        var onAuthPage = here === "/login.html" || here === "/register.html";
+        var next = onAuthPage ? "/" : location.pathname + location.search;
+        lg.href = "/login.html?next=" + encodeURIComponent(next);
         var rg = CL.el("a", "btn", "注册");
         rg.href = "/register.html";
         auth.appendChild(lg);
