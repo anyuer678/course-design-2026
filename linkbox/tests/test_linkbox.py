@@ -24,6 +24,7 @@ if not sys_path_done:
     sys.path.insert(0, str(REPO / "projects" / "B11-net-lab"))
     sys_path_done = True
 
+from b31.codec import is_code_shape                          # noqa: E402
 from b31.store import Store                                  # noqa: E402
 from linkbox.app import LinkBoxApp                           # noqa: E402
 from linkbox.files import (MAX_FILE_BYTES, FileError,        # noqa: E402
@@ -630,6 +631,67 @@ class TestOverRealSocket(unittest.TestCase):
         status, payload = talk("GET", f"/s/{code}/qr.svg")
         self.assertEqual(status, 200)
         self.assertTrue(payload.startswith(b"<svg"))
+
+
+class TestHardening20261007(AppCase):
+    """2026-10-07 审查收口回归：对外 code 不可枚举 + 口令失败限流。
+
+    期望值出处：code = secrets.token_hex(5)（40 bit，is_code_shape 兼容）；
+    限流口径 5 次/10 分钟写进 app.py PASS_MAX_FAILS/PASS_WINDOW，
+    锁定期内连正确口令也 429（拒绝不做 PBKDF2，拒绝得便宜）。
+    """
+
+    def test_stash_codes_are_random_not_sequential(self):
+        a = self.make_stash()["code"]
+        b = self.make_stash()["code"]
+        self.assertNotEqual(a, b)
+        for code in (a, b):
+            self.assertRegex(code, r"^[0-9a-f]{10}$")
+            self.assertTrue(is_code_shape(code), f"{code!r} 过不了形状闸")
+        # 不再是 rowid 的 base62：两次创建不构成"下一个 id"关系
+        self.assertNotEqual(int(a, 16) + 1, int(b, 16))
+
+    def test_file_codes_are_random_too(self):
+        code = self.make_file()["code"]
+        self.assertRegex(code, r"^[0-9a-f]{10}$")
+
+    def test_wrong_passcode_locks_after_five_attempts(self):
+        code = self.make_stash({"passcode": "pw1234"})["code"]
+        for i in range(5):
+            self.assertEqual(
+                self.request("GET", f"/api/stash/{code}?passcode=wrong")[0],
+                401, f"第 {i + 1} 次应仍是 401")
+        # 第 6 次：连正确口令也 429
+        status, headers, _ = self.request(
+            "GET", f"/api/stash/{code}?passcode=pw1234")
+        self.assertEqual(status, 429)
+        self.assertTrue(any(h[0] == "Retry-After" for h in headers),
+                        "429 应带 Retry-After")
+        # 窗口过后解锁（注入时钟推进 601s > PASS_WINDOW=600）
+        self.now += 601
+        self.assertEqual(
+            self.request("GET", f"/api/stash/{code}?passcode=pw1234")[0], 200)
+
+    def test_success_resets_failure_count(self):
+        code = self.make_stash({"passcode": "pw1234"})["code"]
+        for _ in range(3):
+            self.assertEqual(
+                self.request("GET", f"/api/stash/{code}?passcode=wrong")[0], 401)
+        self.assertEqual(
+            self.request("GET", f"/api/stash/{code}?passcode=pw1234")[0], 200)
+        # 成功即清账：之后再错 4 次（<5）不锁
+        for _ in range(4):
+            self.assertEqual(
+                self.request("GET", f"/api/stash/{code}?passcode=wrong")[0], 401)
+        self.assertEqual(
+            self.request("GET", f"/api/stash/{code}?passcode=pw1234")[0], 200)
+
+    def test_correct_passcode_delete_is_also_gated(self):
+        code = self.make_stash({"passcode": "pw1234"})["code"]
+        for _ in range(5):
+            self.request("DELETE", f"/api/stash/{code}?passcode=wrong")
+        self.assertEqual(
+            self.request("DELETE", f"/api/stash/{code}?passcode=pw1234")[0], 429)
 
 
 if __name__ == "__main__":

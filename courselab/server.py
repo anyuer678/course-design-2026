@@ -352,7 +352,7 @@ class Handler(SimpleHTTPRequestHandler):
             # 只允许 showcase/ 子树内的真实文件：resolve 后必须仍在该目录里。
             root = (REPO / "showcase").resolve()
             target = (REPO / unquote(path[1:])).resolve()
-            if not str(target).startswith(str(root)):
+            if root not in target.parents:
                 return self.send_error_json(404, "not found")
             return self._serve_repo(unquote(path[1:]))
 
@@ -362,10 +362,16 @@ class Handler(SimpleHTTPRequestHandler):
         return super().do_GET()
 
     def _serve_repo(self, rel: str):
-        """内容源代理：只允许仓库内真实文件（解析后再判前缀，防目录穿越）。"""
-        root = REPO.resolve()
+        """内容源代理：只放行 projects/、showcase/ 两棵白名单子树，其余一律 404。
+        2026-10-07 审查收口——此前整个仓库可达，匿名可直接拉
+        courselab/data/app.db（口令哈希+会话 token）与 studio/data/password.txt。
+        白名单在前（'..' 等直接拒），解析后再判必须仍在子树内，防穿越防同级前缀。"""
+        top = rel.replace("\\", "/").split("/")[0]
+        if top not in ("projects", "showcase"):
+            return self.send_error_json(404, "not found")
+        root = (REPO / top).resolve()
         target = (REPO / rel).resolve()
-        if not str(target).startswith(str(root)) or not target.is_file():
+        if root not in target.parents or not target.is_file():
             return self.send_error_json(404, "not found")
         body = target.read_bytes()
         self.send_response(200)
@@ -1376,6 +1382,11 @@ def selftest(port: int = 7901) -> int:
     rel = os.path.relpath(str(Path(tmp.name) / "app.db"), str(REPO)).replace("\\", "/")
     status, data, _ = get("/repo/" + rel)
     check("目录穿越（仓库外真实文件）被拒", status == 404)
+    # 内容源白名单（2026-10-07 审查收口）：数据目录/凭据/脚本匿名一律 404
+    for banned in ("courselab/data/app.db", "studio/data/password.txt",
+                   "server.py", "scripts/stop_all.py"):
+        status, _, _ = get("/repo/" + banned)
+        check(f"/repo 白名单外拒（{banned}）", status == 404)
     import http.client as _hconn
     _c = _hconn.HTTPConnection("127.0.0.1", port, timeout=5)
     _c.request("GET", "/showcase/../courselab/server.py")   # 原样上跳，不经客户端规范化

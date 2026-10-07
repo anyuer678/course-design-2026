@@ -288,6 +288,25 @@
      会话闪退——用户点破，已入库 Hard Constraints）；studio 测试端口改运行时探测；
      ④12 个入口 bat 补 pause（`endlocal & exit /b %EC%` 退出码惯用法）；
      ⑤全矩阵回归 **215/215**。
+14z. **轮十二：两轮全仓审查 + 修复收口（10-07，本会话"审查项目"驱动，随后"功能低下"四项全选；与并行会话的轮十/轮十一 UI 修复同日交叉进行）**：
+     ①两轮只读审查（先六 Web 产品+共享地基，后 webframe/CourseLab/board/scripts，
+     全部发现逐条亲自读码核实、误报驳回 2 条）：高危 3——CourseLab `/repo/` 匿名
+     可达全仓库（app.db 含口令哈希+会话 token、studio 口令文件，自检只测穿越没测
+     越权）→ 白名单只放 projects/+showcase/；netlab 空读连接永久占位（64 条耗尽
+     max_conn 全站 503）→ 滞留一个空闲窗口强制回收+写出续命；linkbox code 可枚举
+     → secrets 随机码。中危 9 全修：labs 超时监控线程护甲、cachekv 快照线程 join
+     +坏快照隔离、simlab 引擎规模上限+记录名防碰撞、linkbox 口令失败限流
+     （5 次/10min，锁定期不做 PBKDF2）、BackupDaemon IO 异常不再炸守护、
+     stop_all 弃用窗口标题通配与按端口杀（红线对齐，改 CommandLine 精确匹配）、
+     walkthrough atexit 兜底收摊、start_all 探活失败回收进程、sync_assets/check_all
+     异常路径补全——每项配回归测试；②**数字全面现算重校**：CourseLab 自检 145→**151**（+4 白名单回归；另有并行
+     会话轮十·补五当日 +2 的 145→147 一并计入——"文档写的 145"在多会话并行下
+     已漂移），LinkBox 53→**92**（pytest 收集口径 parametrize 展开；unittest 59），
+     矩阵 pytest 口径 215→**255**，加 CourseLab 自检合计 **406 项**；③check_all
+     默认 15→**16 步**（补 CourseLab 自检步——此前体检对论文主体无自动化入口）
+     +单步超时不吞后续；④文档同步：THESIS/ch1/ch2/ch5/ch6/ch0/摘要/outline/
+     双 README 域分组表全部按当日实数重写；⑤修复后全量回归：六产品套件单跑
+     全绿 + check_all 16/16 + courselab 自检 151/151。
 15. **方向探索**：主线稳定后选一个方向深挖；其余课程基础实验随开课安排，不全部同时启动。
 
 排期暂按每周 8～10 小时估算，尚未确认个人时间预算；先用 2～4 周完成 B9/B10 收尾并校准后续安排，不承诺两学期做完所有扩展。

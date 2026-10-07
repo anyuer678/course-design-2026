@@ -43,5 +43,6 @@ python showcase\lab.py %LANFLAG% %OPENFLAG% || (echo [!] lab exited with an erro
 echo.
 echo Lab stopped. All child processes were cleaned up.
 pause
-endlocal
+set EC=%ERRORLEVEL%
+endlocal & exit /b %EC%
 exit /b 0

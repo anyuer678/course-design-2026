@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import html
 import json
+import threading
 import urllib.parse
 from pathlib import Path
 
@@ -43,6 +44,13 @@ class LinkBoxApp(ShortUrlApp):
         super().__init__(store, web_root, **kwargs)
         self.stash = stash
         self.files = files
+        # 口令失败限流账（2026-10-07 审查收口）：code -> (失败次数, 窗口起点)
+        self._pass_fails: dict[str, tuple[int, float]] = {}
+        self._pass_lk = threading.Lock()
+
+    PASS_MAX_FAILS = 5                    # 窗口内允许的口令失败次数
+    PASS_WINDOW = 600.0                   # 失败计数窗口（秒）
+    PASS_FAILS_CAP = 10000                # 失败表键数上限（防随机 code 刷内存）
 
     def routes(self) -> list:
         return super().routes() + [
@@ -132,6 +140,31 @@ class LinkBoxApp(ShortUrlApp):
         """查询串里的 passcode（netlab 已做百分号解码与 + 归空格）。"""
         return dict(request.query).get("passcode")
 
+    def _verify_passcode(self, store, code: str, candidate: str | None):
+        """口令校验 + 按 code 失败限流（2026-10-07 审查收口：此前失败无计数，
+        叠加旧版 code 可枚举，弱口令可在线爆破）。返回 True=通过 / False=不对 /
+        "locked"=限流中。锁定期内不做 PBKDF2 计算——拒绝也要拒绝得便宜。"""
+        now = self.clock()
+        with self._pass_lk:
+            fails, first = self._pass_fails.get(code, (0, 0.0))
+            if fails and now - first >= self.PASS_WINDOW:
+                self._pass_fails.pop(code, None)
+                fails = 0
+            if fails >= self.PASS_MAX_FAILS:
+                return "locked"
+            if len(self._pass_fails) > self.PASS_FAILS_CAP:
+                for key in [k for k, (_, t0) in self._pass_fails.items()
+                            if now - t0 >= self.PASS_WINDOW]:
+                    self._pass_fails.pop(key, None)
+        ok = store.verify_passcode(code, candidate)
+        with self._pass_lk:
+            if ok:
+                self._pass_fails.pop(code, None)
+            else:
+                fails, first = self._pass_fails.get(code, (0, now))
+                self._pass_fails[code] = (fails + 1, first if fails else now)
+        return ok
+
     def stash_api(self, request):
         code, problem = self._code_from(request.path, "/api/stash/")
         if problem:     # M1 曾直接 return problem（裸字符串会砸了分发层的解包）——潜伏 bug，M2 顺手修掉
@@ -144,10 +177,15 @@ class LinkBoxApp(ShortUrlApp):
             return 410, [JSON_TYPE, NO_STORE], self._error("暂存已过期")
         if rec is None:
             return 404, [JSON_TYPE], self._error(f"暂存 {code!r} 不存在")
-        if rec.has_passcode and \
-                not self.stash.verify_passcode(code, self._passcode_of(request)):
-            return 401, [JSON_TYPE, NO_STORE], \
-                self._error("这条暂存设有访问口令：请在查询串带 ?passcode=…")
+        if rec.has_passcode:
+            verdict = self._verify_passcode(self.stash, code,
+                                            self._passcode_of(request))
+            if verdict == "locked":
+                return 429, [("Retry-After", "60"), JSON_TYPE, NO_STORE], \
+                    self._error("口令尝试过于频繁：请稍后再来")
+            if not verdict:
+                return 401, [JSON_TYPE, NO_STORE], \
+                    self._error("这条暂存设有访问口令：请在查询串带 ?passcode=…")
         if request.method == "DELETE":
             self.stash.delete(code)
             return 204, [JSON_TYPE], b""
@@ -170,10 +208,15 @@ class LinkBoxApp(ShortUrlApp):
             return 204, [JSON_TYPE], b""
         if rec is None:
             return 404, [JSON_TYPE], self._error(f"暂存 {code!r} 不存在")
-        if rec.has_passcode and \
-                not self.stash.verify_passcode(code, self._passcode_of(request)):
-            return 401, [JSON_TYPE, NO_STORE], \
-                self._error("这条暂存设有访问口令：请在查询串带 ?passcode=…")
+        if rec.has_passcode:
+            verdict = self._verify_passcode(self.stash, code,
+                                            self._passcode_of(request))
+            if verdict == "locked":
+                return 429, [("Retry-After", "60"), JSON_TYPE, NO_STORE], \
+                    self._error("口令尝试过于频繁：请稍后再来")
+            if not verdict:
+                return 401, [JSON_TYPE, NO_STORE], \
+                    self._error("这条暂存设有访问口令：请在查询串带 ?passcode=…")
         self.stash.delete(code)
         return 204, [JSON_TYPE], b""
 
@@ -221,10 +264,15 @@ class LinkBoxApp(ShortUrlApp):
             return 410, [JSON_TYPE, NO_STORE], self._error("文件已过期")
         if rec is None:
             return 404, [JSON_TYPE], self._error(f"文件 {code!r} 不存在")
-        if rec.has_passcode and \
-                not self.files.verify_passcode(code, self._passcode_of(request)):
-            return 401, [JSON_TYPE, NO_STORE], \
-                self._error("这个文件设有访问口令：请在查询串带 ?passcode=…")
+        if rec.has_passcode:
+            verdict = self._verify_passcode(self.files, code,
+                                            self._passcode_of(request))
+            if verdict == "locked":
+                return 429, [("Retry-After", "60"), JSON_TYPE, NO_STORE], \
+                    self._error("口令尝试过于频繁：请稍后再来")
+            if not verdict:
+                return 401, [JSON_TYPE, NO_STORE], \
+                    self._error("这个文件设有访问口令：请在查询串带 ?passcode=…")
         if request.method == "DELETE":
             self.files.delete(code)
             return 204, [JSON_TYPE], b""
@@ -244,9 +292,15 @@ class LinkBoxApp(ShortUrlApp):
         if rec is None:
             return 404, [HTML_TYPE], \
                 self._page("文件不存在", f"没有找到 {code!r}。")
-        if rec.has_passcode and not self.files.verify_passcode(code, candidate):
-            hint = "口令不正确，再试一次。" if candidate is not None else ""
-            return 200, [HTML_TYPE, NO_STORE], self._pass_form(code, hint, noun="文件")
+        if rec.has_passcode:
+            verdict = self._verify_passcode(self.files, code, candidate)
+            if verdict == "locked":
+                return 429, [HTML_TYPE, ("Retry-After", "60"), NO_STORE], \
+                    self._page("尝试过于频繁", "口令尝试太多次：请稍后再来。")
+            if not verdict:
+                hint = "口令不正确，再试一次。" if candidate is not None else ""
+                return 200, [HTML_TYPE, NO_STORE], \
+                    self._pass_form(code, hint, noun="文件")
         data = self.files.read(code)
         return 200, [DOWNLOAD_TYPE,
                      ("Content-Disposition", content_disposition(rec.name)),
@@ -342,7 +396,11 @@ class LinkBoxApp(ShortUrlApp):
             return 404, [HTML_TYPE], \
                 self._page("暂存不存在", f"没有找到 {code!r}。")
         if rec.has_passcode:
-            if not self.stash.verify_passcode(code, candidate):
+            verdict = self._verify_passcode(self.stash, code, candidate)
+            if verdict == "locked":
+                return 429, [HTML_TYPE, ("Retry-After", "60"), NO_STORE], \
+                    self._page("尝试过于频繁", "口令尝试太多次：请稍后再来。")
+            if not verdict:
                 hint = "口令不正确，再试一次。" if candidate is not None else ""
                 page = self._pass_form(code, hint)
                 return 200, [HTML_TYPE, NO_STORE], page

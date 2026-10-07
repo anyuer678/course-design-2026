@@ -21,7 +21,7 @@ import sqlite3
 from pathlib import Path
 from urllib.parse import quote
 
-from b31.codec import encode_id
+from .stash import new_code
 
 MAX_FILE_BYTES = 32 * 1024 * 1024             # 单文件上限（32 MiB）
 MIN_TTL_HOURS, MAX_TTL_HOURS = 0.01, 8760.0   # 与 stash 同口径
@@ -143,7 +143,7 @@ class FileStore:
             "INSERT INTO files (code, name, size, created_at, expires_at, "
             "pass_salt, pass_hash) VALUES (NULL, ?, ?, ?, ?, ?, ?)",
             (clean, len(data), now, now + ttl_hours * 3600, salt, digest))
-        code = encode_id(cur.lastrowid)
+        code = new_code(self.conn, "files")
         self.conn.execute("UPDATE files SET code = ? WHERE id = ?", (code, cur.lastrowid))
         self.conn.commit()
         self._write_blob(code, bytes(data))

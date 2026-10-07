@@ -1,6 +1,7 @@
 @echo off
 rem Board one-click: compile + engine selfcheck + double-entry tests (pure ASCII body, see PLAN section 6)
 chcp 65001 >nul
+set PYTHONUTF8=1
 setlocal
 cd /d %~dp0
 
@@ -30,4 +31,5 @@ echo.
 echo All green. Open the paint window with: python launch.py --window
 echo Studio portal managed mode: python launch.py --port 8023 --managed-window
 pause
-endlocal
+set EC=%ERRORLEVEL%
+endlocal & exit /b %EC%

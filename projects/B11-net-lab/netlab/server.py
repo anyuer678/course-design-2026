@@ -231,6 +231,10 @@ class Server:
             self._close(conn, "write failed")
             return
         conn.outbuf = conn.outbuf[sent:]
+        if sent:
+            # 写出也算活动：慢读者在持续拿字节就该续命；真正的"只写不读"
+            # 由 _timeout 的滞留回收兜底（2026-10-07 审查收口）。
+            conn.last_active = time.monotonic()
         if conn.outbuf or not conn.closing or conn.half_closed:
             return
         # 承诺的响应发完了，但不能马上 close()：内核里可能还压着对方没被读走的字节，
@@ -261,7 +265,14 @@ class Server:
 
     def _timeout(self, conn: Conn) -> None:
         if conn.outbuf:
-            return                    # 还有承诺的响应没发出去，先发完
+            # 还有承诺的响应没发出去：只要仍有进展（部分写出会在 _write 续命）就再宽限；
+            # 整整一个空闲窗口零进展 = 对端只写不读，强制回收——否则 max_conn 会被
+            # 这类连接占满导致全站 503（2026-10-07 审查收口的槽位耗尽面）。
+            if time.monotonic() - conn.last_active < self.idle_timeout:
+                return
+            self.stats.timed_out += 1
+            self._close(conn, "stuck output")
+            return
         self.stats.timed_out += 1
         if conn.closing:
             self._close(conn, "idle after close")      # 对方读完不关， grace 用完了

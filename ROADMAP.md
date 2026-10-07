@@ -757,3 +757,21 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   （hsl 按批次号映射，8px 圆点+title）、卡片标题改墨色悬停转强调色（治"满屏
   蓝链接汤"）。零依赖不变、浅色单主题不变。验证：桌面+移动端四张关键截图目检，
   自检 147 PASS，Playwright 17 面扫查 17/17 零 console 错误。
+
+- ✅ **轮十二：两轮全仓审查 + 修复收口（10-07 本会话，与轮十/轮十一 UI 修复同日交叉进行）**：
+  ①高危 3——CourseLab `/repo/` 匿名可达全仓库（app.db 含口令哈希+会话 token、
+  studio 口令文件；旧自检只测穿越没测越权）→ 内容源白名单只放 projects/+showcase/
+  并补 4 条越权回归；netlab 空读连接永久占位（64 条耗尽 max_conn 全站 503）→
+  滞留一个空闲窗口强制回收 + 写出续命（showcase 的 peak_open 时序波动因此显形，
+  按既有规范化纪律掩蔽入账）；linkbox 暂存/文件 code 可枚举 → secrets 随机码；
+  ②中危 9：labs 超时监控线程护甲（taskkill 超时不再炸线程）、cachekv 停机先
+  join 快照线程 + 坏快照隔离启动、simlab 引擎规模上限（网格 200/容量 5000/物品
+  200）+ 记录名掺随机后缀防同秒覆盖、linkbox 口令失败限流（5 次/10min，锁定期
+  不做 PBKDF2，成功清账）、BackupDaemon 轮询 IO 异常不再炸守护、stop_all 弃用
+  窗口标题通配与按端口杀（红线对齐，CommandLine 精确匹配）、walkthrough atexit
+  兜底收摊、start_all 探活失败回收进程、sync_assets/check_all 单点失败不中断；
+  ③数字现算重校：CourseLab 自检 145→**151**（轮十·补五 +2 与本会话 +4 一并计入），
+  LinkBox pytest 口径 53→**92**（unittest 59），矩阵 pytest 口径 215→**255**；
+  check_all 15→**16 步**（补 CourseLab 自检——体检首次覆盖论文主体）+ 单步超时
+  不吞后续；④ thesis 七章/摘要/outline/THESIS/双 README 数字与八域分组表按当日
+  实数重写；⑤全量回归：九产品套件单跑全绿 + check_all 16/16 + 自检 151/151。

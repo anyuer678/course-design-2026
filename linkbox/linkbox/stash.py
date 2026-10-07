@@ -2,8 +2,8 @@
 
 课程要点延续（B32 的教训直接用在这里）：
     - 内容是用户输入，展示层必须转义（app.py 里用 html.escape），存储层只管存原文；
-    - id 用 B31 同款 base62（encode_id(rowid)），路由空间独立（/s/ 前缀），
-      与短链的 /l/ 不冲突；
+    - 对外 code 用密码学随机（new_code，40 bit 十六进制，不可枚举），路由空间独立
+      （/s/ 前缀），与短链的 /l/ 不冲突；
     - 过期语义：访问时惰性删除——命中过期条目就删掉并返回"已过期"，
       库里不留僵尸行；没有后台清扫线程（教学简化，见 README 局限）；
     - 口令只存 PBKDF2-HMAC-SHA256（随机盐 + hmac.compare_digest 恒时比较），
@@ -14,10 +14,21 @@ from __future__ import annotations
 import hashlib
 import hmac
 import os
+import secrets
 import sqlite3
 from pathlib import Path
 
-from b31.codec import encode_id
+
+def new_code(conn: sqlite3.Connection, table: str) -> str:
+    """对外 code：密码学随机十六进制（40 bit），不可枚举、不可预测。
+    2026-10-07 审查收口——旧版 encode_id(rowid) 顺序可猜，未设口令的
+    条目等于向知道地址段的来访者裸奔。极小概率撞码：查表重试。"""
+    for _ in range(5):
+        code = secrets.token_hex(5)
+        if conn.execute(f"SELECT 1 FROM {table} WHERE code = ?",
+                        (code,)).fetchone() is None:
+            return code
+    raise RuntimeError("随机 code 连续撞表（概率事件，检查熵源）")
 
 MAX_CONTENT = 100_000                         # 单条上限（字符）
 MIN_TTL_HOURS, MAX_TTL_HOURS = 0.01, 8760.0   # 1 小时到 1 年
@@ -98,7 +109,7 @@ class StashStore:
             "INSERT INTO stashes (code, content, created_at, expires_at, "
             "pass_salt, pass_hash) VALUES (NULL, ?, ?, ?, ?, ?)",
             (content, now, now + ttl_hours * 3600, salt, digest))
-        code = encode_id(cur.lastrowid)
+        code = new_code(self.conn, "stashes")
         self.conn.execute("UPDATE stashes SET code = ? WHERE id = ?",
                           (code, cur.lastrowid))
         self.conn.commit()

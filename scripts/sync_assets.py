@@ -26,7 +26,7 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--check", action="store_true", help="只核验新鲜度，不写盘")
     args = ap.parse_args(argv[1:])
 
-    stale, copied = [], 0
+    stale, errors, copied = [], [], 0
     for src_rel, dst_tpl in ASSETS:
         src = ROOT / src_rel
         for product in PRODUCTS:
@@ -40,10 +40,20 @@ def main(argv: list[str]) -> int:
             if args.check:
                 stale.append(dst.relative_to(ROOT).as_posix())
             else:
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copyfile(src, dst)
-                copied += 1
-                print(f"[同步] {dst.relative_to(ROOT).as_posix()}")
+                try:
+                    dst.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copyfile(src, dst)
+                    copied += 1
+                    print(f"[同步] {dst.relative_to(ROOT).as_posix()}")
+                except OSError as exc:
+                    # 单目标失败不中断整轮（2026-10-07 审查收口）：汇总报全
+                    errors.append(f"{dst.relative_to(ROOT).as_posix()}：{exc}")
+
+    if errors:
+        print("同步失败清单：")
+        for e in errors:
+            print("  [失败]", e)
+        return 1
 
     if args.check:
         if stale:

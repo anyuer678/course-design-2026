@@ -40,11 +40,13 @@ def _check_params(params: dict) -> None:
         raise ValueError("params 必须是对象")
     for name in ("width", "height"):
         value = params.get(name)
-        if not isinstance(value, int) or isinstance(value, bool) or value < 1:
-            raise ValueError(f"{name} 必须是正整数")
+        if not isinstance(value, int) or isinstance(value, bool) or not 1 <= value <= 200:
+            raise ValueError(f"{name} 必须是 1..200 的整数（网格规模上限，防实时重算被大参数拖死）")
     walls = params.get("walls", [])
     if not isinstance(walls, list) or any(not _cell(c) for c in walls):
         raise ValueError("walls 必须是 [x, y] 的数组")
+    if len(walls) > 40000:
+        raise ValueError("walls 数量上限 40000（网格规模上限）")
     for name in ("start", "goal"):
         if not _cell(params.get(name)):
             raise ValueError(f"{name} 必须是 [x, y]")

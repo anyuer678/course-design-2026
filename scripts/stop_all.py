@@ -57,19 +57,21 @@ def main() -> int:
         print(f"⚠ 仍有端口在线（看门狗/子进程残留）：{still}，10s 后复查")
         time.sleep(10)
         still = [p for p in still if port_open(p)]
-    # 停门户
-    out = subprocess.run(["taskkill", "/F", "/FI",
-                          f"WINDOWTITLE eq CourseLab*"], capture_output=True)
-    # 门户是 python 进程：按端口找 PID 停。netstat 输出是系统 GBK 编码，
-    # 按 UTF-8 解码会让 reader 线程崩掉、stdout 变 None（2026-10-07 实测）。
-    import re
-    netstat = subprocess.run(["netstat", "-ano"], capture_output=True,
-                             text=True, encoding="gbk", errors="replace")
-    lines = (netstat.stdout or "").splitlines()
-    pids = {int(ln.split()[-1]) for ln in lines
-            if re.search(r":8017\s.*LISTENING", ln)}
-    for pid in pids:
+    # 停门户：按命令行精确匹配 studio/server.py（2026-10-07 审查收口）。
+    # 旧路径一按窗口标题 "CourseLab*" 通配、二按 :8017 LISTENING 猜 PID——
+    # 前者可能误杀标题相符的无关窗口，后者字面违反仓库红线"禁按端口号杀"。
+    ps = subprocess.run(
+        ["powershell", "-NoProfile", "-Command",
+         "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | "
+         "Where-Object { $_.CommandLine -match 'studio[\\\\/]+server\\.py' } | "
+         "Select-Object -ExpandProperty ProcessId"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace")
+    killed = [int(tok.strip()) for tok in (ps.stdout or "").split()
+              if tok.strip().isdigit()]
+    for pid in killed:
         subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)
+    if killed:
+        print("已停门户进程 PID：" + ", ".join(map(str, killed)))
     time.sleep(0.5)
     print("门户已停" if not port_open(8017) else "门户仍在（手动检查）")
     print("端口残留：" + (str(still) if still else "无"))

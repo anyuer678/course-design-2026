@@ -9,7 +9,7 @@ CacheKV 产品层只加了三样：统计账本、HTTP API（webframe）、快�
 ## 运行
 
 ```
-run.bat                                   # 双入口测试（15 项）
+run.bat                                   # 双入口测试（17 项）
 python server.py --port 8021              # 启动缓存服务（统计页在根路径）
 ```
 
@@ -29,7 +29,7 @@ python server.py --port 8021              # 启动缓存服务（统计页在根
 | GET | /api/stats | 命中/未命中/命中率/键数/快照次数（3 秒自刷新统计页） |
 | POST | /api/save | 手动快照 |
 
-## 测试策略（15 项）
+## 测试策略（17 项）
 
 引擎语义对拍（**与直接调用 B38 Store 逐条一致**：读写/TTL/惰性过期，共同时钟推进）、
 INCR、统计账本（hit+miss == 总读取）、主动过期周期、

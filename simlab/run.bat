@@ -1,6 +1,7 @@
 @echo off
 rem SimLab one-click: double-entry tests (pure ASCII body, see PLAN section 6)
 chcp 65001 >nul
+set PYTHONUTF8=1
 setlocal
 cd /d %~dp0
 
@@ -20,4 +21,5 @@ if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.
 echo All green. Try: python run.py --list
 pause
-endlocal
+set EC=%ERRORLEVEL%
+endlocal & exit /b %EC%

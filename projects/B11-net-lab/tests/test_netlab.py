@@ -582,6 +582,26 @@ class TestResourceRelease(ServerCase):
                         why="被拒连接没被超时回收", timeout=5.0)
         self.wait_until(lambda: small.stats.open_now == 0, timeout=5.0)
 
+    def test_stuck_reader_slots_are_reclaimed(self):
+        # 只发请求、从不读响应：响应排队后 outbuf 恒非空，旧逻辑里 _timeout
+        # 会永远放行，max_conn 被这类连接占满即全体 503。滞留满一个空闲
+        # 窗口必须被强制回收（2026-10-07 审查收口回归）。
+        self.server.stop()
+        stuck = Server(port=0, max_conn=2, idle_timeout=0.3)
+        stuck.start()
+        self.addCleanup(stuck.stop)
+        socks = []
+        for _ in range(2):
+            s = socket.create_connection(("127.0.0.1", stuck.port), timeout=5)
+            s.sendall(raw())          # 发完请求，故意不 recv
+            socks.append(s)
+        for s in socks:
+            self.addCleanup(s.close)
+        self.wait_until(lambda: stuck.stats.open_now == 2, why="两条滞留连接就位")
+        self.wait_until(lambda: stuck.stats.open_now == 0,
+                        why="只写不读的连接没被滞留回收", timeout=5.0)
+        self.assertGreaterEqual(stuck.stats.timed_out, 2)
+
 
 class TestDatagramFormat(unittest.TestCase):
     """UDP 只有边界，没有顺序和可靠性：每个包得自己带身份。"""

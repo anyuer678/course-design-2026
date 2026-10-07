@@ -29,8 +29,12 @@ def _check_params(params: dict) -> None:
             raise ValueError(f"{name} 必须是整数数组")
     if not isinstance(capacity, int) or isinstance(capacity, bool):
         raise ValueError("capacity 必须是整数")
+    if not 0 <= capacity <= 5000:
+        raise ValueError("capacity 必须是 0..5000（DP 表规模上限，防实时重算被大参数拖死）")
     if len(weights) != len(values):
         raise ValueError("weights 与 values 长度必须一致")
+    if len(weights) > 200:
+        raise ValueError("物品数上限 200（DP 表规模上限，防实时重算被大参数拖死）")
     if not weights:
         raise ValueError("至少要有一件物品")
 

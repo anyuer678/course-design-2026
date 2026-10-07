@@ -40,7 +40,7 @@ B9 是 C 项目，没有可 import 的 Python 调度引擎——按"不重写第
 ## 运行
 
 ```
-run.bat                                  # 双入口测试（33 项）
+run.bat                                  # 双入口测试（37 项）
 python run.py --list                     # CLI：列出可用实验
 python run.py b12-knapsack --params-file params.json --out runs\demo.json
 python server.py --port 8019             # 播放器服务（浏览器打开后选记录或现算）

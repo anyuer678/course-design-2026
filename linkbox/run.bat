@@ -1,6 +1,7 @@
 @echo off
 rem LinkBox M1+M2 one-click: tests + demo (pure ASCII body, see PLAN section 6)
 chcp 65001 >nul
+set PYTHONUTF8=1
 setlocal
 cd /d %~dp0
 
@@ -10,7 +11,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] Running test suite (53 tests: 37 product + 16 QR)...
+echo [1/2] Running test suite (59 tests: 43 product + 16 QR)...
 python -m unittest discover -s tests
 if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.
@@ -21,4 +22,5 @@ echo.
 echo All green. To use the product: python server.py --port 8018
 echo then open http://127.0.0.1:8018/ in your browser.
 pause
-endlocal
+set EC=%ERRORLEVEL%
+endlocal & exit /b %EC%

@@ -169,7 +169,18 @@ def build_server(*, host: str = "127.0.0.1", port: int = 8021,
     data = Path(data_dir) if data_dir else DATA_DIR
     data.mkdir(parents=True, exist_ok=True)
     engine = CacheKV(snapshot_path=data / "snapshot.bin")
-    loaded = engine.load()
+    try:
+        loaded = engine.load()
+    except Exception as exc:
+        # 坏快照不许挡启动：隔离留证、空库起服（2026-10-07 审查收口——
+        # 此前损坏的 snapshot.bin 会让服务永远起不来）
+        bad = data / f"snapshot.bin.bad-{time.strftime('%Y%m%d-%H%M%S')}"
+        try:
+            engine.snapshot_path.rename(bad)
+            print(f"[警告] 快照损坏已隔离：{bad}（{exc!r}）——以空库启动")
+        except OSError:
+            print(f"[警告] 快照损坏且无法隔离（{exc!r}）——以空库启动")
+        loaded = 0
     server = CacheKVServer(build_app(engine), host=host, port=port)
     saver = SnapshotSaver(engine, interval=snapshot_interval)
     server.engine = engine

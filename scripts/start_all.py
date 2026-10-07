@@ -40,6 +40,11 @@ def main() -> int:
         if _port_open(8017):
             break
         time.sleep(0.2)
+    if not _port_open(8017):
+        # 探活失败不许裸栈 + 不许把半启动的门户留在机上（2026-10-07 审查收口）
+        studio.terminate()
+        print("门户 10s 未就绪——已回收进程；可手动 python studio/server.py --port 8017 看报错")
+        return 1
     pw_lines = [ln.strip() for ln in (REPO / "studio" / "data" / "password.txt")
                 .read_text(encoding="utf-8").splitlines()
                 if ln.strip() and not ln.strip().startswith("#")]
@@ -48,7 +53,8 @@ def main() -> int:
                                             "password": pw_lines[-1]}).encode(),
                                 [("Content-Type", "application/json")])
     if status != 200:
-        print(f"登录失败：HTTP {status}")
+        studio.terminate()
+        print(f"登录失败：HTTP {status}——已回收门户进程")
         return 1
     auth = {"Cookie": headers.get("set-cookie", "").split(";")[0],
             "Content-Type": "application/json"}

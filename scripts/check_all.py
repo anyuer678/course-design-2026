@@ -8,8 +8,9 @@
   5. dorm 事实台账：27 键现算（PLAN 改动的联动哨兵）
   6. dorm 管理文档核对：check_pm（台账引用/风险登记/复盘分类）
   7. 交付齐全性：scan_refs.py projects（README + run.bat 引用扫描）
-  8. 产品层：webframe（31）/ studio（17，八产品真启停）/ linkbox（53）/ simlab（37）
+  8. 产品层：webframe（31）/ studio（18，八产品真启停）/ linkbox（92）/ simlab（37）
      / datascope（31）/ cachekv（17）/ sensorhub（18）/ board（11）
+     / courselab（151 项端到端自检，2026-10-07 补齐——此前体检对论文主体无自动化入口）
 --deep 追加：33 个项目的展示页测试套件（各项目 tests/test_showcase.py）。
 
 不覆盖（如实声明）：各项目核心测试套件（Python/C++/Java，见各项目 run.bat）、
@@ -42,13 +43,14 @@ def steps(deep: bool) -> list:
         ("dorm 管理文档核对（check_pm）", [PY, "projects/dorm-repair/checks/check_pm.py"]),
         ("交付齐全性（README+run.bat 引用扫描）", [PY, "scripts/scan_refs.py", "projects"]),
         ("产品层：webframe 微框架（31 项双入口）", [PY, "-m", "pytest", "webframe/tests", "-q"]),
-        ("产品层：Studio 门户（17 项：认证+矩阵+八产品真启停）", [PY, "-m", "pytest", "studio/tests", "-q"]),
-        ("产品层：LinkBox（53 项双入口）", [PY, "-m", "pytest", "linkbox/tests", "-q"]),
+        ("产品层：Studio 门户（18 项：认证+矩阵+八产品真启停）", [PY, "-m", "pytest", "studio/tests", "-q"]),
+        ("产品层：LinkBox（92 项双入口）", [PY, "-m", "pytest", "linkbox/tests", "-q"]),
         ("产品层：SimLab 仿真馆（37 项：记录+引擎+播放器+实时重算）", [PY, "-m", "pytest", "simlab/tests", "-q"]),
         ("产品层：DataScope 工作台（31 项：清洗+挖掘+报告+服务）", [PY, "-m", "pytest", "datascope/tests", "-q"]),
         ("产品层：CacheKV 缓存（17 项：TTL+快照+HTTP+概览演示）", [PY, "-m", "pytest", "cachekv/tests", "-q"]),
         ("产品层：SensorHub 物联网监测（18 项：MQTT 链路+对账+告警+服务）", [PY, "-m", "pytest", "sensorhub/tests", "-q"]),
         ("产品层：board 画板（11 项：B14 自检 7054+备份+守护+启动器契约）", [PY, "-m", "pytest", "board/tests", "-q"]),
+        ("产品层：CourseLab 课程工坊（151 项端到端自检）", [PY, "courselab/server.py", "--selftest"]),
     ]
     if deep:
         for g in sorted((ROOT / "projects").glob("*/")):
@@ -63,8 +65,21 @@ def steps(deep: bool) -> list:
 def run_step(label: str, cmd: list) -> bool:
     env = dict(os.environ, PYTHONUTF8="1")
     t0 = time.time()
-    proc = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True,
-                          encoding="utf-8", errors="replace", env=env, timeout=600)
+    try:
+        proc = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True,
+                              encoding="utf-8", errors="replace", env=env, timeout=600)
+    except subprocess.TimeoutExpired as exc:
+        # 单步卡死只红本步，不吞后续步骤（2026-10-07 审查收口）
+        dt = time.time() - t0
+        print(f"[FAIL] {label}（{dt:.1f}s）")
+        print("      | 超时 600s 强制终止")
+        out = exc.stdout or ""
+        if isinstance(out, bytes):
+            out = out.decode("utf-8", "replace")
+        tail = [ln for ln in out.strip().splitlines() if ln][-5:]
+        for ln in tail:
+            print("      |", ln)
+        return False
     dt = time.time() - t0
     ok = proc.returncode == 0
     # 标签钉值对拍：标签里声明"（N 项"的 pytest 步骤，实跑 passed 数必须相等。

@@ -1,7 +1,6 @@
 package board;
 
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -120,7 +119,11 @@ public final class BackupDaemon implements AutoCloseable {
                     backUpOne(docs, name);
                 }
             } catch (IOException pollProblem) {
-                throw new UncheckedIOException(pollProblem);
+                // 2026-10-07 审查收口：列举失败（如文档恰在列举后被删）原先
+                // 包成 UncheckedIOException 上抛，会炸掉守护线程——备份静默
+                // 停止。改为本轮跳过、打印留痕、下一轮重试：守护的承诺是不死。
+                System.err.println("[backup] poll failed, retry next round: "
+                        + pollProblem);
             }
             sleepQuietly(intervalMillis);
         }

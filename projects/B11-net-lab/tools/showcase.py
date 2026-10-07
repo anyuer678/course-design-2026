@@ -8,9 +8,10 @@
 - 测试数按 tests/ 两个核心文件 `def test_` 静态现数（不跑 discover——跑会在
   "展示页测试里再调 collect"时递归；B12 同款口径）。
 
-**日志规范化（4 条，可审计）**：演示里随环境波动的四处先按规则替换再嵌入——
+**日志规范化（5 条，可审计）**：演示里随环境波动的五处先按规则替换再嵌入——
 ① 临时端口（绑 0 由内核分配）→ `127.0.0.1:<临时端口>`；② 响应 `Date` 头（当场时间）→ `<当场时间>`；
-③ `/stats` 的 `open_now`（随连接回收时点 0/1）→ `<当场>`；④ 真回环 UDP 耗时 → `<当场>`。
+③ `/stats` 的 `open_now`（随连接回收时点 0/1）→ `<当场>`；④ 真回环 UDP 耗时 → `<当场>`；
+⑤ `/stats` 的 `peak_open`（前一连接是否已被异步回收决定 1/2，2026-10-07 收口）→ `<当场>`。
 其余数字由种子与固定脚本决定（`python demo.py` 两遍 diff 自证）。
 
 页面写 `web/showcase.html`；`--check` 重算比对（不写盘），过期即红。
@@ -48,6 +49,7 @@ def _norm(text: str) -> str:
     text = re.sub(r"Date: [A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT",
                   "Date: <当场时间>", text)
     text = re.sub(r"'open_now': \d+", "'open_now': <当场>", text)
+    text = re.sub(r"'peak_open': \d+", "'peak_open': <当场>", text)
     text = re.sub(r"耗时=[\d.]+s", "耗时=<当场>s", text)
     return text
 

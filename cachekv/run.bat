@@ -1,6 +1,7 @@
 @echo off
 rem CacheKV one-click: double-entry tests (pure ASCII body, see PLAN section 6)
 chcp 65001 >nul
+set PYTHONUTF8=1
 setlocal
 cd /d %~dp0
 
@@ -10,7 +11,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] pytest entry (15 tests: engine semantics + ledger + snapshot + HTTP)...
+echo [1/2] pytest entry (17 tests: engine semantics + ledger + snapshot + HTTP)...
 python -m pytest tests -q
 if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.
@@ -20,4 +21,5 @@ if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.
 echo All green. Try: python server.py --port 8021
 pause
-endlocal
+set EC=%ERRORLEVEL%
+endlocal & exit /b %EC%

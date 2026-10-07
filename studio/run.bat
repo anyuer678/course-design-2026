@@ -1,6 +1,7 @@
 @echo off
 rem Studio P0 one-click: tests + demo (pure ASCII body, see PLAN section 6)
 chcp 65001 >nul
+set PYTHONUTF8=1
 setlocal
 cd /d %~dp0
 
@@ -21,4 +22,5 @@ echo.
 echo All green. To use the portal: python server.py --port 8017
 echo login: owner, initial password in studio\data\password.txt
 pause
-endlocal
+set EC=%ERRORLEVEL%
+endlocal & exit /b %EC%

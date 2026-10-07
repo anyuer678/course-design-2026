@@ -17,5 +17,6 @@ echo [1/2] python in PATH; starting hub on http://127.0.0.1:7900/
 echo [2/2] Ctrl+C stops it.
 python server.py --open || (echo [!] courselab exited with an error ^(port 7900 busy?^) & exit /b 1)
 pause
-endlocal
+set EC=%ERRORLEVEL%
+endlocal & exit /b %EC%
 exit /b 0

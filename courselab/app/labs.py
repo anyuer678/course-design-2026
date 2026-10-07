@@ -116,8 +116,11 @@ def _kill_tree(proc) -> None:
         return
     if os.name == "nt":
         # cmd /c run.bat 的子进程会活下来继续跑：必须整树杀（lab.py 同款教训）
-        subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
-                       capture_output=True, timeout=10)
+        try:
+            subprocess.run(["taskkill", "/F", "/T", "/PID", str(proc.pid)],
+                           capture_output=True, timeout=10)
+        except subprocess.TimeoutExpired:   # taskkill 自己卡住：不外抛，交给下方 wait/kill 兜底
+            pass
     else:
         proc.terminate()
     try:
@@ -293,7 +296,10 @@ class Labs:
                 if meta["proc"] is not None and meta["proc"].poll() is None:
                     if time.time() - meta["started"] > self.task_timeout:
                         meta["buf"].append(f"[平台] 超时终止（>{self.task_timeout:.0f}s）")
-                        self._kill(meta)
+                        try:
+                            self._kill(meta)
+                        except Exception as exc:   # 杀失败不许带走监控线程（下一轮重试）
+                            meta["buf"].append(f"[平台] 终止异常，下轮重试：{exc!r}")
 
     def shutdown(self) -> None:
         for meta in list(self._runs.values()):

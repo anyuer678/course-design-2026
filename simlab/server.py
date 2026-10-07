@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import re
+import secrets
 import sys
 import time
 from pathlib import Path
@@ -25,7 +26,7 @@ from webframe import HttpFail, MicroApp, MicroServer, Response  # noqa: E402
 
 WEB_ROOT = ROOT / "web"
 RUNS_DIR = ROOT / "runs"
-DEFAULT_PORT = 8019                # 8017 studio / 8018 linkbox / 7788 lab
+DEFAULT_PORT = 8019                # 8017 studio / 8018 linkbox / 8020 datascope
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*\.json$")
 
 
@@ -80,7 +81,8 @@ def build_app(*, runs_dir: Path | None = None) -> MicroApp:
         record = _render_validated(body["experiment"], body["params"])
         ensure_dir()
         stamp = time.strftime("%Y%m%d-%H%M%S")
-        name = f"{record['experiment']}-{stamp}.json"
+        # 秒级时间戳会同秒碰撞（后写覆盖先写）：掺 2 字节随机后缀
+        name = f"{record['experiment']}-{stamp}-{secrets.token_hex(2)}.json"
         save = simlab.save(record, _record_path(name))
         return ctx.json({"name": save.name, **record}, status=201)
 

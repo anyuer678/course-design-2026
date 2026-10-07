@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import atexit
 import http.client
 import json
 import re
@@ -85,6 +86,27 @@ def main() -> int:
                 "sensorhub", "courselab", "board"]
     ports = {"linkbox": 8018, "lab": 7788, "simlab": 8019, "datascope": 8020,
              "cachekv": 8021, "sensorhub": 8022, "courselab": 8024, "board": 8023}
+    # 收摊兜底（2026-10-07 审查收口）：此前中途异常会把门户+已启动的产品全留
+    # 在机上——正是"残留进程"事故的成因模式。atexit 兜底做幂等收摊；
+    # 正常路径收完摊置 done，兜底不再动作。
+    _cleaned = {"done": False}
+
+    def _emergency_cleanup():
+        if _cleaned["done"]:
+            return
+        _cleaned["done"] = True
+        print("[!] 预演未正常收摊——兜底清理八产品与门户")
+        for pid in reversed(products):
+            try:
+                req(8017, "POST", f"/api/products/{pid}/stop", headers=auth)
+            except Exception:
+                pass
+        try:
+            studio.terminate()
+        except Exception:
+            pass
+
+    atexit.register(_emergency_cleanup)
     for pid in products:
         status, body, _ = req(8017, "POST", f"/api/products/{pid}/start",
                               headers=auth)
@@ -182,6 +204,7 @@ def main() -> int:
     studio.terminate()
     studio.wait(timeout=5)
     step("门户停止", not wait_port(8017, 0.5))
+    _cleaned["done"] = True               # 已正常收摊，atexit 兜底不再动作
 
     # 5) 证据文档
     passed = sum(1 for _, ok, _ in RESULTS if ok)

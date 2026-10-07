@@ -124,6 +124,11 @@ class SnapshotSaver:
 
     def stop(self) -> None:
         self._stop.set()
+        thread = self._thread
+        if thread is not None and thread.is_alive():
+            # 在途快照写完再放行：停机刷盘（engine.save）与快照线程写的是同一个
+            # 临时文件，不 join 就是两写竞态 → 坏快照（2026-10-07 审查收口）
+            thread.join(timeout=10)
 
     def _loop(self) -> None:
         while not self._stop.wait(self.interval):
