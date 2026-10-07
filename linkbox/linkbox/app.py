@@ -23,8 +23,9 @@ from __future__ import annotations
 import html
 import json
 import urllib.parse
+from pathlib import Path
 
-from b31.app import HTML_TYPE, JSON_TYPE, TEXT_TYPE, ShortUrlApp
+from b31.app import HTML_TYPE, JSON_TYPE, STATIC_TYPES, TEXT_TYPE, ShortUrlApp
 from b31.codec import is_code_shape
 
 from .files import MAX_FILE_BYTES, FileError, FileGone, content_disposition
@@ -59,7 +60,20 @@ class LinkBoxApp(ShortUrlApp):
             (("GET", "/f/*"), self.file_download),
             (("HEAD", "/f/*"), self.file_download),
             (("POST", "/f/*"), self.file_download_post),
+            # 共享资产：sync_assets 把 webkit/kb.css 落到 web/assets/，
+            # 而 B31 的静态白名单只有根级三个名字——没有这条路由，
+            # 产品页的 <link assets/kb.css> 永远 404（整页裸样式，2026-10-07 实测）。
+            (("GET", "/assets/*"), self.assets_static),
         ]
+
+    def assets_static(self, request):
+        name = request.path[len("/assets/"):].lstrip("/")
+        if not name:
+            return 404, [TEXT_TYPE], "资源不存在".encode("utf-8")
+        data = self.read_static("assets/" + name)
+        if data is None or Path(name).suffix not in STATIC_TYPES:
+            return 404, [TEXT_TYPE], "资源不存在".encode("utf-8")
+        return 200, [("Content-Type", STATIC_TYPES[Path(name).suffix]), NO_STORE], data
 
     # ------------------------------------------------ 请求体解析（沿用 B31 的校验次序）
     def _json_body(self, request) -> tuple[dict | None, tuple | None]:

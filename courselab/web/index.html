@@ -39,26 +39,29 @@ function load() {
   grid.appendChild(CL.el("div", "skeleton"));
   grid.appendChild(CL.el("div", "skeleton w80"));
   grid.appendChild(CL.el("div", "skeleton w60"));
-  CL.api("/api/courses").then(function (data) {
+  CL.api("/api/courses").then(function (res) {
     grid.textContent = "";
-    if (!data.ok) {
+    // CL.api 返回 {status, data} 信封——业务字段在 res.data 里
+    var d = res.data || {};
+    if (!d.ok) {
       // 网络错误已由 CL.api 归一：这里给出可操作的重试入口
       var errCard = CL.el("div", "card");
-      errCard.appendChild(CL.el("p", null, "课程目录读取失败：" + (data.error || "未知错误")));
+      errCard.appendChild(CL.el("p", null, "课程目录读取失败：" + (d.error || (res.status ? "HTTP " + res.status : "网络错误"))));
       var retry = CL.el("button", "btn btn-ghost", "重试");
+      retry.type = "button";
       retry.addEventListener("click", function () { load(); });
       errCard.appendChild(retry);
       grid.appendChild(errCard);
       return;
     }
-    DATA = data.courses;
+    DATA = d.courses || [];
     var stats = document.getElementById("stats");
     stats.textContent = "";
     var batches = DATA.map(function (c) { return c.batch; })
                       .filter(function (v, i, a) { return a.indexOf(v) === i; });
     stats.appendChild(stat(DATA.length + " 门课程"));
     stats.appendChild(stat(batches.length + " 个批次"));
-    stats.appendChild(stat((data.cards || 0) + " 张练习卡"));
+    stats.appendChild(stat((d.cards || 0) + " 张练习卡"));
     buildChips(batches);
     render(document.getElementById("q").value.trim());
   });

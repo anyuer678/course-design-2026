@@ -43,6 +43,9 @@ def main() -> int:
                              json.dumps({"username": "owner",
                                          "password": pw_lines[-1]}).encode(),
                              [("Content-Type", "application/json")])
+    if status != 200:
+        print(f"门户登录失败（HTTP {status}）——不能按 authenticated 路径收摊，中止")
+        return 2
     auth = {"Cookie": headers.get("set-cookie", "").split(";")[0]}
     for pid in PRODUCTS:
         status, _, _ = req(8017, "POST", f"/api/products/{pid}/stop", headers=auth)
@@ -57,10 +60,13 @@ def main() -> int:
     # 停门户
     out = subprocess.run(["taskkill", "/F", "/FI",
                           f"WINDOWTITLE eq CourseLab*"], capture_output=True)
-    # 门户是 python 进程：按端口找 PID 停
+    # 门户是 python 进程：按端口找 PID 停。netstat 输出是系统 GBK 编码，
+    # 按 UTF-8 解码会让 reader 线程崩掉、stdout 变 None（2026-10-07 实测）。
     import re
-    netstat = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
-    pids = {int(ln.split()[-1]) for ln in netstat.stdout.splitlines()
+    netstat = subprocess.run(["netstat", "-ano"], capture_output=True,
+                             text=True, encoding="gbk", errors="replace")
+    lines = (netstat.stdout or "").splitlines()
+    pids = {int(ln.split()[-1]) for ln in lines
             if re.search(r":8017\s.*LISTENING", ln)}
     for pid in pids:
         subprocess.run(["taskkill", "/F", "/PID", str(pid)], capture_output=True)

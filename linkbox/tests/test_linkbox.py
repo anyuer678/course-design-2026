@@ -562,6 +562,27 @@ class TestOverRealSocket(unittest.TestCase):
         self.assertIn(b"LinkBox", resp.read())
         conn.close()
 
+    def test_shared_assets_over_real_socket(self):
+        """共享资产走真协议栈：产品页 <link assets/kb.css> 必须拿到样式——
+        曾因 B31 静态白名单没有 /assets/ 路由而整页 404 裸样式
+        （2026-10-07 无头浏览器实测抓出）。边界行为按惯例每步一条新连接。"""
+        def talk(target):
+            conn = http.client.HTTPConnection("127.0.0.1", self.port)
+            conn.request("GET", target)
+            resp = conn.getresponse()
+            body = resp.read()
+            conn.close()
+            return resp.status, resp.getheader("Content-Type"), body
+
+        status, ctype, body = talk("/assets/kb.css")
+        self.assertEqual(status, 200)
+        self.assertEqual(ctype, "text/css; charset=utf-8")
+        self.assertGreater(len(body), 500)
+        self.assertIn(b"--", body)          # token 文件必含自定义属性
+        self.assertEqual(talk("/assets/not-exist.css")[0], 404)
+        # `..` 上跳被 netlab 协议层挡死（http1 §安全），到不了 read_static
+        self.assertEqual(talk("/assets/../app.js")[0], 400)
+
     def test_file_over_real_socket(self):
         """文件链路走真协议栈：1 MiB 二进制上传→下载逐位一致——
         专门钉住"传输层 max_body 已放宽"这件事（netlab 默认 1 MiB 会 413）。"""

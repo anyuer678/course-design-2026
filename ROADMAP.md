@@ -663,3 +663,23 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
   cachekv/data/、sensorhub/data/、board/data/）。
 
+
+- ✅ **轮十：浏览器实测轮（10-07，用户"UI 崩坏/登录一塌糊涂/页面打不开/交互极差"）**：
+  pytest/selftest 都绿但真实浏览器崩——机器体检覆盖不了浏览器渲染与前后端契约，
+  本轮用无头 Edge 逐页截图 + HTTP 资产扫描 + API 直调补上这一层，抓出三个真缺陷并全修：
+  ①**LinkBox 整页裸样式**：产品页引用 `assets/kb.css`，但 B31 静态白名单只有根级三个名字，
+  sync_assets 把文件同步到位了、服务端却永远 404（pytest 不测 `<link>` 引用所以全绿）。
+  修：LinkBoxApp 加 `GET /assets/*` 路由（read_static 包含域+后缀双闸沿用），
+  真套接字测试钉住 200/404/400 三态；②**CourseLab 首页全站死**：index.html 还在读旧契约
+  裸 JSON（`data.ok`），而 CL.api 早已改发 `{status,data}` 信封——API 200 成功、页面永远走
+  错误分支显示"读取失败：未知错误"（全站其他页都用 `res.data.*`，只有 index 漏改）。
+  修：index.html 改信封契约，首页 33 门课恢复渲染；③**收摊工具 stop_all.py 自己崩**：
+  `netstat -ano` 输出是系统 GBK，按 UTF-8 解码 reader 线程崩 → stdout=None →
+  `None.splitlines()` AttributeError，且登录失败也会继续往下杀门户。
+  修：显式 `encoding="gbk"` + 登录失败大声中止（exit 2）。
+  **登录系统排查结论（实测非想象）**：CourseLab 注册→登录→身份→登出四步全 200 服务端健康、
+  登录页渲染正常；Studio 用 password.txt 末行口令登录 200（初测 401 是我把注释行也当口令）。
+  用户感知的"登录一塌糊涂"主要是首页死掉 + LinkBox 裸样式的连带观感，两处修复后消除。
+  探针用户 ui_probe_tmp 已从 app.db 清除（连孤儿会话）。
+  验证：无头 Edge 复检 LinkBox/CourseLab 首页截图均恢复；linkbox 测试 53→**54** 双入口全绿；
+  courselab 自检 145 PASS；八产品 stop_all→start_all 全链重走一遍干净。
