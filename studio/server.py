@@ -41,7 +41,7 @@ def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
                   simlab_port: int = 8019, datascope_port: int = 8020,
                   cachekv_port: int = 8021, sensorhub_port: int = 8022,
                   board_port: int = 8023, courselab_port: int = 8024,
-                  linkbox_memory: bool = False) -> ProductManager:
+                  boardweb_port: int = 8025, linkbox_memory: bool = False) -> ProductManager:
     """产品注册表。command=None = 已规划（矩阵名单照抄 PRODUCTS.md §二）。"""
     cmd = [sys.executable, "server.py", "--port", str(linkbox_port)]
     if linkbox_memory:
@@ -89,6 +89,12 @@ def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
                          "--managed-window"],
                 cwd=str(REPO / "board"),
                 kind="desktop"),  # 8023 是探活行协议口（BOARD 8023 OK），不是 HTTP——门户不给"打开产品"
+        Product("boardweb", "画板 Web 版",
+                "浏览器画板：图形工具 / 选择微调 / 贴图粘贴 / 撤销重做 / 自动备份"
+                "（桌面 Swing 版并存，:8023）",
+                port=boardweb_port,
+                command=[sys.executable, "server.py", "--port", str(boardweb_port)],
+                cwd=str(REPO / "boardweb")),
     ]
     return ProductManager(products)
 

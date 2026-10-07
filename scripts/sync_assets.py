@@ -18,7 +18,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = [("webkit/kb.css", "{product}/web/assets/kb.css")]
 PRODUCTS = ["linkbox", "simlab", "datascope", "cachekv",
-            "sensorhub", "courselab", "studio"]
+            "sensorhub", "courselab", "studio", "boardweb"]
 
 
 def main(argv: list[str]) -> int:

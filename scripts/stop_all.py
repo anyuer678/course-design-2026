@@ -9,7 +9,7 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-PRODUCTS = ["board", "courselab", "sensorhub", "cachekv",
+PRODUCTS = ["board", "boardweb", "courselab", "sensorhub", "cachekv",
             "datascope", "simlab", "lab", "linkbox"]
 
 
@@ -51,7 +51,7 @@ def main() -> int:
         status, _, _ = req(8017, "POST", f"/api/products/{pid}/stop", headers=auth)
         print(f"{'✅' if status == 200 else '❌'} stop {pid}")
     time.sleep(1.5)
-    still = [p for p in (8018, 7788, 8019, 8020, 8021, 8022, 8023, 8024)
+    still = [p for p in (8018, 7788, 8019, 8020, 8021, 8022, 8023, 8024, 8025)
              if port_open(p)]
     if still:
         print(f"⚠ 仍有端口在线（看门狗/子进程残留）：{still}，10s 后复查")

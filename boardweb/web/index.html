@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#fafafa">
+<title>画板 Web 版 · Board</title>
+<link rel="stylesheet" href="/static/assets/kb.css">
+<style>
+body{background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Microsoft YaHei",sans-serif;margin:0}
+.toolbar{display:flex;gap:.45rem;align-items:center;flex-wrap:wrap;padding:.55rem .8rem;
+  border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:5}
+.toolbar .sep{width:1px;height:1.4rem;background:var(--line);margin:0 .2rem;flex:none}
+.tool.active{outline:2px solid var(--accent);outline-offset:1px}
+.btn{font:inherit;font-size:.85rem;padding:.35rem .7rem;border:1px solid var(--line-strong);
+  border-radius:7px;background:var(--card);cursor:pointer;color:var(--ink);white-space:nowrap}
+.btn:hover{border-color:var(--accent);color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+input[type=color]{width:2.1rem;height:1.7rem;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--card);cursor:pointer}
+select,input[type=number]{font:inherit;font-size:.85rem;padding:.3rem .45rem;border:1px solid var(--line);
+  border-radius:6px;background:var(--card);color:var(--ink)}
+#board{display:block;margin:1rem auto;border:1px solid var(--line-strong);border-radius:8px;
+  background:#fff;box-shadow:var(--shadow-pop,0 4px 14px rgba(0,0,0,.08));touch-action:none;cursor:crosshair}
+#board.tool-select{cursor:default}
+.props{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;justify-content:center;
+  padding:.4rem .8rem;font-size:.84rem;color:var(--muted)}
+.props input[type=number]{width:4.6rem}
+.props input:disabled{opacity:.45}
+.note{color:var(--muted);font-size:.84rem;text-align:center;padding:.2rem 0 .8rem}
+#save-state{font-size:.84rem;color:var(--muted);min-width:6.5rem}
+kbd{background:var(--line-soft,#efefef);border:1px solid var(--line);border-radius:4px;padding:0 .3rem;font-size:.8rem}
+</style>
+</head>
+<body>
+<div class="toolbar">
+  <button class="btn tool active" data-tool="pen">✏️ 画笔</button>
+  <button class="btn tool" data-tool="line">／ 直线</button>
+  <button class="btn tool" data-tool="rect">▭ 矩形</button>
+  <button class="btn tool" data-tool="ellipse">◯ 椭圆</button>
+  <button class="btn tool" data-tool="select">⬚ 选择/微调</button>
+  <span class="sep"></span>
+  <input type="color" id="color" value="#171717" title="颜色">
+  <select id="width" title="线宽">
+    <option value="2">细 2px</option>
+    <option value="4" selected>中 4px</option>
+    <option value="8">粗 8px</option>
+  </select>
+  <span class="sep"></span>
+  <button class="btn" id="btn-img" title="上传贴图文件（也可直接 Ctrl+V 粘贴截图）">🖼️ 贴图</button>
+  <input type="file" id="img-file" accept="image/png,image/jpeg,image/gif,image/webp" hidden>
+  <span class="sep"></span>
+  <button class="btn" id="btn-undo" title="Ctrl+Z">↩ 撤销</button>
+  <button class="btn" id="btn-redo" title="Ctrl+Y">↪ 重做</button>
+  <button class="btn" id="btn-clear">清空</button>
+  <span class="sep"></span>
+  <button class="btn primary" id="btn-export">导出 PNG</button>
+  <span class="spacer" style="flex:1"></span>
+  <span id="save-state">—</span>
+</div>
+<canvas id="board" width="1120" height="640"></canvas>
+<div class="props" id="props">
+  <b>微调</b>
+  <label>X <input type="number" id="p-x" step="1" disabled></label>
+  <label>Y <input type="number" id="p-y" step="1" disabled></label>
+  <label>W <input type="number" id="p-w" step="1" disabled></label>
+  <label>H <input type="number" id="p-h" step="1" disabled></label>
+  <label>颜色 <input type="color" id="p-color" disabled></label>
+  <label>线宽 <input type="number" id="p-width" min="1" max="40" step="1" disabled></label>
+  <span class="note">← ↑ → ↓ 微调 1px（按住 Shift 10px）；Delete 删除选中</span>
+</div>
+<p class="note">自动保存（改动后 1 秒落盘，保留最近 10 份备份）· 贴图支持文件上传与 <kbd>Ctrl+V</kbd> 粘贴截图 ·
+  导出 PNG 直接下载</p>
+<script src="/static/app.js"></script>
+</body>
+</html>

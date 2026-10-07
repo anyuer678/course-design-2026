@@ -51,6 +51,7 @@ def steps(deep: bool) -> list:
         ("产品层：SensorHub 物联网监测（19 项：MQTT 链路+对账+告警+服务+曲线限流）", [PY, "-m", "pytest", "sensorhub/tests", "-q"]),
         ("产品层：board 画板（11 项：B14 自检 7054+备份+守护+启动器契约）", [PY, "-m", "pytest", "board/tests", "-q"]),
         ("产品层：CourseLab 课程工坊（154 项端到端自检）", [PY, "courselab/server.py", "--selftest"]),
+        ("产品层：画板 Web 版（8 项：文档+备份轮转+贴图+安全）", [PY, "-m", "pytest", "boardweb/tests", "-q"]),
     ]
     if deep:
         for g in sorted((ROOT / "projects").glob("*/")):

@@ -775,3 +775,10 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   check_all 15→**16 步**（补 CourseLab 自检——体检首次覆盖论文主体）+ 单步超时
   不吞后续；④ thesis 七章/摘要/outline/THESIS/双 README 数字与八域分组表按当日
   实数重写；⑤全量回归：九产品套件单跑全绿 + check_all 16/16 + 自检 151/151。
+
+- ✅ **轮十三：画板 Web 版 boardweb（10-07，用户四项诉求：图案/内嵌/微调/贴图）**：
+  新产品 :8025（webframe）——HTML5 Canvas：画笔/直线/矩形/椭圆 + 选择/拖动/
+  方向键微调/属性面板 + 贴图（文件+Ctrl+V）+ 撤销重做 + 自动保存（1s 防抖原子
+  写）+ 轮转备份 keep=10（同秒时戳互覆测试实抓，掺随机尾缀修掉）+ 导出 PNG；
+  第九个 managed 产品接入门户（studio 注册表 + start/stop/walkthrough/sync_assets
+  /check_all 五处同步，17 步）。测试 8 项双入口；矩阵 pytest 口径 262→270。

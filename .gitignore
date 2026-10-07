@@ -40,6 +40,9 @@ datascope/data/
 # board 画板运行数据（文档/备份/状态，见 board/README；2026-10-05 轮七起）
 board/data/
 
+# boardweb 画板 Web 版运行数据（文档/备份/贴图，2026-10-07 起）
+boardweb/data/
+
 # IDE / 工具 scratch
 .idea/
 .vscode/

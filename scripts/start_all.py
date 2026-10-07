@@ -15,7 +15,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 PRODUCTS = ["linkbox", "lab", "simlab", "datascope",
-            "cachekv", "sensorhub", "courselab", "board"]
+            "cachekv", "sensorhub", "courselab", "board", "boardweb"]
 
 
 def req(port: int, method: str, path: str, body=None, headers=None, timeout=30):

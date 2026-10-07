@@ -170,12 +170,12 @@ class PortalCase(unittest.TestCase):
         self.assertEqual(status, 200)
         data = json.loads(body)
         ids = [p["id"] for p in data["products"]]
-        # PRODUCTS.md §二矩阵：门户 + 八个 managed——**已规划清零**，矩阵全兑现
+        # PRODUCTS.md §二矩阵：门户 + 九个 managed（boardweb 2026-10-07 加入）——矩阵全兑现
         self.assertEqual(ids, ["studio", "linkbox", "lab", "simlab", "datascope",
-                               "cachekv", "sensorhub", "courselab", "board"])
+                               "cachekv", "sensorhub", "courselab", "board", "boardweb"])
         by_id = {p["id"]: p for p in data["products"]}
         for managed in ("linkbox", "lab", "simlab", "datascope", "cachekv",
-                        "sensorhub", "courselab", "board"):
+                        "sensorhub", "courselab", "board", "boardweb"):
             self.assertTrue(by_id[managed]["managed"], msg=managed)
         self.assertTrue(all(p["managed"] for p in data["products"] if p["id"] != "studio"),
                         "矩阵已无 planned 产品：门户自身除外，任何残留 planned 都是登记错误")

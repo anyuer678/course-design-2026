@@ -83,9 +83,10 @@ def main() -> int:
 
     # 2) 门户一键启停八个产品
     products = ["linkbox", "lab", "simlab", "datascope", "cachekv",
-                "sensorhub", "courselab", "board"]
+                "sensorhub", "courselab", "board", "boardweb"]
     ports = {"linkbox": 8018, "lab": 7788, "simlab": 8019, "datascope": 8020,
-             "cachekv": 8021, "sensorhub": 8022, "courselab": 8024, "board": 8023}
+             "cachekv": 8021, "sensorhub": 8022, "courselab": 8024, "board": 8023,
+             "boardweb": 8025}
     # 收摊兜底（2026-10-07 审查收口）：此前中途异常会把门户+已启动的产品全留
     # 在机上——正是"残留进程"事故的成因模式。atexit 兜底做幂等收摊；
     # 正常路径收完摊置 done，兜底不再动作。
@@ -188,6 +189,11 @@ def main() -> int:
     with socket.create_connection(("127.0.0.1", 8023), timeout=3) as sock:
         reply = sock.recv(4096).decode("utf-8", "replace").strip()
     step("Board：探活口回报活账", reply.startswith("BOARD 8023 OK"), reply)
+
+    # BoardWeb：画板页 + 文档 API
+    status, body, _ = req(8025, "GET", "/api/doc")
+    step("BoardWeb：文档 API 可读（空文档）",
+         status == 200 and json.loads(body).get("shapes") == [], f"HTTP {status}")
 
     # 4) 门户逐个停止（board 有 ≤8s 看门狗滞后，轮询确认）
     for pid in reversed(products):
