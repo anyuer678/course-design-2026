@@ -91,11 +91,17 @@
         if (busy[p.id]) {
           row.appendChild(el("span", "note", busy[p.id]));
         } else if (p.online) {
-          var open = el("a", "btn", "打开产品");
-          open.href = "http://127.0.0.1:" + p.port + "/";
-          if (p.id === "lab") open.href += "showcase/index.html";
-          open.target = "_blank";
-          row.appendChild(open);
+          if (p.kind === "desktop") {
+            // 桌面窗口应用：端口是探活行协议口，不是 HTTP——导航过去只会报
+            // ERR_INVALID_HTTP_RESPONSE（2026-10-07 实测），所以不给"打开产品"。
+            row.appendChild(el("span", "badge", "桌面应用 · 开窗用 board/launch.py --window"));
+          } else {
+            var open = el("a", "btn", "打开产品");
+            open.href = "http://127.0.0.1:" + p.port + "/";
+            if (p.id === "lab") open.href += "showcase/index.html";
+            open.target = "_blank";
+            row.appendChild(open);
+          }
           var stop = el("button", "btn ghost", "停止");
           stop.addEventListener("click", function () { act(p.id, "stop"); });
           row.appendChild(stop);

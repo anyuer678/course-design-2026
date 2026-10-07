@@ -179,6 +179,16 @@ class PortalCase(unittest.TestCase):
             self.assertTrue(by_id[managed]["managed"], msg=managed)
         self.assertTrue(all(p["managed"] for p in data["products"] if p["id"] != "studio"),
                         "矩阵已无 planned 产品：门户自身除外，任何残留 planned 都是登记错误")
+        # kind 字段：浏览器产品一律 web；board 是桌面窗口应用（8023 是探活行协议口
+        # 而非 HTTP，门户曾给它的卡片渲染"打开产品"导致 ERR_INVALID_HTTP_RESPONSE）
+        self.assertTrue(all(p["kind"] == "web" for p in data["products"]
+                            if p["id"] != "board"), "浏览器产品缺 kind=web")
+        self.assertEqual(by_id["board"]["kind"], "desktop")
+
+    def test_board_is_desktop_kind(self):
+        status, _, body = self.handle("GET", "/api/products/board/status")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["kind"], "desktop")
 
     def test_status_and_unknown_product(self):
         status, _, body = self.handle("GET", "/api/products/linkbox/status")

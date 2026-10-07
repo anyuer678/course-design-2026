@@ -15,13 +15,15 @@ import time
 class Product:
     def __init__(self, pid: str, name: str, tagline: str, *,
                  port: int | None = None, command: list | None = None,
-                 cwd: str | None = None):
+                 cwd: str | None = None, kind: str = "web"):
         self.id = pid
         self.name = name
         self.tagline = tagline
         self.port = port
         self.command = command              # None = 已规划（不可启动）
         self.cwd = cwd
+        self.kind = kind                    # web = 浏览器可开；desktop = 桌面窗口应用
+                                            # （端口只是探活口/行协议，不是 HTTP，门户不给"打开产品"）
 
     @property
     def managed(self) -> bool:
@@ -62,6 +64,7 @@ class ProductManager:
         proc = self.procs.get(pid)
         return {"id": p.id, "name": p.name, "tagline": p.tagline,
                 "port": p.port, "managed": p.managed, "online": online,
+                "kind": p.kind,
                 "pid": proc.pid if proc is not None else None}
 
     def listing(self) -> list[dict]:

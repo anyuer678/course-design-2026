@@ -683,3 +683,15 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   探针用户 ui_probe_tmp 已从 app.db 清除（连孤儿会话）。
   验证：无头 Edge 复检 LinkBox/CourseLab 首页截图均恢复；linkbox 测试 53→**54** 双入口全绿；
   courselab 自检 145 PASS；八产品 stop_all→start_all 全链重走一遍干净。
+
+- ✅ **轮十·补：门户 Board 卡 -370 修复（10-07 同日，应用内浏览器报
+  ERR_INVALID_HTTP_RESPONSE）**：用户在门户点"打开产品"导航到
+  http://127.0.0.1:8023/ 报 -370。原始套接字实测 8023 回的是
+  `BOARD 8023 OK docs=0 backups=0 corrupt=0`——那是 Board 的**探活行协议口**，
+  不是 HTTP；Board 的真 UI 是 Swing 桌面窗口，根本没有网页。门户前端却对
+  所有 managed 产品一律渲染"打开产品"链接（app.js 一刀切）。修：Product 加
+  `kind` 字段（web/desktop），board 注册为 desktop，门户对 desktop 产品渲染
+  "桌面应用 · 开窗用 board/launch.py --window"徽标 + 停止键，不再给网页链接。
+  studio 测试 17→**18** 双入口全绿（kind 断言钉住：除 board 外全部 web）。
+  验证：stop_all→start_all 全链重走、API 实测 board kind=desktop、
+  无头 Edge 整页截图确认 Board 卡片新形态。
