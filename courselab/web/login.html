@@ -15,9 +15,13 @@
 </head>
 <body>
 <header class="topbar" id="topbar"></header>
-<main>
-<h1>登录</h1>
-<div class="form">
+<div class="auth-page">
+<div class="auth-card">
+  <div class="auth-brand">
+    <span class="auth-logo">课</span>
+    <div><b>课程工坊 CourseLab</b><div class="meta">课程 · 实验 · 任务 · 复盘</div></div>
+  </div>
+  <h1>登录</h1>
   <div class="msg err" id="msg" role="alert" style="display:none"></div>
   <div class="field">
     <label for="username">用户名</label>
@@ -32,9 +36,9 @@
     </div>
   </div>
   <button class="btn" id="submit">登录</button>
-  <p class="note" style="margin-top:.8rem">还没有账号？<a href="/register.html">注册一个</a></p>
+  <p class="auth-foot note">还没有账号？<a href="/register.html">注册一个</a></p>
 </div>
-</main>
+</div>
 <script src="/assets/app.js"></script>
 <script>
 "use strict";

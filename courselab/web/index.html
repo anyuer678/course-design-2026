@@ -126,7 +126,11 @@ function render(q) {
     a.appendChild(CL.el("div", "meta", c.id + " · " + c.title));
     if (c.summary) a.appendChild(CL.el("p", "clamp", c.summary));
     var foot = CL.el("div", "meta");
-    foot.style.marginTop = ".3rem";
+    foot.style.marginTop = ".35rem";
+    var dot = CL.el("span", "batch-dot");
+    dot.style.background = "hsl(" + ((Number(c.batch) * 47 + 202) % 360) + " 72% 46%)";
+    dot.title = "批次 " + c.batch;
+    foot.appendChild(dot);
     var tag = CL.el("span", "tag ok", "批次 " + c.batch + " · 已交付");
     foot.appendChild(tag);
     a.appendChild(foot);

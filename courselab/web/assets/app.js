@@ -80,8 +80,12 @@
       var skip = CL.el("a", "skip", "跳到主要内容");
       skip.href = "#main";
       bar.appendChild(skip);
-      var brand = CL.el("a", "brand", "课程工坊 CourseLab");
+      var brand = CL.el("a", "brand");
       brand.href = "/";
+      var mark = CL.el("span", "brand-mark");
+      mark.setAttribute("aria-hidden", "true");
+      brand.appendChild(mark);
+      brand.appendChild(document.createTextNode("课程工坊 CourseLab"));
       bar.appendChild(brand);
       var links = CL.el("nav", "navlinks");
       links.setAttribute("aria-label", "主导航");
@@ -129,11 +133,10 @@
           });
         });
         auth.appendChild(out);
-      } else {
+      } else if (here !== "/login.html" && here !== "/register.html") {
+        // 认证页本身不再渲染右上角登录/注册按钮（卡片内已有入口，避免双份）
         var lg = CL.el("a", "btn btn-ghost", "登录");
-        // next 自指修正：在登录/注册页上点导航"登录"，登录成功应回首页而不是弹回本页
-        var onAuthPage = here === "/login.html" || here === "/register.html";
-        var next = onAuthPage ? "/" : location.pathname + location.search;
+        var next = location.pathname + location.search;
         lg.href = "/login.html?next=" + encodeURIComponent(next);
         var rg = CL.el("a", "btn", "注册");
         rg.href = "/register.html";
