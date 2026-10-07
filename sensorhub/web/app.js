@@ -127,7 +127,9 @@
     img.src = "/api/chart?device=" + encodeURIComponent(dev) +
       "&metric=" + encodeURIComponent(metric) + "&t=" + Date.now();
     img.hidden = false;
-    $("chartnote").textContent = dev + " · " + metric + "（温度曲线叠加设备自报异常点）";
+    var note = dev + " · " + metric + "（温度曲线叠加设备自报异常点）";
+    img.alt = note;                                  // 走查 2026-10-07：绘出后 alt 别再停在空态文案
+    $("chartnote").textContent = note;
   }
   $("btn-chart").addEventListener("click", showChart);
 
@@ -137,5 +139,13 @@
   });
 
   refresh();
-  setInterval(function () { if ($("auto").checked) refresh(); }, 2000);
+  setInterval(function () {
+    if (!$("auto").checked) return;
+    refresh();
+    // 曲线已展示时随自刷新重绘（走查 2026-10-07：此前画一次就定格）
+    var img = $("chart");
+    if (!img.hidden && img.src.indexOf("/api/chart") >= 0) {
+      img.src = img.src.replace(/&t=\d+/, "&t=" + Date.now());
+    }
+  }, 2000);
 })();

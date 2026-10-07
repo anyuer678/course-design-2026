@@ -3,6 +3,9 @@ table.kb td.warn,table.kb td.rose{color:var(--err);font-weight:650}
 td.settled{background:var(--okbg)}
 #chartbox{text-align:center}
 #chart{max-width:100%}
+/* 2026-10-07 走查：窄窗口下标题与按钮文字折行叠字 */
+.crumb{white-space:nowrap}
+.pagebar .btn,.pagebar .btn-sm{white-space:nowrap}
 .inp{font:inherit;font-size:.88rem;padding:.4rem .8rem;border:1px solid var(--line);
 border-radius:8px;background:var(--card);color:var(--ink)}
 .inp:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}

@@ -81,6 +81,7 @@
           <span class="note">配方为空——加入步骤后执行清洗（示例：去重行 → 去首尾空格 → 转数值 → 删空行）</span>
         </div>
         <div class="toolbar">
+          <input id="recipe-name" placeholder="配方名（字母数字-_）" style="width:12rem;flex:none">
           <select id="recipes-select" class="chip" style="width:auto">
             <option value="">— 已存配方 —</option>
           </select>
@@ -110,7 +111,7 @@
           <select id="ap-group" style="flex:none;width:auto"></select>
           <label class="note" style="flex:none">商品列</label>
           <select id="ap-item" style="flex:none;width:auto"></select>
-          <input id="ap-support" placeholder="min_support=0.5" style="width:11rem;flex:none">
+          <input id="ap-support" placeholder="min_support=0.3（示例推荐）" style="width:11rem;flex:none">
           <input id="ap-conf" placeholder="min_confidence=0.6" style="width:13rem;flex:none">
         </div>
         <div class="toolbar" id="kmeans-params" style="display:none">

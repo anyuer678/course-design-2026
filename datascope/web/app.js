@@ -14,8 +14,8 @@
   function toast(msg, kind) {
     var t = el("div", "toast " + (kind || "ok"), msg);
     $("toast-wrap").appendChild(t);
-    setTimeout(function () { t.classList.add("out"); }, 2600);
-    setTimeout(function () { t.remove(); }, 3000);
+    setTimeout(function () { t.classList.add("out"); }, 4200);   // 2026-10-07 走查：2.6s 易错过
+    setTimeout(function () { t.remove(); }, 4600);
   }
   function on(id, fn) {
     var node = $(id);
@@ -178,8 +178,8 @@
     }
     STATE.recipe.forEach(function (step, i) {
       var chip = el("span", "chip active",
-        (i + 1) + ". " + OP_LABEL[step.op] + (step.column ? "：" + step.column : ""));
-      chip.title = "点击移除";
+        (i + 1) + ". " + OP_LABEL[step.op] + (step.column ? "：" + step.column : "") + "  ✕");
+      chip.title = "点击移除这一步";
       chip.addEventListener("click", function () {
         STATE.recipe.splice(i, 1); renderRecipe();
       });
@@ -205,8 +205,9 @@
   }
   on("btn-recipe-save", function () {
     if (!STATE.recipe.length) { toast("配方为空——先加入步骤", "err"); return; }
-    var name = window.prompt("配方名（字母数字-_）：");
-    if (!name) return;
+    var inp = $("recipe-name");
+    var name = (inp && inp.value ? inp.value : "").trim();
+    if (!name) { toast("先在配方名输入框里起个名字", "err"); return; }
     fetch("/api/recipes", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ name: name, steps: STATE.recipe })
@@ -289,7 +290,7 @@
       if (group === item) { toast("聚篮列与商品列不能相同", "err"); return null; }
       return { task: "apriori", params: {
         group_col: group, item_col: item,
-        min_support: Number($("ap-support").value || 0.5) || 0.5,
+        min_support: Number($("ap-support").value || 0.3) || 0.3,
         min_confidence: Number($("ap-conf").value || 0.6) || 0.6 } };
     }
     var cols = Array.prototype.map.call(
