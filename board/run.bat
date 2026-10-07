@@ -28,6 +28,6 @@ python -m unittest discover -s tests
 if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.
 echo All green. Open the paint window with: python launch.py --window
-echo Managed daemon mode for Studio portal: python launch.py --port 8023
+echo Studio portal managed mode: python launch.py --port 8023 --managed-window
 pause
 endlocal

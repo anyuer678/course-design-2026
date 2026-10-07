@@ -695,3 +695,13 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   studio 测试 17→**18** 双入口全绿（kind 断言钉住：除 board 外全部 web）。
   验证：stop_all→start_all 全链重走、API 实测 board kind=desktop、
   无头 Edge 整页截图确认 Board 卡片新形态。
+
+- ✅ **轮十·补二：门户一键开画板窗口（10-07 同日）**：Board 修成 desktop 卡后
+  "启动 = 只起守护不开窗"，用户仍要手动开窗。launch.py 加 `--managed-window`
+  托管形态（= --window + 看门狗；与独立 `--window` 互斥——用户本机开窗依旧不挂
+  看门狗、独立活），BackupDaemon 侧两开关本就独立解析、零 java 改动。门户 board
+  命令换 `--managed-window`：**点"启动"即出画图窗口**，"停止"时窗口/守护/探活口
+  整链一秒级退出（实测 stop 后探活口 1.7s 关闭、零孤儿）。README/run.bat/门户
+  徽标文案同步。验证：board 11 项（启动器契约不变）+ studio 18 项双入口全绿；
+  PowerShell CIM 实证 java 进程同时带 --window 与 --parent-pid；门户 API 真
+  启停一轮干净。

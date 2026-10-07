@@ -22,8 +22,13 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser(description="board 画板产品启动器（被 Studio 管理）")
     ap.add_argument("--port", type=int, default=8023,
                     help="探活口端口（0 = 自动分配）")
-    ap.add_argument("--window", action="store_true",
-                    help="加开 B14 画板真窗口（headless 环境会明确拒绝）")
+    group = ap.add_mutually_exclusive_group()
+    group.add_argument("--window", action="store_true",
+                       help="加开 B14 画板真窗口（headless 环境会明确拒绝）；"
+                            "独立活：不挂看门狗，启动方退出窗口不受影响")
+    group.add_argument("--managed-window", action="store_true",
+                       help="门户托管形态：= --window + 看门狗——启动方（Studio）"
+                            "停止时整链一秒级退出，不留孤儿窗口/探活口")
     ap.add_argument("--interval", type=float, default=2000,
                     help="目录守护轮询毫秒数")
     ap.add_argument("--keep", type=int, default=20, help="每桶保留备份数")
@@ -33,7 +38,7 @@ def main(argv=None) -> int:
     data_dir = Path(__file__).resolve().parent / "data"
     board_args = ["--port", str(args.port), "--interval", str(args.interval),
                   "--keep", str(args.keep)]
-    if args.window:
+    if args.window or args.managed_window:
         board_args.append("--window")
     # 轮九 UI 专项：Nimbus 外观由引擎 App.java 显式 setLookAndFeel（产品矩阵观感统一），
     # launch.py 不再经 JVM 属性注入（显式调用优先级更高，属性已移除）。
@@ -41,7 +46,8 @@ def main(argv=None) -> int:
            "-cp", str(classes),
            "board.BackupDaemon"] + board_args
     if not args.window:
-        # 只有 Studio 托管的服务形态才带看门狗；--window 是用户本机开窗，独立活
+        # 服务形态与托管窗口形态都挂看门狗；只有独立 --window 不挂
+        # （用户本机开窗，独立活）。java 侧两个开关可并存（BackupDaemon 独立解析）。
         cmd += ["--parent-pid", str(os.getpid())]
     try:
         proc = subprocess.run(cmd, cwd=str(Path(__file__).resolve().parent),

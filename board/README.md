@@ -8,10 +8,12 @@ B14 已经做完了画图、撤销重做、PNG 导出与全套防线（7054 项�
 ## 两种形态（一个入口）
 
 ```
-python launch.py --port 8023     # 服务形态（Studio 门户管理的就是这个）：
-                                 #   目录守护 + 探活口 + 看门狗，不开窗
-python launch.py --window        # 桌面形态：再开 B14 真窗口（PaintFrame 原样复用），
-                                 #   并给窗口文档挂节流自动备份——没保存的工作也有一份
+python launch.py --port 8023     # 服务形态：目录守护 + 探活口 + 看门狗，不开窗
+python launch.py --window        # 桌面形态（独立活）：再开 B14 真窗口（PaintFrame 原样复用），
+                                 #   并给窗口文档挂节流自动备份——没保存的工作也有一份；
+                                 #   不挂看门狗，启动方退出窗口不受影响
+python launch.py --managed-window# 门户托管形态（Studio 启动的就是这个）：= --window + 看门狗，
+                                 #   门户"停止"时窗口/守护/探活口整链一秒级退出
 ```
 
 | 部件 | 来源 | 角色 |
