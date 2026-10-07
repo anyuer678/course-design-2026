@@ -8,9 +8,9 @@
 <title>登录 · 课程工坊 CourseLab</title>
 <link rel="stylesheet" href="/assets/app.css">
 <style>
-  .pass-row{display:flex;gap:.5rem;align-items:stretch}
-  .pass-row input{flex:1}
-  .pass-row .btn-xs{flex:none;align-self:center}
+  .pass-row{display:flex;gap:.5rem;align-items:center}
+  .pass-row input{flex:1 1 0;width:auto;min-width:0}   /* 覆盖 .field input 的 width:100%，否则输入框在 flex 行里塌缩 */
+  .pass-row .btn-xs{flex:none;width:auto}   /* app.css 的 .form .btn{width:100%} 会把显示按钮拉满、挤塌输入框 */
 </style>
 </head>
 <body>
