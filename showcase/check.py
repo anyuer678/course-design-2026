@@ -218,6 +218,8 @@ def render_index(manifest: dict) -> str:
         '<html lang="zh-CN">',
         "<head>",
         '<meta charset="utf-8">',
+        ('''<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' '''
+         '''viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E">'''),
         "<title>课设作品集 · 33 个项目</title>",
         "<style>",
         ":root{--primary:#3b82f6;--primary-deep:#2563eb;--ink:#0f172a;--muted:#475569;--faint:#94a3b8;"
@@ -342,6 +344,8 @@ def index_problems(manifest: dict, index_text: str, root: Path) -> list:
         value = m.group(1).strip()
         if value.startswith("#") or not value:
             continue
+        if value.startswith("data:"):
+            continue          # 行内图标等 data URI 不落盘，不是文件链接
         if "://" in value or value.startswith("//"):
             continue
         target = (INDEX.parent / value).resolve()

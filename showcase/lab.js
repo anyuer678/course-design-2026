@@ -13,9 +13,15 @@
   var pid = (document.body && document.body.dataset) ? document.body.dataset.showcase : "";
   var isIndex = !!(document.body && document.body.dataset && document.body.dataset.labIndex);
   if (!isIndex && !(slot && pid)) return;  // 既不是项目页也不是总入口：完全安静
-  var HUB = (location.protocol === "http:") ? "" : "http:\/\/127.0.0.1:7788";
+  // 就地控制台只在"本源就是实验台"（:7788）或 file://（Hub 固定 7788）时激活；
+  // 页面被其他 http 来源内嵌（如课程平台 /repo/）时保持静态启动说明——
+  // 那里没有 /lab/api/* 路由，发探测请求只会留下 404 噪音（2026-10-07 终扫）。
+  var HUB = (location.protocol === "http:")
+    ? (location.port === "7788" ? "" : null)
+    : "http:\/\/127.0.0.1:7788";
 
   function api(path, post) {
+    if (HUB === null) return Promise.reject(new Error("非实验台来源：控制台不可用"));
     var opt = { method: post ? "POST" : "GET" };
     if (post) {
       opt.headers = { "Content-Type": "application/json" };

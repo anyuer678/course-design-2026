@@ -345,6 +345,17 @@ class Handler(SimpleHTTPRequestHandler):
         if path.startswith("/repo/"):
             return self._serve_repo(unquote(path[len("/repo/"):]))
 
+        if path.startswith("/showcase/"):
+            # 内嵌展示页的 <script src="/showcase/lab.js">：实验台脚本在 lab:7788
+            # 之外（如 /repo/ 内嵌于本站）也要能加载——加载后 API 走不通时
+            # lab.js 自带"静态启动说明"降级，不产生控制台噪音（2026-10-07 终扫）。
+            # 只允许 showcase/ 子树内的真实文件：resolve 后必须仍在该目录里。
+            root = (REPO / "showcase").resolve()
+            target = (REPO / unquote(path[1:])).resolve()
+            if not str(target).startswith(str(root)):
+                return self.send_error_json(404, "not found")
+            return self._serve_repo(unquote(path[1:]))
+
         if self.command == "GET" and (path == "/" or (path.endswith(".html")
                                                       and (WEB / path.lstrip("/")).is_file())):
             count_visit(self.db)
@@ -1356,10 +1367,20 @@ def selftest(port: int = 7901) -> int:
         body = r.read(400)
         check("项目演示页经 /repo/ 可打开", r.status == 200 and len(body) > 50)
 
+    # 内嵌展示页的实验台脚本：/showcase/* 挂仓库 showcase/（/repo/ 同款安全闸）
+    with _OPENER.open(base + "/showcase/lab.js", timeout=10) as r:
+        body = r.read(200)
+        check("实验台脚本经 /showcase/ 可加载", r.status == 200 and b"lab-slot" in body)
+
     # 目录穿越：指向"仓库外真实存在的文件"（自检临时库），必须被 404 挡住
     rel = os.path.relpath(str(Path(tmp.name) / "app.db"), str(REPO)).replace("\\", "/")
     status, data, _ = get("/repo/" + rel)
     check("目录穿越（仓库外真实文件）被拒", status == 404)
+    import http.client as _hconn
+    _c = _hconn.HTTPConnection("127.0.0.1", port, timeout=5)
+    _c.request("GET", "/showcase/../courselab/server.py")   # 原样上跳，不经客户端规范化
+    _r = _c.getresponse(); _r.read(); _c.close()
+    check("目录穿越（/showcase/ 上跳）被拒", _r.status in (400, 404))
 
     print("CourseLab 自检：" + ("PASS" if ok else "FAIL"))
     db.close()

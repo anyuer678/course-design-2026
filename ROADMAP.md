@@ -705,3 +705,20 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   徽标文案同步。验证：board 11 项（启动器契约不变）+ studio 18 项双入口全绿；
   PowerShell CIM 实证 java 进程同时带 --window 与 --parent-pid；门户 API 真
   启停一轮干净。
+
+- ✅ **轮十·补三：全矩阵浏览器终扫清零（10-07，Playwright 17 面回归）**：以
+  console error/warning + pageerror + HTTP≥400 为门槛扫九个产品面与 courselab
+  全部 10 页（17 面）。清掉四类残余：①**favicon 404**（8 个服务全中，Chromium
+  自动请求 /favicon.ico）——17 个页面头注入同一枚 data-URI SVG 图标，零服务器
+  改动；②**cachekv 陈旧钩子**——旧布局的 btn-save 钩子在重排后失配，控制台
+  天天报降级警告（功能早已由侧边栏 nav-save 承担），删钩子；③**courselab
+  /showcase/ 挂载**——/repo/ 内嵌展示页的 <script src="/showcase/lab.js">
+  404（实验台脚本只在 lab:7788 有路由），server.py 加 /showcase/* 分支挂仓库
+  showcase/（resolve 后必须仍在 showcase 子树内，穿越原始套接字测试钉住）；
+  ④**lab.js 来源门控**——其"http 同源即实验台"假设被内嵌场景打破，改为只在
+  实验台本源（:7788）或 file:// 激活就地控制台，其余来源保持静态启动说明、
+  不发必 404 的探测。showcase 总入口是现算产物：favicon 进 check.py 生成器
+  （三引号行，绕开 JSON→Python 两层转义坑——单/双引号版本先后被两层转义吃掉
+  两次，第三次才落对），校验器跳过 data: URI。**终扫 17/17 零 console error、
+  零 pageerror、零失败请求**。自检 145→147（/showcase 正向 + 穿越两条新钉）。
+  套件：showcase 16 / cachekv 17 / board 11 / studio 18 全绿。

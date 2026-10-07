@@ -344,8 +344,7 @@
   on("btn-put", doPut);
   on("btn-get", function () { doGet(); });
   on("btn-del", function () { doDel(); });
-  on("btn-save", doSave);
-  on("btn-demo", doDemo);
+  on("btn-demo", doDemo);   // 旧布局的 btn-save 快照入口已并入侧边栏 nav-save
   on("nav-demo", doDemo);
   on("nav-save", doSave);
   on("drawer-mask", closeDrawer);
