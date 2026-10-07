@@ -3,7 +3,8 @@
 API：
     GET  /                           监测台页面（自刷新；静态资产在 /static）
     GET  /api/status                 总账：broker 统计 + 设备账本 vs 入库对账 + 告警汇总
-    GET  /api/series?device&metric   曲线数据 [(seq, 值)]（metric = temp/vib）
+    GET  /api/series?device&metric[&limit]   曲线数据 [(seq, 值)]（metric = temp/vib；
+                                             limit 默认 500、上限 5000，只取最新点）
     GET  /api/chart?device&metric    自包含 SVG（B35 svgplot 现算，温度曲线叠异常点）
     GET  /api/alerts?limit=100       告警台账（最新在前）
     POST /api/tick                   手动推一拍（返回本轮账；自动节拍不受影响）
@@ -77,8 +78,15 @@ def build_app(engine: SensorHub, *, charts_dir: str | Path) -> MicroApp:
     @app.get("/api/series")
     def series(ctx):
         device, metric = device_of(ctx), metric_of(ctx)
+        raw = ctx.query.get("limit", "")
+        try:
+            limit = int(raw) if raw else 500
+        except ValueError:
+            raise HttpFail(400, "limit 必须是整数")
+        if not 1 <= limit <= 5000:
+            raise HttpFail(400, "limit 须在 1..5000")
         return ctx.json({"device": device, "metric": metric,
-                         "points": engine.series(device, metric)})
+                         "points": engine.series(device, metric, limit=limit)})
 
     @app.get("/api/chart")
     def chart(ctx):

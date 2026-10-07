@@ -263,6 +263,26 @@ class TestServer(unittest.TestCase):
         status, _, _ = self.handle("GET", "/api/series")
         self.assertEqual(status, 400)
 
+    def test_series_limit(self):
+        # 2026-10-07 性能收口回归：series 只吐最新 limit 点（长跑库全量输出
+        # 曾是 160KB/650ms 的接口热点）；limit 越界/非整数一律 400。
+        for seq in range(1, 21):
+            self.hub.inject("dev-01", 600 + seq, temp=20.0 + seq, vib=0.1)
+        self.hub.tick()
+        status, _, body = self.handle("GET", "/api/series?device=dev-01&limit=5")
+        self.assertEqual(status, 200)
+        points = json.loads(body)["points"]
+        self.assertEqual(len(points), 5)
+        self.assertEqual([p[0] for p in points], [616, 617, 618, 619, 620])
+        status, _, body = self.handle("GET", "/api/series?device=dev-01")
+        self.assertLessEqual(len(json.loads(body)["points"]), 500)
+        self.assertEqual(
+            self.handle("GET", "/api/series?device=dev-01&limit=abc")[0], 400)
+        self.assertEqual(
+            self.handle("GET", "/api/series?device=dev-01&limit=0")[0], 400)
+        self.assertEqual(
+            self.handle("GET", "/api/series?device=dev-01&limit=9999")[0], 400)
+
     def test_chart_svg(self):
         # 用游走够不着的高 seq：同 (device, seq) 会被设备重放幂等覆盖（INSERT OR REPLACE）
         self.hub.inject("dev-01", 501, temp=120.0, vib=0.5, anomaly="spike")

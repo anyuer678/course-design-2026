@@ -83,11 +83,21 @@ class Recorder:
             out[device] = (hi - lo + 1) - count
         return out
 
-    def series(self, device: str, metric: str = "temp") -> list[tuple[int, float]]:
-        """取一个设备的 (seq, 指标) 序列——SVG 曲线的数据源。"""
-        rows = self.conn.execute(
-            f"SELECT seq, {metric} FROM readings WHERE device = ? ORDER BY seq",
-            (device,)).fetchall()
+    def series(self, device: str, metric: str = "temp",
+               limit: int | None = None) -> list[tuple[int, float]]:
+        """取一个设备的 (seq, 指标) 序列——SVG 曲线的数据源。
+        limit 给定时只取最新 limit 点（SENSORHUB 长跑库的性能收口，2026-10-07；
+        缺省 None 保持全量语义，B35 原有调用零影响）。走 (device, seq) 主键索引
+        反向区间扫描，不靠全表取回再切尾。"""
+        if limit is None:
+            rows = self.conn.execute(
+                f"SELECT seq, {metric} FROM readings WHERE device = ? ORDER BY seq",
+                (device,)).fetchall()
+        else:
+            rows = self.conn.execute(
+                f"SELECT seq, {metric} FROM readings WHERE device = ? "
+                f"ORDER BY seq DESC LIMIT {int(limit)}", (device,)).fetchall()
+            rows.reverse()
         return [(int(s), float(v)) for s, v in rows]
 
     def anomaly_points(self, device: str) -> list[tuple[int, float, str]]:

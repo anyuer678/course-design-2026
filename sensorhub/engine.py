@@ -186,8 +186,11 @@ class SensorHub:
         if self._setup_error is not None:
             return
         next_tick = time.monotonic() + self.interval
-        while not self._stop.wait(min(0.05, self.interval)):
-            self._drain_jobs()                     # 外部调用先伺候（/api/tick 等）
+        while not self._stop.is_set():
+            # 阻塞等队列替代固定 50ms 轮询（2026-10-07 性能收口：外部调用
+            # 即到即办，不再吃轮询量子——_call 均延迟 75~125ms → <15ms）；
+            # 节拍仍由 timeout 兜底，到点照常 tick。
+            self._drain_jobs(block_timeout=min(0.05, self.interval))
             if time.monotonic() >= next_tick:
                 try:
                     self._tick_once()
@@ -215,18 +218,27 @@ class SensorHub:
             raise box["err"]
         return box.get("ret")
 
-    def _drain_jobs(self) -> None:
-        while True:
-            try:
+    def _drain_jobs(self, block_timeout: float = 0.0) -> None:
+        """伺候外部调用队列。block_timeout>0：首条阻塞等待（即到即办），
+        其余立即排空；=0：纯非阻塞排空（手动模式用不到，保留兼容）。"""
+        try:
+            if block_timeout > 0:
+                fn, box, done = self._jobs.get(timeout=block_timeout)
+            else:
                 fn, box, done = self._jobs.get_nowait()
-            except queue.Empty:
-                return
+        except queue.Empty:
+            return
+        while True:
             try:
                 box["ret"] = fn()
             except BaseException as err:           # 原样递交给提交方
                 box["err"] = err
             finally:
                 done.set()
+            try:
+                fn, box, done = self._jobs.get_nowait()
+            except queue.Empty:
+                return
 
     # ---------------------------------------------------------------- 节拍与告警
 
@@ -330,10 +342,14 @@ class SensorHub:
             "SELECT DISTINCT device FROM readings").fetchall()
         return sorted({r[0] for r in rows} | set(self.devices))
 
-    def series(self, device: str, metric: str = "temp") -> list[tuple[int, float]]:
+    def series(self, device: str, metric: str = "temp",
+               limit: int = 500) -> list[tuple[int, float]]:
         if metric not in METRICS:
             raise ValueError(f"metric 只支持 {'/'.join(METRICS)}")
-        return self._call(lambda: self.recorder.series(device, metric))
+        limit = max(1, int(limit))
+        # limit 下推到 B35 recorder 的 SQL（主键索引尾部扫描，2026-10-07 性能收口：
+        # 此前全量取回再切尾，长跑库里是 160KB/650ms 的接口热点）
+        return self._call(lambda: self.recorder.series(device, metric, limit=limit))
 
     def anomaly_points(self, device: str) -> list[tuple[int, float, str]]:
         """B35 的异常点（seq, temp, 自报标签）——温度曲线的叠加层。"""
