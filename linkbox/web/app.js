@@ -122,8 +122,11 @@
           : Math.max(1, Math.round(r.data.size / 1024)) + " KB";
         var note = (r.data.protected ? "已设口令，扫码后先输口令；" : "") +
           size + " · 扫码即下载，到期自动清除";
+        var qrDl = el("a", "", "下载二维码");
+        qrDl.href = r.data.url + "/qr.svg?download=1";     // L1 二维码下载
+        qrDl.download = "qr-file-" + r.data.code + ".svg";
         showOk(box, [el("b", "", "已上传：" + r.data.name + " — "), a,
-                     el("span", "note", "  " + note)]);
+                     qrDl, el("span", "note", "  " + note)]);
         $("file-input").value = "";
         $("file-pass").value = "";
       })

@@ -46,14 +46,14 @@
 ## 运行
 
 ```
-run.bat                                   # 双入口测试（31 项）
+run.bat                                   # 双入口测试（34 项）
 python run.py profile 数据.csv             # 列画像（类型/缺失/去重/最值）
 python run.py clean 数据.csv --recipe 配方.json --out 清洗后.csv --report 报告.json
 python run.py mine 数据.csv --task apriori --params '{"group_col": "order", "item_col": "item"}'
 python server.py --port 8020              # 工作台服务（Studio 门户亦可一键启停）
 ```
 
-## 测试策略（31 项 = 17 清洗管线 + 14 挖掘/报告/服务）
+## 测试策略（34 项 = 17 清洗管线 + 14 挖掘/报告/服务）
 
 解析（BOM/空值/空行跳过/空文件拒绝）、画像类型推断（**一个坏值整列退化为 text**）、
 六个步骤各自的账本计数（缺陷数量构造时已知，报告逐笔对上）、

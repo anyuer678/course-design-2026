@@ -352,7 +352,11 @@ class LinkBoxApp(ShortUrlApp):
         if rec is None:
             return 404, [JSON_TYPE], self._error(f"文件 {code!r} 不存在")
         svg = qr_svg(self._abs_view_url(f"/f/{code}", request))
-        return 200, [SVG_TYPE, NO_STORE], svg.encode("utf-8")
+        headers = [SVG_TYPE, NO_STORE]
+        if (dict(request.query).get("download") or "") == "1":
+            # L1 二维码下载（2026-10-07 功能增强）：物料存图/打印；code 已过形状闸，头部安全
+            headers.append(("Content-Disposition", "attachment; filename=qr-file-" + code + ".svg"))
+        return 200, headers, svg.encode("utf-8")
 
     # ------------------------------------------------ 暂存：浏览页（/s/<code>）
     def stash_page(self, request):
@@ -409,7 +413,7 @@ class LinkBoxApp(ShortUrlApp):
                           note=f"创建于 {rec.created_at:.0f}，"
                                f"过期于 {rec.expires_at:.0f}（Unix 时间）"
                                + ("（设有访问口令）" if rec.has_passcode else ""),
-                          qr=qr)
+                          qr=qr, qr_download="/s/" + code + "/qr.svg")
         return 200, [HTML_TYPE, NO_STORE], body
 
     # ------------------------------------------------ 暂存：二维码（/s/<code>/qr.svg）
@@ -430,7 +434,10 @@ class LinkBoxApp(ShortUrlApp):
         if rec is None:
             return 404, [JSON_TYPE], self._error(f"暂存 {code!r} 不存在")
         svg = qr_svg(self._stash_view_url(code, request))
-        return 200, [SVG_TYPE, NO_STORE], svg.encode("utf-8")
+        headers = [SVG_TYPE, NO_STORE]
+        if (dict(request.query).get("download") or "") == "1":
+            headers.append(("Content-Disposition", "attachment; filename=qr-stash-" + code + ".svg"))
+        return 200, headers, svg.encode("utf-8")
 
     def _abs_view_url(self, path: str, request) -> str:
         """查看/下载页绝对 URL。Host 头是客户端可控的——和 B31 短链同口径：
@@ -468,10 +475,15 @@ button{{font-size:1rem;padding:.5rem .9rem;border:0;border-radius:6px;background
         return page.encode("utf-8")
 
     def _page(self, title: str, body_html: str, note: str = "",
-              qr: str | None = None) -> bytes:
+              qr: str | None = None, qr_download: str | None = None) -> bytes:
         safe_title = html.escape(title)
         note_html = f'<p class="note">{html.escape(note)}</p>' if note else ""
-        qr_html = (f'<h2>扫码打开本页</h2>{qr}' if qr else "")
+        qr_html = ""
+        if qr:
+            qr_html = f'<h2>扫码打开本页</h2>{qr}'
+            if qr_download:
+                qr_html += (f'<p class="note"><a href="{html.escape(qr_download)}?download=1">'
+                            "下载二维码 SVG</a></p>")
         page = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head><meta charset="utf-8">

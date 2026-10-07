@@ -262,6 +262,18 @@ def teacher_course_stats(db, cid: str) -> dict:
             "custom": custom, "recent": recent, "lab_rank": lab_rank}
 
 
+def export_grades(db, cid: str) -> list[dict]:
+    """成绩册长表（C1）：课程下全部任务记录 JOIN 用户，教师导出 CSV 用。
+    没交过的学生不在此表（长表只记发生过的动作）；课程不存在按 404 语义报。"""
+    if courses.course_detail(cid) is None:
+        raise TaskError("NO_COURSE", "课程不存在", 404)
+    return db.all(
+        "SELECT u.username, u.display_name, r.task_key, r.status, r.submitted_at,"
+        " r.grade, r.feedback FROM task_records r"
+        " JOIN users u ON u.id = r.user_id"
+        " WHERE r.course = ? ORDER BY u.username, r.task_key", (cid,))
+
+
 def teacher_create(db, user_id: int, course: str, title: str, body: str, due_at: str) -> dict:
     if courses.course_detail(course) is None:
         raise TaskError("NO_COURSE", "课程不存在", 404)

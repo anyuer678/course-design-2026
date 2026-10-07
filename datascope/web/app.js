@@ -187,6 +187,54 @@
     });
   }
 
+  // ---------------- D1 配方保存/重放（2026-10-07 功能增强）
+  function refreshRecipes() {
+    fetch("/api/recipes").then(function (r) { return r.json(); }).then(function (d) {
+      var sel = $("recipes-select");
+      if (!sel) return;
+      sel.textContent = "";
+      var blank = el("option", null, "— 已存配方 —");
+      blank.value = "";
+      sel.appendChild(blank);
+      (d.recipes || []).forEach(function (n) {
+        var op = el("option", null, n);
+        op.value = n;
+        sel.appendChild(op);
+      });
+    });
+  }
+  on("btn-recipe-save", function () {
+    if (!STATE.recipe.length) { toast("配方为空——先加入步骤", "err"); return; }
+    var name = window.prompt("配方名（字母数字-_）：");
+    if (!name) return;
+    fetch("/api/recipes", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, steps: STATE.recipe })
+    }).then(function (r) {
+      return r.json().then(function (d) { return { status: r.status, d: d }; });
+    }).then(function (r) {
+      if (r.status !== 201) { toast((r.d && r.d.error) || "保存失败", "err"); return; }
+      toast("配方已保存：" + r.d.name);
+      refreshRecipes();
+    });
+  });
+  on("btn-recipe-load", function () {
+    var sel = $("recipes-select");
+    var name = sel ? sel.value : "";
+    if (!name) { toast("先选一个配方", "err"); return; }
+    fetch("/api/recipes/" + encodeURIComponent(name))
+      .then(function (r) {
+        return r.json().then(function (d) { return { status: r.status, d: d }; });
+      })
+      .then(function (r) {
+        if (r.status !== 200) { toast((r.d && r.d.error) || "读取失败", "err"); return; }
+        STATE.recipe = r.d.steps || [];
+        renderRecipe();
+        toast("配方已应用（" + STATE.recipe.length + " 步）");
+      });
+  });
+  refreshRecipes();
+
   // ---------------- 清洗
   on("btn-clean", function () {
     if (!STATE.csv) { toast("先加载数据", "err"); return; }

@@ -9,6 +9,9 @@ API：
 """
 from __future__ import annotations
 
+import json
+import os
+import re
 import sys
 from pathlib import Path
 
@@ -25,6 +28,8 @@ from datascope.mining import apriori_from_rows, kmeans_from_rows  # noqa: E402
 
 WEB_ROOT = ROOT / "web"
 DEFAULT_PORT = 8020                # 8017 studio / 8018 linkbox / 8019 simlab
+RECIPES_DIR = ROOT / "data" / "recipes"   # D1 清洗配方落盘（JSON，原子写）
+_NAME_RE = re.compile(r"^[A-Za-z0-9_\-]{1,40}$")
 
 # 内置演示数据（轮九）：一份故意带脏的订单 CSV——重复行 / 数量缺失 / 金额含空格 /
 # 备注列待删，任何一条基础配方都能在它上面演示出"清洗前 vs 清洗后"的差异。
@@ -46,8 +51,52 @@ SAMPLE_CSV = """订单号,商品,数量,金额,备注
 """
 
 
-def build_app() -> MicroApp:
+def build_app(recipes_dir: Path | None = None) -> MicroApp:
     app = MicroApp()
+    rdir = Path(recipes_dir) if recipes_dir else RECIPES_DIR
+
+    def _recipe_path(name: str) -> Path:
+        if not _NAME_RE.match(name or ""):
+            raise HttpFail(400, "配方名只允许字母数字与 _-（1..40 字符）")
+        return rdir / (name + ".json")
+
+    # ---------------- D1 清洗配方：保存 / 列表 / 读取 / 删除（JSON 原子写）
+    @app.get("/api/recipes")
+    def recipes_list(ctx):
+        names = sorted(p.stem for p in rdir.glob("*.json")) if rdir.is_dir() else []
+        return ctx.json({"recipes": names})
+
+    @app.post("/api/recipes")
+    def recipes_save(ctx):
+        payload = ctx.json_body({"name": (str, True), "steps": (list, True)})
+        path = _recipe_path(payload["name"].strip())
+        steps = payload["steps"]
+        if not steps or len(steps) > 50:
+            raise HttpFail(400, "steps 须为 1..50 条")
+        for st in steps:
+            if not isinstance(st, dict) or not isinstance(st.get("op"), str):
+                raise HttpFail(400, "每个步骤须为含 op 的对象")
+        rdir.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"name": path.stem, "steps": steps},
+                                  ensure_ascii=False, indent=1), encoding="utf-8")
+        os.replace(tmp, path)                 # 原子落盘（B10 的经验）
+        return ctx.json({"ok": True, "name": path.stem, "steps": steps}, status=201)
+
+    @app.get("/api/recipes/<name>")
+    def recipes_get(ctx):
+        path = _recipe_path(ctx.params["name"])
+        if not path.is_file():
+            raise HttpFail(404, "没有这个配方")
+        return ctx.json(json.loads(path.read_text(encoding="utf-8")))
+
+    @app.delete("/api/recipes/<name>")
+    def recipes_delete(ctx):
+        path = _recipe_path(ctx.params["name"])
+        if not path.is_file():
+            raise HttpFail(404, "没有这个配方")
+        path.unlink()
+        return ctx.json({"ok": True})
 
     def _csv_of(ctx, payload: dict | None = None) -> datascope.Table:
         try:

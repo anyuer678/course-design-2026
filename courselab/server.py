@@ -13,6 +13,8 @@ M1+M2：账号与会话（注册/登录/登出/PBKDF2/限流）+ 课程目录 / 
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import os
 import re
@@ -26,7 +28,7 @@ import urllib.error
 import urllib.request
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import unquote, urlparse
+from urllib.parse import quote, unquote, urlparse
 
 from app import admin, auth, can, courses, labs, notices, tasks
 from app.db import DB, now_str
@@ -266,6 +268,33 @@ class Handler(SimpleHTTPRequestHandler):
             if not can.can(user, "manage_course"):
                 return self.send_error_json(403, "需要教师权限", "FORBIDDEN")
             return self.send_json({"ok": True, "courses": admin.teacher_courses(self.db, user)})
+
+        if path == "/api/teacher/export":
+            # C1 成绩册导出：绑定课的教师/管理员可下，CSV 带 BOM（Excel 直开不乱码）
+            user = self.current_user()
+            if user is None:
+                return self.send_error_json(401, "请先登录", "LOGIN_REQUIRED")
+            cid = (query.get("course") or [""])[0]
+            if not admin.teacher_can_manage(self.db, user, cid):
+                return self.send_error_json(403, "该课未绑定给你（联系管理员在管理端绑定）", "FORBIDDEN")
+            rows = tasks.export_grades(self.db, cid)
+            buf = io.StringIO()
+            writer = csv.writer(buf)
+            writer.writerow(["用户名", "姓名", "任务", "状态", "提交时间", "分数", "评语"])
+            for r in rows:
+                writer.writerow([r["username"], r["display_name"] or "", r["task_key"],
+                                 r["status"], r["submitted_at"] or "",
+                                 "" if r["grade"] is None else r["grade"], r["feedback"]])
+            payload = b"\xef\xbb\xbf" + buf.getvalue().encode("utf-8")
+            self.send_response(200)
+            self.send_header("Content-Type", "text/csv; charset=utf-8")
+            self.send_header("Content-Disposition",
+                             "attachment; filename=grades.csv; filename*=UTF-8''"
+                             + quote(f"grades-{cid}.csv"))
+            self.send_header("Content-Length", str(len(payload)))
+            self.end_headers()
+            self.wfile.write(payload)
+            return None
 
         if path == "/api/teacher/course":
             user = self.current_user()
@@ -1007,6 +1036,28 @@ def selftest(port: int = 7901) -> int:
     check("重交回到待批阅且清分",
           status == 200 and data["record"]["status"] == "submitted"
           and data["record"]["grade"] is None and data["record"]["feedback"] == "")
+
+    # C1 成绩册导出（CSV 非 JSON——走原始读；BOM+表头+提交行+下载头）
+    def raw_get(path, cookie=None):
+        req0 = urllib.request.Request(base + path)
+        if cookie:
+            req0.add_header("Cookie", cookie)
+        try:
+            with _OPENER.open(req0, timeout=10) as r0:
+                return r0.status, r0.read(), r0.headers
+        except urllib.error.HTTPError as e0:
+            return e0.code, e0.read(), e0.headers
+
+    status, data, headers = raw_get("/api/teacher/export?course=B11-net-lab", cookie=cookie)
+    check("学生调成绩册导出 403", status == 403)
+    status, data, headers = raw_get("/api/teacher/export?course=B11-net-lab", cookie=tcookie)
+    text = data.decode("utf-8", "replace")
+    check("教师成绩册导出 200（BOM+表头+提交行+attachment）",
+          status == 200 and text.startswith("\ufeff")
+          and "用户名,姓名,任务" in text and "submitted" in text
+          and "attachment" in headers.get("Content-Disposition", ""))
+    status, _, _ = raw_get("/api/teacher/export?course=B3-logic-lab", cookie=tcookie)
+    check("教师导出未绑定课 403", status == 403)
     status, data, _ = post("/api/teacher/grade",
                            {"course": "B11-net-lab", "key": "B11-net-lab#0",
                             "user_id": stu_id, "score": 91}, cookie=tcookie)

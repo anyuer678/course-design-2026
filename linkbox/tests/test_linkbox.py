@@ -693,6 +693,19 @@ class TestHardening20261007(AppCase):
         self.assertEqual(
             self.request("DELETE", f"/api/stash/{code}?passcode=pw1234")[0], 429)
 
+    def test_qr_download_header(self):
+        # L1 二维码下载：?download=1 带 attachment 头；不带时保持内联
+        code = self.make_stash()["code"]
+        status, headers, body = self.request("GET", f"/s/{code}/qr.svg")
+        self.assertEqual(status, 200)
+        self.assertTrue(body.startswith(b"<svg"))
+        self.assertFalse(any(h[0] == "Content-Disposition" for h in headers))
+        status, headers, body = self.request("GET", f"/s/{code}/qr.svg?download=1")
+        self.assertEqual(status, 200)
+        hd = {h[0]: h[1] for h in headers}
+        self.assertIn("attachment", hd.get("Content-Disposition", ""))
+        self.assertIn("qr-stash-", hd.get("Content-Disposition", ""))
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

@@ -158,6 +158,36 @@ class TestHttp(unittest.TestCase):
         self.assertEqual(status, 200)
         self.assertEqual(json.loads(body)["saved"], 1)
 
+    def test_export_import_roundtrip(self):
+        # K1 键空间导出/导入（2026-10-07 功能增强）：含 TTL 的键原样往返
+        self.handle("PUT", "/api/kv/alpha", b"one")
+        self.handle("PUT", "/api/kv/beta?ttl=3600", b"two")
+        status, headers, body = self.handle("GET", "/api/export")
+        self.assertEqual(status, 200)
+        hd = {h[0]: h[1] for h in headers}
+        self.assertIn("attachment", hd.get("Content-Disposition", ""))
+        blob = json.loads(body)
+        self.assertEqual(blob["count"], 2)
+        status, _, body = self.handle("POST", "/api/import",
+                                      json.dumps({"keys": blob["keys"]}).encode(),
+                                      [("Content-Type", "application/json")])
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["imported"], 2)
+        # 导入的键真的在（含 TTL 语义）
+        status, _, body = self.handle("GET", "/api/kv/alpha")
+        self.assertEqual(status, 200)
+        status, _, body = self.handle("GET", "/api/kv/beta")
+        self.assertEqual(status, 200)
+        status, _, body = self.handle("GET", "/api/stats")
+        self.assertGreater(json.loads(body)["stats"]["keys"], 0)
+
+    def test_import_bad_body_400(self):
+        status, _, _ = self.handle(
+            "POST", "/api/import",
+            json.dumps({"keys": [{"key": "!!!", "value": "!!!"}]}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 400)
+
     def test_index_and_static(self):
         status, _, body = self.handle("GET", "/")
         self.assertEqual(status, 200)

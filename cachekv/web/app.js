@@ -347,6 +347,27 @@
   on("btn-demo", doDemo);   // 旧布局的 btn-save 快照入口已并入侧边栏 nav-save
   on("nav-demo", doDemo);
   on("nav-save", doSave);
+  // ---------------- K1 键空间导入（导出走 /api/export 直链，无需 JS）
+  var imp = $("import-file");
+  if (imp) imp.addEventListener("change", function () {
+    var f = imp.files[0];
+    if (!f) return;
+    var reader = new FileReader();
+    reader.onload = function () {
+      fetch("/api/import", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: reader.result
+      }).then(function (r) {
+        return r.json().then(function (d) { return { status: r.status, d: d }; });
+      }).then(function (r) {
+        if (r.status !== 200) { toast((r.d && r.d.error) || "导入失败", "err"); return; }
+        toast("已导入 " + r.d.imported + " 键（跳过 " + r.d.skipped + "）");
+        refresh();
+      });
+    };
+    reader.readAsText(f);
+    imp.value = "";
+  });
   on("drawer-mask", closeDrawer);
   on("drawer-close", closeDrawer);
   document.addEventListener("keydown", function (ev) {

@@ -11,7 +11,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] pytest entry (17 tests: engine semantics + ledger + snapshot + HTTP)...
+echo [1/2] pytest entry (19 tests: engine semantics + ledger + snapshot + HTTP)...
 python -m pytest tests -q
 if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.

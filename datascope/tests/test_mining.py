@@ -222,5 +222,55 @@ class TestOverRealSocket(unittest.TestCase):
         conn.close()
 
 
+class TestRecipes(unittest.TestCase):
+    """D1 清洗配方保存/重放（2026-10-07 功能增强）：隔离目录，不碰 data/。"""
+
+    def setUp(self):
+        self.rdir = Path(tempfile.mkdtemp(prefix="ds-recipes-"))
+        self.app = build_app(recipes_dir=self.rdir)
+
+    def handle(self, method, path, body=b"", headers=None):
+        from netlab.http1 import Request
+        req = Request(method=method, target=path, version="1.1",
+                      headers=[(k.lower(), v) for k, v in list(headers or [])],
+                      body=body, path=path, query=[], keep_alive=False,
+                      content_length=len(body))
+        return self.app.handle(req)
+
+    def test_save_list_load_delete(self):
+        steps = [{"op": "trim"}, {"op": "drop_duplicates"}]
+        status, _, body = self.handle(
+            "POST", "/api/recipes",
+            json.dumps({"name": "demo-1", "steps": steps}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 201)
+        self.assertTrue((self.rdir / "demo-1.json").is_file())
+        status, _, body = self.handle("GET", "/api/recipes")
+        self.assertIn("demo-1", json.loads(body)["recipes"])
+        status, _, body = self.handle("GET", "/api/recipes/demo-1")
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["steps"], steps)
+        status, _, _ = self.handle("DELETE", "/api/recipes/demo-1")
+        self.assertEqual(status, 200)
+        status, _, _ = self.handle("GET", "/api/recipes/demo-1")
+        self.assertEqual(status, 404)
+
+    def test_bad_name_and_empty_steps_400(self):
+        status, _, _ = self.handle(
+            "POST", "/api/recipes",
+            json.dumps({"name": "bad name!", "steps": [{"op": "trim"}]}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 400)
+        status, _, _ = self.handle(
+            "POST", "/api/recipes",
+            json.dumps({"name": "ok", "steps": []}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 400)
+
+    def test_unknown_recipe_404(self):
+        status, _, _ = self.handle("GET", "/api/recipes/ghost")
+        self.assertEqual(status, 404)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

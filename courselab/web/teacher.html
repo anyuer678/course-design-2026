@@ -87,6 +87,12 @@ function load(course) {
     stats.appendChild(stat("记录 " + d.totals.records));
     panel.appendChild(stats);
 
+    // C1 成绩册导出：服务端现算长表 CSV（带 BOM，Excel 直开）
+    var ex = CL.el("a", "btn btn-sm", "导出成绩册 CSV");
+    ex.href = "/api/teacher/export?course=" + encodeURIComponent(curCourse);
+    ex.download = "grades-" + curCourse + ".csv";
+    panel.appendChild(ex);
+
     // 课程维护（F9）：发布开关 + 补充简介 + 大纲（平台覆盖层，注明来源）
     var upCard = CL.el("div", "card");
     upCard.appendChild(CL.el("h3", null, "课程维护（平台覆盖层）"));

@@ -111,6 +111,8 @@
           <input id="key" placeholder="键名">
           <input id="value" placeholder="值（文本）" style="flex:2">
           <input id="ttl" placeholder="TTL 秒（可空=永久）" style="width:11rem;flex:none">
+          <a class="btn btn-ghost btn-sm" href="/api/export" download="cachekv-export.json">导出 JSON</a>
+          <input type="file" id="import-file" accept=".json,application/json" style="flex:none" title="导入键空间 JSON">
         </div>
         <div class="toolbar">
           <button id="btn-put" class="btn btn-sm">SET 写入</button>

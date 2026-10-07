@@ -81,6 +81,13 @@
           <span class="note">配方为空——加入步骤后执行清洗（示例：去重行 → 去首尾空格 → 转数值 → 删空行）</span>
         </div>
         <div class="toolbar">
+          <select id="recipes-select" class="chip" style="width:auto">
+            <option value="">— 已存配方 —</option>
+          </select>
+          <button id="btn-recipe-load" class="btn btn-ghost btn-sm">应用配方</button>
+          <button id="btn-recipe-save" class="btn btn-ghost btn-sm">保存当前配方</button>
+        </div>
+        <div class="toolbar">
           <button id="btn-clean" class="btn btn-sm">执行清洗</button>
           <button id="btn-download-csv" class="btn btn-ghost btn-sm" disabled>下载清洗后 CSV</button>
         </div>

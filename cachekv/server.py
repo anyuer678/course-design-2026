@@ -7,12 +7,17 @@ API（键与值都是文本；TTL 用查询串）：
     GET    /api/keys               存活键列表
     GET    /api/stats              统计（命中/未命中/键数/快照数）
     POST   /api/save               手动快照
+    GET    /api/export             键空间导出 JSON（attachment 下载）
+    POST   /api/import             导入 {keys:[{key,value(base64),expires_at}]}（键/值都 b64）
     GET    /                       统计页（自刷新）
 只绑回环。快照：启动载入 + 定时（脏了才写）+ 停止时保存。
 """
 from __future__ import annotations
 
+import base64
+import json
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -150,6 +155,45 @@ def build_app(engine: CacheKV) -> MicroApp:
     def save_now(ctx):
         count = engine.save()
         return ctx.json({"saved": count})
+
+    # ---------------- K1 键空间导出 / 导入（2026-10-07 功能增强）
+    @app.get("/api/export")
+    def export_keys(ctx):
+        entries = engine.export_state()
+        keys = [{"key": base64.b64encode(k).decode("ascii"),
+                 "value": base64.b64encode(v).decode("ascii"),
+                 "expires_at": exp} for k, v, exp in entries]
+        payload = json.dumps({"version": 1, "count": len(keys), "keys": keys},
+                             ensure_ascii=False).encode("utf-8")
+        return Response(payload,
+                        content_type="application/json; charset=utf-8",
+                        headers=[("Content-Disposition",
+                                  "attachment; filename=cachekv-export.json")])
+
+    @app.post("/api/import")
+    def import_keys(ctx):
+        payload = ctx.json_body({"keys": (list, True)})
+        if len(payload["keys"]) > 5000:
+            raise HttpFail(400, "单次导入上限 5000 键")
+        now = time.time()
+        imported = skipped = 0
+        for item in payload["keys"]:
+            try:
+                key = base64.b64decode(item["key"], validate=True)
+                value = base64.b64decode(item["value"], validate=True)
+                expires_at = item.get("expires_at")
+            except Exception:
+                raise HttpFail(400, "键/值须为 base64，expires_at 须为数字或空")
+            if not key or len(value) > 1048576:
+                skipped += 1
+                continue
+            engine.cmd_set(key, value)
+            if expires_at:
+                ttl = int(float(expires_at) - now)
+                if ttl > 0:
+                    engine.cmd_expire(key, ttl)
+            imported += 1
+        return ctx.json({"ok": True, "imported": imported, "skipped": skipped})
 
     @app.get("/")
     def index(ctx):
