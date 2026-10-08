@@ -8,9 +8,9 @@
   5. dorm 事实台账：27 键现算（PLAN 改动的联动哨兵）
   6. dorm 管理文档核对：check_pm（台账引用/风险登记/复盘分类）
   7. 交付齐全性：scan_refs.py projects（README + run.bat 引用扫描）
-  8. 产品层：webframe（31）/ studio（18，八产品真启停）/ linkbox（93）/ simlab（37）
-     / datascope（34）/ cachekv（19）/ sensorhub（19）/ board（11）
-     / courselab（154 项端到端自检，2026-10-07 补齐——此前体检对论文主体无自动化入口）
+  8. 产品层：webframe（31）/ studio（21，八产品真启停+审计）/ linkbox（104）/ simlab（37）
+     / datascope（34）/ cachekv（19）/ sensorhub（25）/ board（12）
+     / courselab（154 项端到端自检）/ boardweb（8）
 --deep 追加：33 个项目的展示页测试套件（各项目 tests/test_showcase.py）。
 
 不覆盖（如实声明）：各项目核心测试套件（Python/C++/Java，见各项目 run.bat）、

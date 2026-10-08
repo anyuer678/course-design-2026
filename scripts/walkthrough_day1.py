@@ -1,7 +1,7 @@
-"""scripts/walkthrough_day1.py —— P-验收 Day-1 预演：门户真启停八产品 + 机器可走查的用户故事。
+"""scripts/walkthrough_day1.py —— P-验收 Day-1 预演：门户真启停九产品 + 机器可走查的用户故事。
 
 这不是 P-验收的替代品（真实使用 ≥1 周仍由用户执行），而是它的 Day-1 冒烟预演：
-用真实端口（8017-8024）把门户与八个产品按用户实际路径拉起，把清单里"机器可走查"
+用真实端口（8017-8024）把门户与九个产品按用户实际路径拉起，把清单里"机器可走查"
 的故事真跑一遍并落一份证据文档；观感类故事（窗口/图表/移动端）如实留给用户。
 产物：p-验收/day1-预演-<日期>.md。
 """
@@ -81,7 +81,7 @@ def main() -> int:
         return 1
     auth = [("Cookie", cookie), ("Content-Type", "application/json")]
 
-    # 2) 门户一键启停八个产品
+    # 2) 门户一键启停九个产品
     products = ["linkbox", "lab", "simlab", "datascope", "cachekv",
                 "sensorhub", "courselab", "board", "boardweb"]
     ports = {"linkbox": 8018, "lab": 7788, "simlab": 8019, "datascope": 8020,
@@ -96,7 +96,7 @@ def main() -> int:
         if _cleaned["done"]:
             return
         _cleaned["done"] = True
-        print("[!] 预演未正常收摊——兜底清理八产品与门户")
+        print("[!] 预演未正常收摊——兜底清理九产品与门户")
         for pid in reversed(products):
             try:
                 req(8017, "POST", f"/api/products/{pid}/stop", headers=auth)
@@ -205,7 +205,7 @@ def main() -> int:
         time.sleep(0.3)
     else:
         print("[!] board :8023 在 10s 后仍可连（看门狗未收干净）")
-    step("门户逐个停止八产品（board 看门狗跟进）", not wait_port(8023, 0.3))
+    step("门户逐个停止九产品（board 看门狗跟进）", not wait_port(8023, 0.3))
 
     studio.terminate()
     studio.wait(timeout=5)

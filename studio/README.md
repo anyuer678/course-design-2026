@@ -27,7 +27,7 @@ server.py --port 8017      # 启动门户（浏览器打开 http://127.0.0.1:801
 
 ## 能做什么
 
-- **产品目录**：矩阵照抄根 PRODUCTS.md——八个产品全部 managed 给启停按钮
+- **产品目录**：矩阵照抄根 PRODUCTS.md——九个产品全部 managed 给启停按钮
   （LinkBox、展示层实验台、SimLab、DataScope、CacheKV、SensorHub、CourseLab、画板），
   **已规划清零**；
 - **状态面板**：在线 = TCP 探活连得上，不撒谎；每 3 秒刷新；
@@ -55,7 +55,7 @@ server.py --port 8017      # 启动门户（浏览器打开 http://127.0.0.1:801
 
 认证流（未登录 me 空 → 错口令 401 统一话术 → 登录得会话 → 登出回写空会话）、
 改口令（未登录 401 / 旧口令错 / 新口令过短 / 成功后旧口令失效 + **旧世代会话 401**）、
-凭据落盘跨重启、矩阵对齐（门户 + 八个 managed，**已规划清零**——除门户自身外
+凭据落盘跨重启、矩阵对齐（门户 + 九个 managed，**已规划清零**——除门户自身外
 全部 managed，残留 planned 即登记错误）、
 状态与未知产品 404、首页与静态资产、**启停鉴权**（未登录 401）、
 **八产品真启停**（LinkBox/实验台/SimLab/DataScope/CacheKV/SensorHub/CourseLab

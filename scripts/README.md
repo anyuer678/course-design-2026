@@ -11,7 +11,7 @@
 |---|---|---|
 | `check_all.bat` | 全仓体检 15 步（只读；`deep` 追加 33 项目展示页套件） | check_all.py |
 | `lab.bat` | 实验台 :7788（讲解层 33 项目控制台；`no-open`/`lan`/`selftest`） | showcase/lab.py |
-| `start_all.bat` | 起门户 :8017 并经门户拉起全部八产品（真子进程） | start_all.py |
+| `start_all.bat` | 起门户 :8017 并经门户拉起全部九产品（真子进程） | start_all.py |
 | `stop_all.bat` | 经门户停全部产品 + 停门户，核对端口全关 | stop_all.py |
 | `walkthrough_day1.bat` | P-验收 Day-1 预演（21 个机器故事；证据落 `p-验收/`） | walkthrough_day1.py |
 | `scan_refs.bat` | 交付齐全性扫描（run.bat 引用核对 + 缺件探测） | scan_refs.py |
@@ -28,7 +28,7 @@ python scripts/walkthrough_day1.py     # 端口 8017-8024 必须空闲，否则�
 
 ## 典型组合
 
-- **日常开关**：`start_all.bat`（八产品在线，浏览器管理）→ 用完 `stop_all.bat`；
+- **日常开关**：`start_all.bat`（九产品在线，浏览器管理）→ 用完 `stop_all.bat`；
 - **发布前**：`check_all.bat`（全绿才交付）→ `walkthrough_day1.bat`（干净环境真启停 + 故事走查）；
 - **证据口径**：walkthrough 的带日期证据落 `p-验收/`，历史快照不覆盖。
 
