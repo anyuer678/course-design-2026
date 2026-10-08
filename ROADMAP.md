@@ -806,3 +806,12 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   board）与 check_all 标签同日实数对齐。走查复验（浏览器串行）：Studio 审计页
   真实行（refused 琥珀 pill）/LinkBox 删除按钮+暂存删除表单/CacheKV 分布条+倒计时/
   SensorHub 阈值编辑器+告警确认/SimLab 分享链接+hash 复原，全部 PASS console 零错误。
+  安全审查（10-08，TRAE-security-review 流程，范围 82c8c4d..ff4d203）：✅ 无本轮引入的
+  可利用风险——新增攻击面逐项 source→sink 追踪：①LinkBox 删除端点（DELETE 跨站被
+  preflight 挡、code=40bit secrets 即凭证口径与 M1 一致、设口令的删除仍过 _verify_passcode）；
+  ②SensorHub rules/ack（JSON content-type 门槛挡表单 CSRF、阈值 0..300/0..100+有限数、
+  rules.json 固定名原子写、老文件坏值忽略不挡启动）；③Studio audit（require_user、
+  参数化 SQL、detail[:300]、前端 textContent 渲染）；④SimLab 分享 hash（JSON.parse 只进
+  表单 value 属性不进 innerHTML、引擎规模上限沿用轮十二）；⑤B14 画笔解析（点数 2..10000、
+  坐标 ±100000、宽 1..32 全夹紧，文本格式无反序列化面）。全框架无 CORS 头（preflight
+  必败）为既有基线；lab.py 的 ACAO:* 为预存在且本轮未触碰，出界不计入。
