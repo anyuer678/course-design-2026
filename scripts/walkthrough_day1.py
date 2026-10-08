@@ -192,8 +192,14 @@ def main() -> int:
 
     # BoardWeb：画板页 + 文档 API
     status, body, _ = req(8025, "GET", "/api/doc")
-    step("BoardWeb：文档 API 可读（空文档）",
-         status == 200 and json.loads(body).get("shapes") == [], f"HTTP {status}")
+    doc = json.loads(body) if status == 200 else {}
+    shapes = doc.get("shapes")
+    # 断言状态无关：doc.json 是持久文档（用户画过就不是空的）——只验 API 可读且
+    # shapes 是列表，不再假设"全新空文档"（2026-10-08 预演实测抓出的过时假设）
+    step("BoardWeb：文档 API 可读（shapes 列表）",
+         status == 200 and isinstance(shapes, list),
+         f"HTTP {status}，shapes "
+         f"{len(shapes) if isinstance(shapes, list) else '非列表'} 条")
 
     # 4) 门户逐个停止（board 有 ≤8s 看门狗滞后，轮询确认）
     for pid in reversed(products):
