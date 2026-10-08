@@ -111,11 +111,11 @@
   },
   {
    "id": "b14-paint",
-   "claim": "Java Swing 图形编辑器（命令/撤销重做、原子存盘）：7054 项检查 0 失败",
+   "claim": "Java Swing 图形编辑器（命令/撤销重做、原子存盘）：7106 项检查 0 失败",
    "pointers": [
     "projects/B14-java-paint/README.md"
    ],
-   "anchor": "7054 项检查",
+   "anchor": "7106 项检查",
    "commit": "16d125f"
   },
   {

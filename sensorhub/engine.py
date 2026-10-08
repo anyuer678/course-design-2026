@@ -21,6 +21,8 @@
 from __future__ import annotations
 
 import json
+import math
+import os
 import queue
 import re
 import sqlite3
@@ -46,9 +48,13 @@ CREATE TABLE IF NOT EXISTS alerts (
     value     REAL NOT NULL,
     threshold REAL NOT NULL,
     raised_at REAL NOT NULL,
+    acked_at  REAL,
     PRIMARY KEY (device, seq, rule)
 );
 """
+
+# S1 阈值规则页面化（2026-10-07）：规则名 → 允许的阈值上下限（含等号）
+RULE_BOUNDS = {"temp_max": (0.0, 300.0), "vib_max": (0.0, 100.0)}
 
 
 class SensorHub:
@@ -79,6 +85,9 @@ class SensorHub:
         # 规则表：规则名 → (指标, 阈值)；判定口径是严格大于（正好压线不算告警）
         self.rules = {"temp_max": ("temp", float(temp_max)),
                       "vib_max": ("vib", float(vib_max))}
+        # S1：持久化的规则文件（若存在则覆盖构造参数）——页面改的阈值重启仍在
+        self.rules_path = self.db_path.parent / "rules.json"
+        self._load_rules_file()
         # ---- 运行态（start 之后才有内容；连接全部在 _setup 里建）
         self.broker: Broker | None = None
         self.recorder: Recorder | None = None
@@ -96,6 +105,58 @@ class SensorHub:
         self.started_at: float | None = None
 
     # ---------------------------------------------------------------- 生命周期
+
+    def _load_rules_file(self) -> None:
+        """读 rules.json（S1 持久化面）。文件坏/形状不对就当没有——默认规则顶上，
+        不让一个坏文件挡启动；下次 set_rule 会原子覆盖掉它。"""
+        try:
+            raw = json.loads(self.rules_path.read_text("utf-8"))
+        except (OSError, ValueError):
+            return
+        if not isinstance(raw, dict):
+            return
+        for name, value in raw.items():
+            if name not in RULE_BOUNDS:
+                continue
+            try:
+                threshold = self._coerce_threshold(name, value)
+            except ValueError:
+                continue
+            metric = "temp" if name == "temp_max" else "vib"
+            self.rules[name] = (metric, threshold)
+
+    @staticmethod
+    def _coerce_threshold(rule: str, value) -> float:
+        """阈值收口：数字、有限、在规则允许的上下限内（S1；上限防 OOM 式离谱值）。"""
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError(f"{rule} 的阈值必须是数字")
+        threshold = float(value)
+        if not math.isfinite(threshold):
+            raise ValueError(f"{rule} 的阈值必须是有限数")
+        low, high = RULE_BOUNDS[rule]
+        if not low <= threshold <= high:
+            raise ValueError(f"{rule} 的阈值须在 {low}..{high}")
+        return threshold
+
+    def rules_view(self) -> dict:
+        """当前规则（页面化观察口）：规则名 → 阈值。"""
+        return {name: spec[1] for name, spec in self.rules.items()}
+
+    def set_rule(self, rule: str, threshold) -> dict:
+        """S1：页面改阈值——立即生效并原子落盘 rules.json（重启仍在）。"""
+        if rule not in RULE_BOUNDS:
+            raise ValueError(f"没有叫 {rule!r} 的规则（可选：{sorted(RULE_BOUNDS)}）")
+        threshold = self._coerce_threshold(rule, threshold)
+        return self._call(lambda: self._set_rule(rule, threshold))
+
+    def _set_rule(self, rule: str, threshold: float) -> dict:
+        metric = "temp" if rule == "temp_max" else "vib"
+        self.rules[rule] = (metric, threshold)
+        payload = {name: spec[1] for name, spec in self.rules.items()}
+        tmp = self.rules_path.with_suffix(".json.tmp")
+        tmp.write_text(json.dumps(payload, ensure_ascii=False, indent=1), "utf-8")
+        os.replace(tmp, self.rules_path)             # 原子写：半截文件不存在
+        return payload
 
     def start(self) -> None:
         """建件并开跑。服务模式起 hub 线程（等它建完件才返回）；手动模式就地建。"""
@@ -138,6 +199,12 @@ class SensorHub:
             self._alert_conn = sqlite3.connect(str(self.db_path))
             self._alert_conn.execute("PRAGMA busy_timeout=3000")
             self._alert_conn.execute(ALERTS_SCHEMA)
+            # S2 迁移：老库没有 acked_at 列——补上（新库由建表语句自带）
+            cols = {row[1] for row in self._alert_conn.execute(
+                "PRAGMA table_info(alerts)")}
+            if "acked_at" not in cols:
+                self._alert_conn.execute(
+                    "ALTER TABLE alerts ADD COLUMN acked_at REAL")
             self._alert_conn.commit()
             self.rec_client = Client("sensorhub-recorder", port=self.broker.port)
             self.rec_client.connect()
@@ -372,13 +439,34 @@ class SensorHub:
 
     def _alerts(self, limit: int) -> list[dict]:
         rows = self._alert_conn.execute(
-            "SELECT device, seq, rule, metric, value, threshold, raised_at "
+            "SELECT device, seq, rule, metric, value, threshold, raised_at, acked_at "
             "FROM alerts ORDER BY raised_at DESC, device, seq LIMIT ?",
             (max(1, min(1000, limit)),)).fetchall()
-        keys = ("device", "seq", "rule", "metric", "value", "threshold", "raised_at")
+        keys = ("device", "seq", "rule", "metric", "value", "threshold",
+                "raised_at", "acked_at")
         return [dict(zip(keys, row)) for row in rows]
+
+    def ack_alert(self, device: str, seq: int, rule: str) -> bool:
+        """S2 告警确认：标记 acked_at（落库持久）。返回是否真确认了——
+        没有这条告警、或已确认过，都是 False（幂等，由路由层翻译成 404）。"""
+        if not _DEVICE_RE.match(str(device)):
+            raise ValueError(f"设备名不合法：{device!r}")
+        if rule not in self.rules:
+            raise ValueError(f"没有叫 {rule!r} 的规则")
+        return self._call(lambda: self._ack_alert(str(device), int(seq), rule))
+
+    def _ack_alert(self, device: str, seq: int, rule: str) -> bool:
+        cur = self._alert_conn.execute(
+            "UPDATE alerts SET acked_at = ? "
+            "WHERE device = ? AND seq = ? AND rule = ? AND acked_at IS NULL",
+            (time.time(), device, seq, rule))
+        self._alert_conn.commit()
+        return cur.rowcount > 0
 
     def _alert_summary(self) -> dict:
         by_rule = {rule: n for rule, n in self._alert_conn.execute(
             "SELECT rule, COUNT(*) FROM alerts GROUP BY rule")}
-        return {"total": sum(by_rule.values()), "by_rule": by_rule}
+        unacked = self._alert_conn.execute(
+            "SELECT COUNT(*) FROM alerts WHERE acked_at IS NULL").fetchone()[0]
+        return {"total": sum(by_rule.values()), "by_rule": by_rule,
+                "unacked": unacked}

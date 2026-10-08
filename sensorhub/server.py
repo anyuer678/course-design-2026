@@ -37,6 +37,8 @@ _INJECT_SCHEMA = {
     "temp": (float, True), "vib": (float, True),
     "anomaly": (str, False),
 }
+_RULE_SCHEMA = {"rule": (str, True), "threshold": (float, True)}
+_ACK_SCHEMA = {"device": (str, True), "seq": (int, True), "rule": (str, True)}
 _SAFE_NAME = re.compile(r"[^A-Za-z0-9_.-]")
 
 
@@ -115,6 +117,28 @@ def build_app(engine: SensorHub, *, charts_dir: str | Path) -> MicroApp:
             raise HttpFail(400, "limit 要是整数") from None
         return ctx.json({"rules": {name: spec[1] for name, spec in engine.rules.items()},
                          "alerts": engine.alerts(limit)})
+
+    @app.post("/api/rules")
+    def set_rule(ctx):
+        """S1 阈值规则页面化：改一条规则立即生效并落盘 rules.json。"""
+        body = ctx.json_body(_RULE_SCHEMA)
+        try:
+            rules = engine.set_rule(body["rule"], body["threshold"])
+        except ValueError as exc:
+            raise HttpFail(400, str(exc)) from None
+        return ctx.json({"rules": rules})
+
+    @app.post("/api/alerts/ack")
+    def ack_alert(ctx):
+        """S2 告警确认：标记已处理（持久）。没有这条/已确认过 → 404。"""
+        body = ctx.json_body(_ACK_SCHEMA)
+        try:
+            acked = engine.ack_alert(body["device"], body["seq"], body["rule"])
+        except ValueError as exc:
+            raise HttpFail(400, str(exc)) from None
+        if not acked:
+            raise HttpFail(404, "没有这条告警（或已确认过）")
+        return ctx.json({"acked": True})
 
     @app.post("/api/tick")
     def tick(ctx):

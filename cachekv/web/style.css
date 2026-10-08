@@ -5,3 +5,13 @@ table.kb .btn-xs{margin:0}
 #out{min-height:3.2rem}
 .kv dd{word-break:break-all}
 .side-link .cnt{font-variant-numeric:tabular-nums}
+/* K2 TTL 剩余可视化（2026-10-07）：键空间页头的 TTL 分布条 + 秒级倒计时 */
+.ttl-dist{margin:.4rem 0 .8rem}
+.ttl-dist-bar{display:flex;height:.55rem;border-radius:.35rem;overflow:hidden;
+background:var(--line-soft)}
+.ttl-dist-bar span{display:block;height:100%;min-width:2px}
+.ttl-dist-bar .b-soon{background:var(--err,#e11d48)}
+.ttl-dist-bar .b-short{background:var(--warn,#d97706)}
+.ttl-dist-bar .b-long{background:#2563eb}
+.ttl-dist-bar .b-forever{background:#8b5cf6}
+.ttl-dist .note{margin-top:.3rem}

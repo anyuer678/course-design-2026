@@ -97,25 +97,27 @@
   }
 
   // ------------------------------------------------ 参数表单（schema 驱动）
-  function loadSchema(experiment) {
+  function loadSchema(experiment, preset) {
     currentExperiment = experiment;
     return fetch("/api/params/" + encodeURIComponent(experiment))
       .then(function (r) { return r.json(); })
       .then(function (data) {
         currentSchema = data.schema;
-        buildForm(data.schema);
+        buildForm(data.schema, preset);
         msg("");
       });
   }
 
-  function buildForm(schema) {
+  function buildForm(schema, preset) {
     var box = $("params-form");
     box.textContent = "";
     Object.keys(schema).forEach(function (field) {
       var spec = schema[field];
       var row = el("div", "prow");
       row.appendChild(el("label", "plabel", spec.label || field));
-      var value = spec.default;
+      // M1 分享链接（2026-10-07）：URL hash 里带来的参数值优先于 schema 默认值
+      var value = (preset && Object.prototype.hasOwnProperty.call(preset, field))
+        ? preset[field] : spec.default;
       if (spec.type === "bool") {
         var cb = el("input", "inp");
         cb.type = "checkbox"; cb.checked = !!value; cb.dataset.field = field;
@@ -367,6 +369,22 @@
   // ------------------------------------------------ 控制条与导航
   on("btn-render", rerun);
   on("btn-save", saveRun);
+  // M1 分享链接（2026-10-07）：把当前实验+参数编进 URL hash，打开即回放
+  on("btn-share", function () {
+    var params;
+    try { params = collectParams(); }
+    catch (exc) { toast("参数 JSON 解析失败，无法分享", "err"); return; }
+    var url = location.origin + "/#exp=" + encodeURIComponent(currentExperiment) +
+      "&params=" + encodeURIComponent(JSON.stringify(params));
+    function done() { toast("分享链接已复制，打开即回放本次参数"); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(done, function () {
+        window.prompt("复制下面的分享链接：", url);       // 剪贴板不可用就亮出原文
+      });
+    } else {
+      window.prompt("复制下面的分享链接：", url);
+    }
+  });
   $("btn-load-legacy") && null;
   on("btn-play", togglePlay);
   on("btn-first", function () { goto(0); });
@@ -397,7 +415,25 @@
     });
   }
 
-  // 初始化：填实验下拉 → 载第一个的表单 → 自动重算一次（页面一打开就有东西看）
+  // 初始化：填实验下拉 → 载第一个的表单 → 自动重算一次（页面一打开就有东西看）。
+  // M1：若 URL hash 带 #exp=…&params=…（分享链接），优先按它复原实验与参数。
+  function parseShareHash() {
+    var hash = (location.hash || "").replace(/^#/, "");
+    if (!hash) return null;
+    var kv = {};
+    hash.split("&").forEach(function (pair) {
+      var eq = pair.indexOf("=");
+      if (eq > 0) kv[pair.slice(0, eq)] = decodeURIComponent(pair.slice(eq + 1));
+    });
+    if (!kv.exp) return null;
+    var preset = null;
+    if (kv.params) {
+      try { preset = JSON.parse(kv.params); }
+      catch (exc) { return null; }                    // 坏参数当没有，走默认初始化
+      if (!preset || typeof preset !== "object" || Array.isArray(preset)) return null;
+    }
+    return { exp: kv.exp, preset: preset };
+  }
   fetch("/api/records").then(function (r) { return r.json(); }).then(function (data) {
     var exp = $("experiment-list");
     exp.textContent = "";
@@ -406,6 +442,12 @@
       exp.appendChild(opt);
     });
     refreshRecords();
+    var shared = parseShareHash();
+    if (shared && (data.experiments || []).indexOf(shared.exp) >= 0) {
+      exp.value = shared.exp;                         // 下拉跟着分享链接走
+      loadSchema(shared.exp, shared.preset).then(rerun);
+      return;
+    }
     if (data.experiments && data.experiments.length) {
       currentExperiment = data.experiments[0];
       loadSchema(currentExperiment).then(rerun);

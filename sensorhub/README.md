@@ -35,17 +35,19 @@ ProgrammingError——测试里真抓到过一次，见下）。测试/脚本可
 ## 运行
 
 ```
-run.bat                                   # 双入口测试（18 项）
+run.bat                                   # 双入口测试（25 项）
 python server.py --port 8022              # 监测台服务（Studio 门户可一键启停）
 python server.py --port 8022 --interval 0.2   # 加快节拍看曲线动起来
 ```
 
-页面：**总账**（入库行数/broker 客户端/拍数/告警数）→ **对账表**（每台设备
+页面：**总账**（入库行数/broker 客户端/拍数/告警数）→ **阈值编辑器**（S1：
+改完立即生效并落盘 rules.json，重启仍在）→ **对账表**（每台设备
 发出/尖峰/卡值/断数 vs 实收入库/seq 缺口）→ **曲线**（temp 叠加设备自报异常点）
-→ **告警台账**（最新在前）。API：`/api/status`、`/api/series`、`/api/chart`、
-`/api/alerts`、`POST /api/tick`、`POST /api/inject`。
+→ **告警台账**（最新在前；S2 确认按钮，已确认持久标记）。
+API：`/api/status`、`/api/series`、`/api/chart`、`/api/alerts`、
+`POST /api/rules`、`POST /api/alerts/ack`、`POST /api/tick`、`POST /api/inject`。
 
-## 测试策略（18 项 = 9 引擎 + 8 服务 + 1 真套接字）
+## 测试策略（25 项 = 13 引擎 + 11 服务 + 1 真套接字）
 
 **全链路对账钉值**（seed=2026 + 计划 0.2/0.2/0.2 + 8 拍的确定性流，探针实测）：
 发出 21 == 实收 21 == 入库行数；自报异常 spike 3 / freeze 7 == 设备账本；
@@ -54,9 +56,15 @@ gaps {0,1,1}（dev-01 的断数落在 seq 1——首条成功之前，gap 区间
 温度居高不下）、vib_max 0。**告警语义**：注入 120 越限即告警、压线 85.0 不算、
 重复评估幂等、重启后台账仍在且重评估不加账。**确定性**：同种子两次运行剔除
 ts 逐条一致。**守卫**：注入口设备名白名单（topic 注入面）、未启动先拒。
-**服务**：status/series/chart/alerts/tick/inject 全覆盖（压线 400、bool 冒充
+**服务**：status/series/chart/alerts/rules/ack/tick/inject 全覆盖（压线 400、bool 冒充
 数字 400、非法设备名 400、幽灵设备 404）、SVG 现算含异常红圈、真套接字全链路
 （HTTP 线程经队列汇入 hub 线程）。
+
+**S1/S2（2026-10-07，+6）**：S1 阈值页面化——set_rule 立即生效（新口径下不再
+告警）+ rules.json 原子落盘重启仍在 + 校验收口（未知规则/越界/NaN/inf/bool/
+字符串全 400，上下限含等号）+ `POST /api/rules` 后 status 同步；S2 告警确认——
+ack 幂等（重复/不存在 False→404）、acked_at 落库、unacked 汇总、重启仍在、
+无 acked_at 列的老库 ALTER TABLE 自动迁移照常读写。
 
 ## 已知边界（如实声明）
 

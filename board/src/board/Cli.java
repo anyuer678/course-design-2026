@@ -34,9 +34,12 @@ import paint.ui.Tool;
  *
  * <p>脚本语法（每行一个操作，# 开头是注释，空行忽略）：
  * <pre>
- *   tool &lt;line|rect|ellipse&gt;        换工具
+ *   tool &lt;line|rect|ellipse|pencil&gt;  换工具
+ *   width &lt;1..32&gt;                   换新形状的线宽（默认 2）
  *   color &lt;#RRGGBB&gt;                 换颜色
  *   draw &lt;x1&gt; &lt;y1&gt; &lt;x2&gt; &lt;y2&gt;        按下-拖动-松手（小于阈值的误点如实报 committed=false）
+ *   scribble &lt;x1&gt; &lt;y1&gt; &lt;x2&gt; &lt;y2&gt; …  画笔一笔（≥2 个采样点，一次拖拽=一条命令）
+ *   nudge &lt;dx&gt; &lt;dy&gt;                 选中形状微调（方向键的语义入口）
  *   undo | redo | new
  *   save &lt;名.pad&gt; | open &lt;名.pad&gt;
  *   export &lt;名.png&gt;                 离屏渲染 480x360 → PNG（走 SafeStore 的导出白名单）
@@ -137,6 +140,12 @@ public final class Cli {
                 canvas.setTool(Tool.valueOf(tokens[1].toUpperCase(Locale.ROOT)));
                 emit("{\"op\":\"tool\",\"tool\":\"" + tokens[1].toLowerCase(Locale.ROOT) + "\"}");
             }
+            case "width" -> {
+                // 拓展轮（10-07）：新形状的线宽（对已画形状没有影响——形状不可变）
+                requireTokens(tokens, 2);
+                canvas.setStrokeWidth(intAt(tokens, 1));
+                emit("{\"op\":\"width\",\"width\":" + canvas.strokeWidth() + "}");
+            }
             case "color" -> {
                 canvas.setColor(Color.decode(tokens[1]));   // 不是 #RRGGBB → 异常 → error line
                 emit("{\"op\":\"color\",\"color\":\"" + tokens[1] + "\"}");
@@ -147,6 +156,33 @@ public final class Cli {
                 canvas.dragTo(intAt(tokens, 3), intAt(tokens, 4));
                 boolean committed = canvas.releaseAt(intAt(tokens, 3), intAt(tokens, 4));
                 emit("{\"op\":\"draw\",\"committed\":" + committed
+                        + ",\"shapes\":" + drawing.size() + "}");
+            }
+            case "scribble" -> {
+                // 画笔（自由手绘）：至少两个采样点，一次拖拽 = 一条可撤销命令
+                requireTokens(tokens, 5);
+                if ((tokens.length - 1) % 2 != 0) {
+                    throw new IOException("scribble 的坐标要成对给出（x1 y1 x2 y2 …）");
+                }
+                canvas.pressAt(intAt(tokens, 1), intAt(tokens, 2), false);
+                for (int i = 3; i < tokens.length; i += 2) {
+                    canvas.dragTo(intAt(tokens, i), intAt(tokens, i + 1));
+                }
+                boolean committed = canvas.releaseAt(
+                        intAt(tokens, tokens.length - 2), intAt(tokens, tokens.length - 1));
+                int points = 0;
+                if (drawing.size() > 0 && drawing.get(drawing.size() - 1)
+                        instanceof paint.model.PencilShape pencil) {
+                    points = pencil.pointCount();
+                }
+                emit("{\"op\":\"scribble\",\"committed\":" + committed
+                        + ",\"points\":" + points + ",\"shapes\":" + drawing.size() + "}");
+            }
+            case "nudge" -> {
+                // 方向键微调的语义入口：选中形状平移 (dx,dy)；Shift+方向键的大步长由 UI 侧换算
+                requireTokens(tokens, 3);
+                boolean moved = canvas.nudgeBy(intAt(tokens, 1), intAt(tokens, 2));
+                emit("{\"op\":\"nudge\",\"moved\":" + moved
                         + ",\"shapes\":" + drawing.size() + "}");
             }
             case "undo" -> emit("{\"op\":\"undo\",\"described\":\""

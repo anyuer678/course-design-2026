@@ -166,6 +166,13 @@ class Store:
                 (code,)).fetchone()
         return None if row is None else Link(*tuple(row))
 
+    def delete(self, code: str) -> bool:
+        """删除一条短链（LinkBox L3 管理能力新增，B31 原有只读账面不变）。
+        返回是否真删了——不存在的码返回 False，由路由层翻译成 404。"""
+        with self._lock:
+            cur = self.db.execute("DELETE FROM links WHERE code = ?", (code,))
+        return cur.rowcount > 0
+
     def recent(self, limit: int = 20) -> list:
         limit = max(1, min(int(limit), MAX_LIST))
         with self._lock:

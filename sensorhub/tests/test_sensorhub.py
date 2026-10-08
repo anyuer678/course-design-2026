@@ -122,6 +122,95 @@ class TestEngine(unittest.TestCase):
             self.assertEqual(hub.tick()["new_alerts"], 0)
         self.assertEqual(hub.status()["alerts"]["total"], 1)
 
+    # ------------------------------------------------ S1 阈值规则页面化（2026-10-07）
+    def test_set_rule_updates_and_persists(self):
+        """S1：改阈值立即生效（新口径下不再告警）并落盘 rules.json，重启仍在。"""
+        hub = make_hub(self._tmp.name)
+        self.addCleanup(hub.stop)                  # stop 幂等，中途失败也能收摊
+        hub.start()
+        hub.inject("dev-01", 101, temp=90.0, vib=0.5)   # 高 seq：避开模拟器首拍主键
+        hub.tick()
+        self.assertEqual(hub.status()["alerts"]["by_rule"], {"temp_max": 1})
+        rules = hub.set_rule("temp_max", 95.5)
+        self.assertEqual(rules, {"temp_max": 95.5, "vib_max": 4.0})
+        self.assertEqual(hub.status()["rules"], {"temp_max": 95.5, "vib_max": 4.0})
+        hub.inject("dev-01", 102, temp=90.0, vib=0.5)   # 90 已不越 95.5 的线
+        hub.tick()
+        self.assertEqual(hub.status()["alerts"]["total"], 1)  # 不新增
+        hub.stop()
+        revived = make_hub(self._tmp.name)             # 同一目录：rules.json 顶上来
+        self.addCleanup(revived.stop)
+        revived.start()
+        self.assertEqual(revived.status()["rules"], {"temp_max": 95.5, "vib_max": 4.0})
+
+    def test_set_rule_validation(self):
+        """S1 收口：未知规则/越界/非有限数/bool/字符串都明着拒绝，一个不漏。"""
+        hub = make_hub(self._tmp.name, db_name="guard.sqlite3")
+        self.addCleanup(hub.stop)
+        hub.start()
+        for rule, value in (("nope", 1.0), ("temp_max", 500.0), ("temp_max", -1.0),
+                            ("temp_max", float("nan")), ("temp_max", float("inf")),
+                            ("temp_max", True), ("temp_max", "90")):
+            with self.assertRaises(ValueError, msg=(rule, value)):
+                hub.set_rule(rule, value)
+        # 压线（== 上限）合法：上下限含等号
+        self.assertEqual(hub.set_rule("temp_max", 300.0)["temp_max"], 300.0)
+        self.assertEqual(hub.set_rule("vib_max", 100.0)["vib_max"], 100.0)
+
+    # ------------------------------------------------ S2 告警确认（2026-10-07）
+    def test_ack_alert_flow(self):
+        """S2：确认一条告警 → acked_at 落库、unacked 归零；重复确认 False（幂等）。"""
+        hub = make_hub(self._tmp.name, db_name="ack.sqlite3")
+        self.addCleanup(hub.stop)
+        hub.start()
+        hub.inject("dev-01", 11, temp=120.0, vib=0.5)
+        hub.tick()
+        alert = hub.alerts()[0]
+        self.assertIsNone(alert["acked_at"])
+        self.assertEqual(hub.status()["alerts"]["unacked"], 1)
+        self.assertTrue(hub.ack_alert("dev-01", 11, "temp_max"))
+        alert = hub.alerts()[0]
+        self.assertIsNotNone(alert["acked_at"])
+        self.assertEqual(hub.status()["alerts"]["unacked"], 0)
+        self.assertFalse(hub.ack_alert("dev-01", 11, "temp_max"))   # 已确认过
+        self.assertFalse(hub.ack_alert("dev-01", 999, "temp_max"))  # 没有这条
+
+    def test_ack_persists_over_restart_and_migrates_old_db(self):
+        """S2：确认标记重启仍在；无 acked_at 列的老库自动迁移（ALTER TABLE 补列）。"""
+        hub = make_hub(self._tmp.name, db_name="mig.sqlite3")
+        self.addCleanup(hub.stop)                  # stop 幂等，中途失败也能收摊
+        hub.start()
+        hub.inject("dev-01", 21, temp=120.0, vib=0.5)
+        hub.tick()
+        self.assertTrue(hub.ack_alert("dev-01", 21, "temp_max"))
+        hub.stop()
+        revived = make_hub(self._tmp.name, db_name="mig.sqlite3")
+        self.addCleanup(revived.stop)
+        revived.start()
+        self.assertIsNotNone(revived.alerts()[0]["acked_at"])
+        self.assertEqual(revived.status()["alerts"]["unacked"], 0)
+        revived.stop()
+        # 手工造一个老 schema 库（无 acked_at 列）→ 新引擎迁移后照常读写
+        import sqlite3
+        old = Path(self._tmp.name) / "old.sqlite3"
+        conn = sqlite3.connect(str(old))
+        conn.execute(
+            "CREATE TABLE alerts (device TEXT NOT NULL, seq INTEGER NOT NULL, "
+            "rule TEXT NOT NULL, metric TEXT NOT NULL, value REAL NOT NULL, "
+            "threshold REAL NOT NULL, raised_at REAL NOT NULL, "
+            "PRIMARY KEY (device, seq, rule))")
+        conn.execute("INSERT INTO alerts VALUES ('dev-09', 1, 'temp_max', 'temp', "
+                     "120.0, 85.0, 1.0)")
+        conn.commit()
+        conn.close()
+        migrant = make_hub(self._tmp.name, db_name="old.sqlite3")
+        self.addCleanup(migrant.stop)
+        migrant.start()
+        rows = migrant.alerts()
+        self.assertEqual(len(rows), 1)
+        self.assertIsNone(rows[0]["acked_at"])
+        self.assertTrue(migrant.ack_alert("dev-09", 1, "temp_max"))
+
     def test_restart_persistence(self):
         """重启：读数与告警台账都在库里；重评估（幂等）不产生新告警。"""
         hub = make_hub(self._tmp.name)
@@ -311,6 +400,41 @@ class TestServer(unittest.TestCase):
         status, _, body = self.handle("GET", "/api/alerts?limit=1")
         self.assertEqual(len(json.loads(body)["alerts"]), 1)
         status, _, _ = self.handle("GET", "/api/alerts?limit=abc")
+        self.assertEqual(status, 400)
+
+    # ------------------------------------------------ S1/S2 的 HTTP 面（2026-10-07）
+    def test_rules_api(self):
+        """S1：POST /api/rules 改阈值 → 200 返回新规则表；未知规则/越界 → 400。"""
+        payload = json.dumps({"rule": "temp_max", "threshold": 92}).encode()
+        status, _, body = self.handle("POST", "/api/rules", payload,
+                                      headers=[("Content-Type", "application/json")])
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"rules": {"temp_max": 92.0, "vib_max": 4.0}})
+        status, _, body = self.handle("GET", "/api/status")
+        self.assertEqual(json.loads(body)["rules"]["temp_max"], 92.0)
+        for bad in ({"rule": "nope", "threshold": 1.0},
+                    {"rule": "temp_max", "threshold": 9999.0},
+                    {"rule": "temp_max", "threshold": "92"}):
+            status, _, _ = self.handle(
+                "POST", "/api/rules", json.dumps(bad).encode(),
+                headers=[("Content-Type", "application/json")])
+            self.assertEqual(status, 400, msg=bad)
+
+    def test_ack_api(self):
+        """S2：POST /api/alerts/ack 确认 → 200；再确认/没有这条 → 404；坏规则 → 400。"""
+        self.hub.inject("dev-02", 6, temp=110.0, vib=0.5)
+        self.hub.tick()
+        payload = json.dumps({"device": "dev-02", "seq": 6, "rule": "temp_max"}).encode()
+        status, _, body = self.handle("POST", "/api/alerts/ack", payload,
+                                      headers=[("Content-Type", "application/json")])
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"acked": True})
+        status, _, _ = self.handle("POST", "/api/alerts/ack", payload,
+                                   headers=[("Content-Type", "application/json")])
+        self.assertEqual(status, 404)
+        bad = json.dumps({"device": "dev-02", "seq": 6, "rule": "nope"}).encode()
+        status, _, _ = self.handle("POST", "/api/alerts/ack", bad,
+                                   headers=[("Content-Type", "application/json")])
         self.assertEqual(status, 400)
 
     def test_inject_api(self):

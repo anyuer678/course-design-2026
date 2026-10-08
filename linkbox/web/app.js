@@ -51,6 +51,21 @@
         left.appendChild(el("span", "note", "  → " + item.target));
         li.appendChild(left);
         li.appendChild(el("span", "note", item.hits + " 次"));
+        // L3 删除管理（2026-10-07）：逐行删除入口，确认后调 DELETE /api/links/<code>
+        var del = el("button", "btn-del", "删除");
+        del.type = "button";
+        del.addEventListener("click", function () {
+          if (!window.confirm("删除短链 /" + item.code + "？删除后链接即刻失效。")) return;
+          fetch("/api/links/" + encodeURIComponent(item.code), { method: "DELETE" })
+            .then(function (resp) {
+              if (resp.status === 204) { refreshLinks(); return; }
+              return resp.json().then(function (data) {
+                showErr($("link-result"), data.error || ("删除失败 " + resp.status));
+              });
+            })
+            .catch(function () { showErr($("link-result"), "网络错误，请重试。"); });
+        });
+        li.appendChild(del);
         list.appendChild(li);
       });
       if (!list.children.length) list.appendChild(el("li", "note", "（还没有链接）"));

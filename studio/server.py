@@ -22,9 +22,11 @@ from webframe import (HttpFail, MicroApp, MicroServer, Response,  # noqa: E402
                       )
 
 try:                                                          # noqa: E402
+    from .audit import AuditLog
     from .auth import USERNAME, Auth
     from .manager import AlreadyOnline, NotOurs, Product, ProductManager
 except ImportError:                     # 作为脚本直接跑（python server.py）
+    from audit import AuditLog
     from auth import USERNAME, Auth
     from manager import AlreadyOnline, NotOurs, Product, ProductManager
 
@@ -41,8 +43,10 @@ def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
                   simlab_port: int = 8019, datascope_port: int = 8020,
                   cachekv_port: int = 8021, sensorhub_port: int = 8022,
                   board_port: int = 8023, courselab_port: int = 8024,
-                  boardweb_port: int = 8025, linkbox_memory: bool = False) -> ProductManager:
-    """产品注册表。command=None = 已规划（矩阵名单照抄 PRODUCTS.md §二）。"""
+                  boardweb_port: int = 8025, linkbox_memory: bool = False,
+                  audit_path=None) -> ProductManager:
+    """产品注册表。command=None = 已规划（矩阵名单照抄 PRODUCTS.md §二）。
+    audit_path 给了才记账（M2 操作审计）；生产由 build_server 传 data 目录。"""
     cmd = [sys.executable, "server.py", "--port", str(linkbox_port)]
     if linkbox_memory:
         cmd.append("--memory")
@@ -96,7 +100,8 @@ def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
                 command=[sys.executable, "server.py", "--port", str(boardweb_port)],
                 cwd=str(REPO / "boardweb")),
     ]
-    return ProductManager(products)
+    audit = AuditLog(audit_path) if audit_path else None
+    return ProductManager(products, audit=audit)
 
 
 def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
@@ -181,6 +186,18 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
         except NotOurs as exc:
             raise HttpFail(409, str(exc)) from None
 
+    # ------------------------------------------------ 操作审计（M2，要求登录）
+    @app.get("/api/audit")
+    def audit_events(ctx):
+        require_user(ctx)
+        raw = ctx.query.get("limit", "200")
+        try:
+            limit = int(raw)
+        except ValueError:
+            raise HttpFail(400, "limit 要是整数") from None
+        events = manager.audit.tail(limit) if manager.audit is not None else []
+        return ctx.json({"events": events})
+
     # ------------------------------------------------ 页面与静态
     @app.get("/")
     def index(ctx):
@@ -206,7 +223,8 @@ def build_server(*, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
                             sensorhub_port=sensorhub_port,
                             board_port=board_port,
                             courselab_port=courselab_port,
-                            linkbox_memory=linkbox_memory)
+                            linkbox_memory=linkbox_memory,
+                            audit_path=Path(data_dir or DATA_DIR) / "audit.sqlite3")
     server = MicroServer(build_app(manager, auth), host=host, port=port)
     return server, manager, auth
 

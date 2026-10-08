@@ -21,20 +21,57 @@ public abstract class Shape {
     /** 命中容差（像素）：点选比一个像素宽的线好点中，这是可用性问题不是精度问题。 */
     public static final int HIT_TOLERANCE = 4;
 
-    /** 所有线宽集中一处：改粗细只动一个常量，序列化格式不受影响。 */
+    /** 默认线宽：老文件没有线宽字段，读回都按这个值算（格式向后兼容的锚点）。 */
     public static final int STROKE_WIDTH = 2;
+    /** 线宽上下限：序列化字段 <code>wN</code> 的合法区间（UI 提供细/中/粗三档）。 */
+    public static final int MIN_WIDTH = 1;
+    public static final int MAX_WIDTH = 32;
 
     private final Color color;
+    private final int strokeWidth;
 
     protected Shape(Color color) {
+        this(color, STROKE_WIDTH);
+    }
+
+    protected Shape(Color color, int strokeWidth) {
         if (color == null) {
             throw new IllegalArgumentException("颜色不能为 null");
         }
+        if (strokeWidth < MIN_WIDTH || strokeWidth > MAX_WIDTH) {
+            throw new IllegalArgumentException(
+                    "线宽须在 " + MIN_WIDTH + ".." + MAX_WIDTH + "：" + strokeWidth);
+        }
         this.color = color;
+        this.strokeWidth = strokeWidth;
     }
 
     public Color color() {
         return color;
+    }
+
+    /** 本形状的线宽（像素）。老构造出来的形状恒为 {@link #STROKE_WIDTH}。 */
+    public int strokeWidth() {
+        return strokeWidth;
+    }
+
+    /** 序列化的线宽尾缀：默认宽度不写（老文件格式零变化），非默认才带 <code>wN</code>。 */
+    protected String widthSuffix() {
+        return strokeWidth == STROKE_WIDTH ? "" : " w" + strokeWidth;
+    }
+
+    /** 解析 <code>wN</code> 线宽尾缀；没有就是默认宽度。非法值返回 -1（交给调用方报行号）。 */
+    public static int parseWidthSuffix(String token) {
+        if (token == null || token.length() < 2 || token.charAt(0) != 'w') {
+            return -1;
+        }
+        int value;
+        try {
+            value = Integer.parseInt(token.substring(1));
+        } catch (NumberFormatException bad) {
+            return -1;
+        }
+        return (value >= MIN_WIDTH && value <= MAX_WIDTH) ? value : -1;
     }
 
     /** 类型名，用于序列化与 UI 显示；也是 {@link #parse} 分派的依据。 */
@@ -63,12 +100,13 @@ public abstract class Shape {
             return false;
         }
         Shape shape = (Shape) other;
-        return color.equals(shape.color) && geometryEquals(shape);
+        return color.equals(shape.color) && strokeWidth == shape.strokeWidth
+                && geometryEquals(shape);
     }
 
     @Override
     public int hashCode() {
-        return java.util.Objects.hash(getClass(), color, geometryKey());
+        return java.util.Objects.hash(getClass(), color, strokeWidth, geometryKey());
     }
 
     protected abstract boolean geometryEquals(Shape other);

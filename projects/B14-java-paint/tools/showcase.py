@@ -2,7 +2,7 @@
 
 数据全部现算：**自包含构建**（缺 build 即重建：javac --release 17 → build/classes +
 build/test-classes，与 run.bat 同命令行），再真跑：
-  - `paint.PaintTests`（headless 自检，8 组 / 7054 项检查）→ 逐组结论上页面；
+  - `paint.PaintTests`（headless 自检，9 组 / 7106 项检查）→ 逐组结论上页面；
   - `paint.App --demo`（离屏演示：画 3 个形状 → 撤销 → 重做 → 像素统计 → 写 PNG）
     → 把**真画出来的 PNG** 内嵌为 data URI（确定性：多次运行 sha1 相同，测试钉住）。
 

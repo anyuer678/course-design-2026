@@ -13,7 +13,7 @@
 | 1 | B1–B4 | **全部已重建（非逐字），批次 1 收口** | **B1**：268 项断言 0 失败、与 std 容器对拍 253,086 次比较 0 失败；**B2**：428 项断言 0 失败、141,228 项对拍检查 0 失败、交互菜单可脚本驱动；**B3**：36 项双入口；**B4**：43 项双入口、egcd 双实现互拍、mod_pow vs pow 3000 组、群判定四张坏表全拒（均 2026-10-02 事故后重建，各配 run.bat 两次验证） |
 | 2 | B5–B8 | **全部已重建（非逐字），批次 2 收口** | **B5**：42 断言、双模型逐字节一致；**B6**：373 断言 0 失败、ABI 探针全 0 + 反面教材亮灯、反汇编结构对照 23/23；**B7**：15 项双入口；**B8**：24 项双入口（WSL Ubuntu-24.04）、0 僵尸、run.bat 两次日志逐字相同（均 2026-10-02 事故后重建） |
 | 3 | B9–B12 | G1 完成 | B9 183、B10 36（含 sqlite 对拍）、B11 91、B12 57 |
-| 4 | B13 / B14 | G1 完成 / 自动化完成 | B13 55+393 subTest；B14 7054 项检查，真窗口待用户 |
+| 4 | B13 / B14 | G1 完成 / 自动化完成 | B13 55+393 subTest；B14 7106 项检查，真窗口待用户 |
 | 5 | B15–B22（dorm-repair） | G1 全部完成 | Python 198 + Java 37；门禁 PASS（9 blocking 层）；台账 27 键 |
 | 7 部分 | B31 | 自动化完成 | 73 tests；浏览器交互待用户 |
 | 6 | **B23** | G1 完成（2026-10-02 复核实测） | run.bat 退出码 0、`not recognized` 0；**33 tests 全过**（含梯度检查）；README/docs/data/ml/tests 齐备 |
@@ -782,3 +782,24 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   写）+ 轮转备份 keep=10（同秒时戳互覆测试实抓，掺随机尾缀修掉）+ 导出 PNG；
   第九个 managed 产品接入门户（studio 注册表 + start/stop/walkthrough/sync_assets
   /check_all 五处同步，17 步）。测试 8 项双入口；矩阵 pytest 口径 262→270。
+
+- ✅ **轮十三·补：功能增强批（10-07，走查修复批后用户确认执行 L2/L3/K2/S1/S2/M1-M3/C3）**：
+  ①LinkBox L3 删除管理——B31 引擎补 Store.delete（非重写）+ DELETE /api/links/*
+  + 暂存查看页删除表单（POST body 带口令，不进 URL）+ 产品页逐行删除按钮；
+  L2（列表显示点击数）核实已有。②CacheKV K2——TTL 分布条（四段）+ 秒级倒计时
+  （expires_at 本地推算、2s 服务器校准）。③SensorHub S2 告警确认——acked_at 列
+  （老库 ALTER TABLE 迁移）+ POST /api/alerts/ack（幂等 404）+ 台账处理列 +
+  unacked 汇总。④SensorHub S1 阈值页面化——POST /api/rules（0..300/0..100 上下限
+  +有限数校验）+ rules.json 原子落盘重启仍在 + 总账页编辑器。⑤SimLab M1 分享
+  链接——实验+参数进 URL hash，打开即复原重算。⑥Studio M2 操作审计——
+  audit.sqlite3 追加账（拒绝/失败也入账、幂等空操作不记）+ /api/audit（登录）+
+  审计页 #audit。⑦Board M3 窗口记忆——java.util.prefs（关窗确认才记）+ 恢复前
+  虚拟桌面 3/4 面积校验。⑧C3 本课实验排行核实为既有功能（teacher.html F11）。
+  ⑨桌面画板能力拓展（用户"拓展内容"）——B14 引擎新增 PencilShape 画笔自由手绘
+  （一笔=一条可撤销命令）、形状级线宽 wN 尾缀（默认 2 不写，老文件零变化，1..32
+  校验）、方向键 1px/Shift 10px 微调（nudgeBy 语义入口）；PaintFrame 工具栏加
+  画笔+线宽三档+只读属性面板；board Cli 加 width/scribble/nudge 三操作供无头驱动。
+  测试：LinkBox 98→104（+6，标签 93 上轮漂移一并归位）、SensorHub 19→25（+6）、
+  Studio 18→20（+2）、board 11→12（+1）+ B14 引擎自检 7054→7106（+52，8→9 组，
+  showcase 随引擎重生成）；矩阵 pytest 口径 270→**290**（+自检 154=**444**）；
+  五份 README（根/linkbox/studio/sensorhub/board）与 check_all 标签同日实数对齐。

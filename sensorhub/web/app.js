@@ -56,8 +56,14 @@
       var ruleText = Object.keys(s.rules || {}).map(function (name) {
         return name + " > " + s.rules[name];
       }).join("，");
-      $("rules").textContent = "当前规则：" + ruleText + "（严格大于才算告警）";
+      $("rules").textContent = "当前规则：" + ruleText + "（严格大于才算告警）"
+        + (alertSum.unacked ? "，未确认 " + alertSum.unacked + " 条" : "");
       $("nav-alert-cnt").textContent = String(alertSum.total || 0);
+      // S1：规则编辑器的占位符跟随当前阈值
+      var ruleInput = $("rule-value");
+      if (ruleInput && !ruleInput.value && s.rules) {
+        ruleInput.placeholder = "当前 " + (s.rules[$("rule-name").value] || "—");
+      }
 
       // 对账表：设备账本 vs 入库实收
       var tbody = $("ledger").querySelector("tbody");
@@ -93,6 +99,27 @@
             if (i === 0 || i === 5) td.className = "warn";
             tr.appendChild(td);
           });
+        // S2 告警确认（2026-10-07）：已确认出绿标，未确认给确认按钮
+        var op = el("td");
+        if (a.acked_at) {
+          op.appendChild(el("span", "pill ok", "已确认"));
+        } else {
+          var btn = el("button", "btn btn-ghost btn-xs", "确认");
+          btn.addEventListener("click", function () {
+            fetch("/api/alerts/ack", {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ device: a.device, seq: a.seq, rule: a.rule })
+            }).then(function (r) {
+              return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+            }).then(function (r) {
+              if (!r.ok) { toast(r.d.error || "确认失败", "err"); return; }
+              toast("已确认：" + a.device + " #" + a.seq + " " + a.rule);
+              refresh();
+            });
+          });
+          op.appendChild(btn);
+        }
+        tr.appendChild(op);
         atbody.appendChild(tr);
       });
       if (!(data.alerts || []).length) {
@@ -132,6 +159,27 @@
     $("chartnote").textContent = note;
   }
   $("btn-chart").addEventListener("click", showChart);
+
+  // S1 规则编辑器（2026-10-07）：改阈值 → POST /api/rules → 立即生效并落盘
+  $("btn-rule").addEventListener("click", function () {
+    var rule = $("rule-name").value;
+    var raw = $("rule-value").value;
+    if (raw === "") { toast("先填新阈值", "err"); return; }
+    fetch("/api/rules", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ rule: rule, threshold: Number(raw) })
+    }).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+    }).then(function (r) {
+      if (!r.ok) { toast(r.d.error || "更新失败", "err"); return; }
+      toast("阈值已更新：" + rule + " > " + r.d.rules[rule]);
+      $("rule-value").value = "";
+      refresh();
+    });
+  });
+  $("rule-name").addEventListener("change", function () {
+    $("rule-value").value = "";
+  });
 
   // 设备名单从 status 里拿（注入设备也会出现在库里）
   fetch("/api/status").then(function (r) { return r.json(); }).then(function (s) {

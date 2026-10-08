@@ -3,9 +3,13 @@ package paint.ui;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
+import java.awt.Rectangle;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.List;
+import java.util.prefs.BackingStoreException;
+import java.util.prefs.Preferences;
 import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.ButtonGroup;
@@ -23,6 +27,7 @@ import paint.io.DrawingFormat;
 import paint.io.DrawingFormatException;
 import paint.io.SafeStore;
 import paint.model.Drawing;
+import paint.model.Shape;
 
 /**
  * 主窗口：把工具栏、画布、撤销栈和文件动作接在一起。
@@ -42,6 +47,7 @@ public final class PaintFrame extends JFrame {
     private final JButton undoButton = new JButton("撤销");
     private final JButton redoButton = new JButton("重做");
     private final JLabel status = new JLabel(" 就绪");
+    private final JLabel shapeProps = new JLabel(" ");
     private final JButton colorButton = new JButton();
 
     /** 变更计数：只有"和上次保存时的计数不同"才算脏，比"形状数量变了"准得多——移动一个形状数量不变。 */
@@ -56,9 +62,10 @@ public final class PaintFrame extends JFrame {
         setLayout(new BorderLayout());
         add(buildToolbar(), BorderLayout.NORTH);
         add(canvas, BorderLayout.CENTER);
-        add(status, BorderLayout.SOUTH);
-        setSize(900, 620);
-        setLocationByPlatform(true);
+        JPanel south = new JPanel(new BorderLayout());
+        south.add(shapeProps, BorderLayout.NORTH);
+        south.add(status, BorderLayout.SOUTH);
+        add(south, BorderLayout.SOUTH);
 
         drawing.addListener(changed -> onDrawingChanged());
         history.addListener(changed -> refreshHistoryButtons());
@@ -70,6 +77,7 @@ public final class PaintFrame extends JFrame {
         });
         refreshHistoryButtons();
         refreshStatus();
+        restoreWindowBounds();          // M3：上次关窗时的位置/尺寸优先，没账才走平台默认
     }
 
     public Drawing drawing() {
@@ -92,6 +100,14 @@ public final class PaintFrame extends JFrame {
             tools.add(button);
             bar.add(button);
         }
+        bar.add(new JLabel("   线宽 "));
+        // 线宽三档：细(2,默认)/中(4)/粗(8)。只影响新画的形状——形状不可变，改已有形状走撤销重画
+        Integer[] widths = {2, 4, 8};
+        javax.swing.JComboBox<Integer> widthBox = new javax.swing.JComboBox<>(widths);
+        widthBox.setSelectedIndex(0);
+        widthBox.addActionListener(e -> canvas.setStrokeWidth(
+                (Integer) java.util.Objects.requireNonNull(widthBox.getSelectedItem())));
+        bar.add(widthBox);
         bar.add(new JLabel("   颜色 "));
         colorButton.setBackground(canvas.color());
         colorButton.addActionListener(e -> pickColor());
@@ -232,7 +248,8 @@ public final class PaintFrame extends JFrame {
         StringBuilder text = new StringBuilder(" 形状 ").append(drawing.size())
                 .append("  选中 ").append(drawing.selection() < 0 ? "无" : "#" + drawing.selection())
                 .append("  历史 撤销 ").append(history.undoDepth())
-                .append("/重做 ").append(history.redoDepth());
+                .append("/重做 ").append(history.redoDepth())
+                .append("  （选中后可用方向键微调：1px，Shift+方向键 10px）");
         if (history.droppedCount() > 0) {
             text.append("  （最早 ").append(history.droppedCount()).append(" 步已超出历史深度，无法撤销）");
         }
@@ -240,6 +257,23 @@ public final class PaintFrame extends JFrame {
             text.append("  ● 未保存");
         }
         status.setText(text.toString());
+        refreshShapeProps();
+    }
+
+    /** 选中形状的实时属性（只读面板）：编辑仍走拖动/方向键——形状不可变，就地改值与撤销栈天然冲突。 */
+    private void refreshShapeProps() {
+        int selected = drawing.selection();
+        if (selected < 0) {
+            shapeProps.setText(" 属性：未选中形状");
+            return;
+        }
+        Shape shape = drawing.get(selected);
+        java.awt.Rectangle bounds = shape.bounds();
+        shapeProps.setText(" 属性 #" + selected + "：" + shape.kind()
+                + "  位置 (" + bounds.x + "," + bounds.y + ")"
+                + "  尺寸 " + bounds.width + "×" + bounds.height
+                + "  线宽 " + shape.strokeWidth()
+                + "  颜色 " + Shape.colorHex(shape.color()));
     }
 
     private String askText(String question, String initial) {
@@ -258,7 +292,63 @@ public final class PaintFrame extends JFrame {
 
     private void confirmAndClose() {
         if (confirmDiscardIfDirty()) {
+            rememberWindowBounds();                     // M3：确认关窗才记，取消不算
             dispose();
+        }
+    }
+
+    // ------------------------------------------------ M3 窗口记忆（java.util.prefs）
+    private static final int MIN_RESTORE_W = 400;
+    private static final int MIN_RESTORE_H = 300;
+
+    private static Preferences windowPrefs() {
+        return Preferences.userNodeForPackage(PaintFrame.class).node("window");
+    }
+
+    private void restoreWindowBounds() {
+        Preferences prefs = windowPrefs();
+        int x = prefs.getInt("x", 0);
+        int y = prefs.getInt("y", 0);
+        int w = prefs.getInt("w", 0);
+        int h = prefs.getInt("h", 0);
+        boolean hasSize = w >= MIN_RESTORE_W && h >= MIN_RESTORE_H;
+        if (hasSize && mostlyOnScreen(x, y, w, h)) {
+            setBounds(x, y, w, h);                      // 位置和尺寸都可信：原样恢复
+        } else {
+            setSize(hasSize ? w : 900, hasSize ? h : 620);
+            setLocationByPlatform(true);                // 尺寸能用但位置离谱：尺寸要，位置交给系统
+        }
+    }
+
+    /** 面积至少 3/4 落在虚拟桌面（所有屏幕的并集）内才认这个位置——
+     *  防止"上次在已拔掉的副屏上关闭"把窗口恢复到永远看不见的地方。 */
+    private static boolean mostlyOnScreen(int x, int y, int w, int h) {
+        Rectangle virtual = null;
+        for (java.awt.GraphicsDevice device
+                : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+            Rectangle screen = device.getDefaultConfiguration().getBounds();
+            virtual = virtual == null ? screen : virtual.union(screen);
+        }
+        if (virtual == null) {
+            return false;
+        }
+        Rectangle visible = new Rectangle(x, y, w, h).intersection(virtual);
+        long visibleArea = (long) visible.width * visible.height;
+        long totalArea = (long) w * h;
+        return visibleArea * 4 >= totalArea * 3;
+    }
+
+    private void rememberWindowBounds() {
+        try {
+            Preferences prefs = windowPrefs();
+            Rectangle bounds = getBounds();
+            prefs.putInt("x", bounds.x);
+            prefs.putInt("y", bounds.y);
+            prefs.putInt("w", bounds.width);
+            prefs.putInt("h", bounds.height);
+            prefs.flush();                              // BackingStoreException → 当没记成
+        } catch (BackingStoreException ignored) {
+            // 首选项后端不可用（极少见）：窗口记忆是锦上添花，不拦关窗
         }
     }
 

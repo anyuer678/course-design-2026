@@ -22,6 +22,16 @@ public final class LineShape extends Shape {
         this(new Point(x1, y1), new Point(x2, y2), color);
     }
 
+    public LineShape(int x1, int y1, int x2, int y2, Color color, int strokeWidth) {
+        this(new Point(x1, y1), new Point(x2, y2), color, strokeWidth);
+    }
+
+    public LineShape(Point from, Point to, Color color, int strokeWidth) {
+        super(color, strokeWidth);
+        this.from = Objects.requireNonNull(from, "from");
+        this.to = Objects.requireNonNull(to, "to");
+    }
+
     public Point from() {
         return from;
     }
@@ -42,7 +52,8 @@ public final class LineShape extends Shape {
 
     @Override
     public Shape translatedBy(int dx, int dy) {
-        return new LineShape(from.x() + dx, from.y() + dy, to.x() + dx, to.y() + dy, color());
+        return new LineShape(from.x() + dx, from.y() + dy, to.x() + dx, to.y() + dy,
+                color(), strokeWidth());
     }
 
     @Override
@@ -55,14 +66,14 @@ public final class LineShape extends Shape {
     @Override
     public void draw(Graphics2D g) {
         g.setColor(color());
-        g.setStroke(new BasicStroke(STROKE_WIDTH, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g.setStroke(new BasicStroke(strokeWidth(), BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
         g.drawLine(from.x(), from.y(), to.x(), to.y());
     }
 
     @Override
     public String serialize() {
         return "line " + from.x() + " " + from.y() + " " + to.x() + " " + to.y()
-                + " " + colorHex(color());
+                + " " + colorHex(color()) + widthSuffix();
     }
 
     @Override

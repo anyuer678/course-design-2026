@@ -156,6 +156,44 @@
       user = (data.portal && data.portal.user) || null;
       renderAuth();
       render(last);
+      refreshAudit();
+    });
+  }
+
+  // ------------------------------------------------ 操作审计（M2，登录后可见）
+  var OUTCOME_CLS = { ok: "pill ok", refused: "pill warn",
+                      failed: "pill err", timeout: "pill err" };
+  function refreshAudit() {
+    if (!user) return;                       // 未登录：保持占位行，不发请求（401 噪音）
+    fetch("/api/audit?limit=50").then(function (r) {
+      return r.json().then(function (d) { return { status: r.status, d: d }; });
+    }).then(function (r) {
+      var rows = $("audit-rows");
+      if (!rows) return;
+      rows.textContent = "";
+      if (r.status !== 200) {
+        rows.appendChild(el("tr")).appendChild(
+          el("td", "note", "审计读取失败（HTTP " + r.status + "）"));
+        return;
+      }
+      var events = r.d.events || [];
+      if (!events.length) {
+        rows.appendChild(el("tr")).appendChild(
+          el("td", "note", "还没有启停动作——启动或停止一个产品后这里开始记账。"));
+        return;
+      }
+      events.forEach(function (e) {
+        var tr = el("tr");
+        var t = new Date((e.ts || 0) * 1000);
+        tr.appendChild(el("td", "time",
+          isNaN(t) ? "—" : t.toLocaleString("zh-CN", { hour12: false })));
+        tr.appendChild(el("td", "", e.action === "start" ? "启动" : "停止"));
+        tr.appendChild(el("td", "", el("span", "kbd", e.pid).textContent));
+        tr.appendChild(el("td", "", "")).appendChild(
+          el("span", OUTCOME_CLS[e.outcome] || "pill", e.outcome));
+        tr.appendChild(el("td", "note", e.detail || ""));
+        rows.appendChild(tr);
+      });
     });
   }
 
@@ -180,6 +218,10 @@
       activateNav("account");
       var t = $("account");
       if (t) t.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (location.hash === "#audit") {
+      activateNav("audit");
+      var a = $("audit");
+      if (a) a.scrollIntoView({ behavior: "smooth", block: "start" });
     } else {
       activateNav("cards");
     }

@@ -22,6 +22,15 @@ public final class EllipseShape extends Shape {
         this.height = box.height;
     }
 
+    public EllipseShape(int x1, int y1, int x2, int y2, Color color, int strokeWidth) {
+        super(color, strokeWidth);
+        Rectangle box = normalizedBox(x1, y1, x2, y2);
+        this.x = box.x;
+        this.y = box.y;
+        this.width = box.width;
+        this.height = box.height;
+    }
+
     @Override
     public String kind() {
         return "ellipse";
@@ -34,7 +43,8 @@ public final class EllipseShape extends Shape {
 
     @Override
     public Shape translatedBy(int dx, int dy) {
-        return new EllipseShape(x + dx, y + dy, x + dx + width, y + dy + height, color());
+        return new EllipseShape(x + dx, y + dy, x + dx + width, y + dy + height,
+                color(), strokeWidth());
     }
 
     @Override
@@ -50,13 +60,14 @@ public final class EllipseShape extends Shape {
     @Override
     public void draw(Graphics2D g) {
         g.setColor(color());
-        g.setStroke(new BasicStroke(STROKE_WIDTH));
+        g.setStroke(new BasicStroke(strokeWidth()));
         g.drawOval(x, y, width, height);
     }
 
     @Override
     public String serialize() {
-        return "ellipse " + x + " " + y + " " + width + " " + height + " " + colorHex(color());
+        return "ellipse " + x + " " + y + " " + width + " " + height + " " + colorHex(color())
+                + widthSuffix();
     }
 
     @Override

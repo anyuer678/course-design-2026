@@ -3,7 +3,7 @@
 B14 没有 Python 测试框架（Java 项目，自检入口是 PaintTests）——本文件直跑：
 `python tests\\test_showcase.py`（口径同批次③的 C++ 项目）。
 
-钉住：页面新鲜度、Java 现算事实（7054 项 / 8 组 / 像素统计）、PNG 内嵌与确定性 sha1、
+钉住：页面新鲜度、Java 现算事实（7106 项 / 9 组 / 像素统计）、PNG 内嵌与确定性 sha1、
 规范化规则（临时文件名）、改坏必红、标记与零外链。
 """
 from __future__ import annotations
@@ -51,16 +51,16 @@ class TestPayload(unittest.TestCase):
 
     def test_selftest_facts(self):
         facts = dict(self.payload["facts"])
-        self.assertIn("7054 项检查、0 失败", facts["自检（headless）"])
-        self.assertIn("8 组", facts["自检（headless）"])
+        self.assertIn("7106 项检查、0 失败", facts["自检（headless）"])
+        self.assertIn("9 组", facts["自检（headless）"])
         self.assertIn("随机操作 vs 快照模型", facts["自检（headless）"])
-        self.assertEqual(len(self.payload["modules"]), 8)
+        self.assertEqual(len(self.payload["modules"]), 9)
 
     def test_offscreen_facts(self):
         facts = dict(self.payload["facts"])
         self.assertIn("红 1160 / 蓝 834 / 绿 642", facts["离屏演示"])
         self.assertIn("[rect, ellipse, line]", facts["离屏演示"])
-        self.assertIn("20 个源文件", facts["类体系"])
+        self.assertIn("21 个源文件", facts["类体系"])
 
     def test_png_deterministic(self):
         facts = dict(self.payload["facts"])

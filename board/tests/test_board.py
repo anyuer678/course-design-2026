@@ -1,11 +1,11 @@
 """board 画板自测：B14 引擎自检 + 备份仓库 + 节流自动备份 + 守护探活 + CLI + 启动器契约。
 
 对拍口径（零件库纪律的测试面）：
-    - B14 PaintTests（7054 项检查）在产品编译产物上现跑现过——引擎没被产品层碰坏；
+    - B14 PaintTests（7106 项检查）在产品编译产物上现跑现过——引擎没被产品层碰坏；
     - 绘图/存取/PNG 全走 B14 真件（PaintCanvas 交互语义、SafeStore 白名单、
       DrawingFormat 往返），产品侧只补备份与守护；
-    - 钉值出处：B14 README 钉了自检 7054 项；PNG 魔数 \\x89PNG；探活回行的
-      docs/backups/corrupt 是现算活账。
+    - 钉值出处：B14 README 钉了自检 7106 项（拓展轮 2026-10-07 画笔/线宽/微调
+      +52）；PNG 魔数 \\x89PNG；探活回行的 docs/backups/corrupt 是现算活账。
 """
 import json
 import socket
@@ -47,7 +47,7 @@ def run_cli(data_dir: Path, script_lines: list[str], *, keep: int = 20,
 
 
 class EngineTest(unittest.TestCase):
-    """引擎完好性：产品编译产物上现跑 B14 的 7054 项自检。"""
+    """引擎完好性：产品编译产物上现跑 B14 的 7106 项自检。"""
 
     def test_b14_selfcheck_on_product_build(self):
         classes, test_classes = ensure_classes()
@@ -56,10 +56,10 @@ class EngineTest(unittest.TestCase):
             capture_output=True, text=True, encoding="utf-8", errors="replace",
             timeout=300, check=False)
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        # 钉值出处：B14 README——"7054 项检查"。格式："全部通过：7054 项检查，0 失败"
+        # 钉值出处：B14 README——"7106 项检查"（拓展轮 +52）。格式："全部通过：7106 项检查，0 失败"
         summary = [ln for ln in proc.stdout.splitlines() if "全部通过" in ln]
         self.assertTrue(summary, "自检汇总行没找到")
-        self.assertIn("7054", summary[-1])
+        self.assertIn("7106", summary[-1])
         self.assertIn("0 失败", summary[-1])
 
 
@@ -146,6 +146,30 @@ class CliTest(unittest.TestCase):
         png = self.data / "冒烟.png"
         self.assertTrue(png.exists())
         self.assertEqual(png.read_bytes()[:4], PNG_MAGIC)
+
+    def test_pencil_nudge_width_roundtrip(self):
+        """拓展轮（10-07）：画笔一笔=一个形状、nudge 微调生效、线宽 w 尾缀进文档往返。"""
+        rc, records, err = run_cli(self.data, [
+            "tool pencil", "width 4", "color #ff8800",
+            "scribble 10 10 20 30 40 10",
+            "tool rect", "width 8",
+            "draw 0 0 50 50",
+            "nudge 5 0",
+            "save 拓展.pad", "stats",
+        ])
+        self.assertEqual(rc, 0, err)
+        scribble = next(r for r in records if r.get("op") == "scribble")
+        self.assertTrue(scribble["committed"])
+        self.assertEqual(scribble["points"], 3)           # 一次拖拽 = 一条命令、三个采样点
+        nudge = next(r for r in records if r.get("op") == "nudge")
+        self.assertTrue(nudge["moved"])
+        text = (self.data / "拓展.pad").read_text(encoding="utf-8")
+        self.assertIn("pencil #FF8800 3 10 10 20 30 40 10 w4", text)
+        self.assertIn("rect 5 0 50 50 #FF8800 w8", text)  # 微调后的位置 + 线宽尾缀
+        rc2, records2, _ = run_cli(self.data, ["new", "open 拓展.pad", "stats"])
+        self.assertEqual(rc2, 0)
+        stats = [r for r in records2 if r.get("op") == "stats"]
+        self.assertEqual(stats[0]["kinds"], "pencil,rect")
 
     def test_bad_script_first_error_stops(self):
         """首错即停：未知操作/非法文件名都带行号报错、退出码 2、之前的操作结果仍在。"""

@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from studio.auth import USERNAME, Auth
+from studio.manager import AlreadyOnline
 from studio.server import build_app, build_manager
 
 def _free_port(start: int) -> int:
@@ -328,7 +329,72 @@ class PortalCase(unittest.TestCase):
             time.sleep(0.2)
         else:
             self.fail("board stop 后 8s 探活仍在线（看门狗没收干净）")
+        status, _, body = self.authed("POST", "/api/products/board/stop", cookie)
         self.assertFalse(json.loads(body)["online"])
+
+    # ------------------------------------------------ M2 操作审计（2026-10-07）
+    def test_audit_api_gate_and_empty(self):
+        """M2：审计读取要登录（401）；本用例的 manager 没挂账本 → 空账也 200。"""
+        status, _, _ = self.handle("GET", "/api/audit")
+        self.assertEqual(status, 401)
+        cookie = self.login()
+        status, _, body = self.authed("GET", "/api/audit", cookie)
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body), {"events": []})
+
+
+class TestAudit(unittest.TestCase):
+    """M2 操作审计：启停（含拒绝）如实入账、幂等空操作不记、落盘重启仍在。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.port = _free_port(18198)
+        cls.manager = build_manager(linkbox_port=cls.port,
+                                    lab_port=_free_port(18188),
+                                    simlab_port=_free_port(18218),
+                                    datascope_port=_free_port(18228),
+                                    cachekv_port=_free_port(18238),
+                                    sensorhub_port=_free_port(18249),
+                                    board_port=_free_port(18259),
+                                    courselab_port=_free_port(18269),
+                                    boardweb_port=_free_port(18279),
+                                    linkbox_memory=True,
+                                    audit_path=Path(cls._tmp.name) / "audit.sqlite3")
+
+    @classmethod
+    def tearDownClass(cls):
+        if cls.manager.audit is not None:
+            cls.manager.audit.close()            # Windows：连接不关，临时目录删不掉
+        cls._tmp.cleanup()
+
+    def test_lifecycle_writes_audit(self):
+        m = self.manager
+        with self.assertRaises(ValueError):
+            m.start("studio")                        # 已规划 → refused
+        with self.assertRaises(AlreadyOnline):
+            m.procs["linkbox"] = object()            # 伪造句柄 → refused
+            m.start("linkbox")
+        del m.procs["linkbox"]
+        self.assertEqual(m.audit.count(), 2)
+        m.start("linkbox")                           # 真启动 → ok
+        m.stop("linkbox")                            # 真停止 → ok
+        m.stop("linkbox")                            # 幂等空操作 → 不记账
+        m.start("linkbox")                           # 再启动 → ok
+        m.stop("linkbox")
+        events = m.audit.tail(50)
+        actions = [(e["action"], e["pid"], e["outcome"]) for e in events]
+        self.assertIn(("start", "linkbox", "ok"), actions)
+        self.assertIn(("stop", "linkbox", "ok"), actions)
+        self.assertIn(("start", "studio", "refused"), actions)
+        self.assertEqual(actions.count(("stop", "linkbox", "ok")), 2)
+        # 幂等空操作没入账：stop 事件恰好 2 次（每次真停各 1）
+        self.assertEqual([e["action"] for e in events].count("stop"), 2)
+        # 落盘：换个 AuditLog 实例（模拟重启后）账还在
+        from studio.audit import AuditLog
+        reopened = AuditLog(Path(self._tmp.name) / "audit.sqlite3")
+        self.assertGreaterEqual(reopened.count(), 6)
+        reopened.close()
 
 
 class TestOverRealSocket(unittest.TestCase):

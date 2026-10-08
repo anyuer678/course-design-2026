@@ -85,12 +85,18 @@ class AppCase(unittest.TestCase):
             return self.app.stash_qr(req)
         if clean.startswith("/s/") and method == "GET":
             return self.app.stash_page(req)
+        if clean.startswith("/s/") and method == "POST" and clean.endswith("/delete"):
+            return self.app.stash_delete_page(req)     # L3：必须在泛化 POST /s/ 之前
         if clean.startswith("/s/") and method == "POST":
             return self.app.stash_page_post(req)
         if clean == "/api/files" and method == "POST":
             return self.app.create_file(req)
         if clean.startswith("/api/files/") and method in ("GET", "DELETE"):
             return self.app.file_api(req)
+        if clean.startswith("/api/links/") and method == "DELETE":
+            return self.app.delete_link(req)
+        if clean == "/api/links" and method == "GET":
+            return self.app.list_links(req)
         if clean.endswith("/qr.svg") and clean.startswith("/f/") and method == "GET":
             return self.app.file_qr(req)
         if clean.startswith("/f/") and method in ("GET", "HEAD"):
@@ -224,6 +230,53 @@ class AppCase(unittest.TestCase):
         status, _, _ = self.request(
             "DELETE", f"/api/stash/{code}?passcode=secret1")
         self.assertEqual(status, 204)
+        status, _, _ = self.request("GET", f"/api/stash/{code}")
+        self.assertEqual(status, 404)
+
+    # ------------------------------------------------ L3 删除管理（2026-10-07）
+    def test_stash_view_page_has_delete_form(self):
+        """L3：查看页自带删除表单；受保护的暂存表单带口令框，无口令的不带。"""
+        info = self.make_stash({"content": "plain"})
+        status, _, body = self.request("GET", f"/s/{info['code']}")
+        self.assertEqual(status, 200)
+        self.assertIn(f'action="/s/{info["code"]}/delete"'.encode(), body)
+        self.assertNotIn(b'type="password"', body)
+        info2 = self.make_stash({"content": "protected"}, passcode="pw123")
+        status, _, body = self.request(
+            "GET", f"/s/{info2['code']}?passcode=pw123")
+        self.assertEqual(status, 200)
+        self.assertIn(b'type="password"', body)
+
+    def test_stash_delete_page_flow(self):
+        """L3 查看页删除：表单 POST /s/<码>/delete → 已删除页 → 原链接 404。"""
+        info = self.make_stash({"content": "delete me"})
+        code = info["code"]
+        status, _, body = self.request(
+            "POST", f"/s/{code}/delete", raw=b"",
+            headers=[("Content-Type", "application/x-www-form-urlencoded")])
+        self.assertEqual(status, 200)
+        self.assertIn("已删除", body.decode("utf-8"))
+        status, _, _ = self.request("GET", f"/s/{code}")
+        self.assertEqual(status, 404)
+
+    def test_stash_delete_page_gated_by_passcode(self):
+        """L3：设口令的暂存删除也要口令——错口令回表单不删，对口令才删。"""
+        info = self.make_stash({"content": "secret"}, passcode="pw123")
+        code = info["code"]
+        wrong = urllib.parse.urlencode({"passcode": "nope"}).encode()
+        status, _, body = self.request(
+            "POST", f"/s/{code}/delete", raw=wrong,
+            headers=[("Content-Type", "application/x-www-form-urlencoded")])
+        self.assertEqual(status, 200)
+        self.assertIn("没有删除", body.decode("utf-8"))
+        status, _, _ = self.request("GET", f"/api/stash/{code}?passcode=pw123")
+        self.assertEqual(status, 200)                  # 内容还在
+        right = urllib.parse.urlencode({"passcode": "pw123"}).encode()
+        status, _, body = self.request(
+            "POST", f"/s/{code}/delete", raw=right,
+            headers=[("Content-Type", "application/x-www-form-urlencoded")])
+        self.assertEqual(status, 200)
+        self.assertIn("已删除", body.decode("utf-8"))
         status, _, _ = self.request("GET", f"/api/stash/{code}")
         self.assertEqual(status, 404)
 
@@ -365,6 +418,27 @@ class AppCase(unittest.TestCase):
         self.assertEqual(status, 302)
         loc = {k.lower(): v for k, v in headers}["location"]
         self.assertEqual(loc, "http://example.com/page")
+
+    def test_delete_link_roundtrip(self):
+        """L3：DELETE /api/links/<码> 204 → 跳转 404 → 重复删除 404 → 账面同步。"""
+        status, _, body = self.request(
+            "POST", "/api/links", {"url": "http://example.com/del"})
+        self.assertEqual(status, 201)
+        code = json.loads(body)["code"]
+        self.request("GET", f"/l/{code}")              # 造一次命中
+        status, _, _ = self.request("DELETE", f"/api/links/{code}")
+        self.assertEqual(status, 204)
+        status, _, _ = self.request("GET", f"/l/{code}")
+        self.assertEqual(status, 404)
+        status, _, _ = self.request("DELETE", f"/api/links/{code}")
+        self.assertEqual(status, 404)
+        status, _, body = self.request("GET", "/api/links")
+        self.assertEqual(json.loads(body)["stats"]["links"], 0)
+
+    def test_delete_link_bad_code_400(self):
+        """L3：短码形状不对 400（与 B31 _code_from 同口径）。"""
+        status, _, _ = self.request("DELETE", "/api/links/not_base62!")
+        self.assertEqual(status, 400)
 
     def test_product_index_served(self):
         status, headers, body = self.request("GET", "/")
@@ -631,6 +705,25 @@ class TestOverRealSocket(unittest.TestCase):
         status, payload = talk("GET", f"/s/{code}/qr.svg")
         self.assertEqual(status, 200)
         self.assertTrue(payload.startswith(b"<svg"))
+
+    def test_delete_link_over_real_socket(self):
+        """L3 协议层：真套接字上 DELETE 短链 204 → 跳转 404 → 重复删除 404。
+        每个请求单独建连接：204 无响应体，keep-alive 状态机不值得在这里依赖。"""
+        def talk(method, path, body=None, ctype=None):
+            conn = http.client.HTTPConnection("127.0.0.1", self.port)
+            headers = {"Content-Type": ctype} if ctype else {}
+            conn.request(method, path, body=body, headers=headers)
+            resp = conn.getresponse()
+            payload = resp.read()
+            conn.close()
+            return resp.status, payload
+        status, payload = talk(
+            "POST", "/api/links",
+            json.dumps({"url": "http://example.com/rs"}).encode(), "application/json")
+        code = json.loads(payload)["code"]
+        self.assertEqual(talk("DELETE", f"/api/links/{code}")[0], 204)
+        self.assertEqual(talk("GET", f"/l/{code}")[0], 404)
+        self.assertEqual(talk("DELETE", f"/api/links/{code}")[0], 404)
 
 
 class TestHardening20261007(AppCase):

@@ -15,6 +15,7 @@
     <div class="side-brand"><span class="logo">ST</span>Studio</div>
     <div class="side-section">门户</div>
     <a class="side-link active" href="#cards" data-nav="cards">产品矩阵</a>
+    <a class="side-link" href="#audit" data-nav="audit">操作审计</a>
     <a class="side-link" href="#account" data-nav="account">账户</a>
     <div class="side-foot">
       <div class="badge-dot" id="foot-state">只绑 127.0.0.1</div>
@@ -47,6 +48,17 @@
       <p class="note">目录 · 一键启停 · 状态面板 · 导航。管理动作（启停）需登录；
         "在线 = 端口连得上"，不撒谎。</p>
       <section id="cards" class="grid" style="margin-top:1rem"></section>
+
+      <div class="overline">Audit</div>
+      <h2 id="audit">操作审计 <span class="note">（启停动作的账，含拒绝与失败；需登录查看）</span></h2>
+      <table class="kb">
+        <thead><tr>
+          <th>时间</th><th>动作</th><th>产品</th><th>结果</th><th>说明</th>
+        </tr></thead>
+        <tbody id="audit-rows">
+          <tr><td colspan="5" class="note">登录后可见。</td></tr>
+        </tbody>
+      </table>
 
       <div class="overline">Account</div>
       <h2 id="account">改口令</h2>

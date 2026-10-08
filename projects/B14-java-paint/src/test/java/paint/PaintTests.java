@@ -19,6 +19,7 @@ import paint.io.SafeStore;
 import paint.model.Drawing;
 import paint.model.EllipseShape;
 import paint.model.LineShape;
+import paint.model.PencilShape;
 import paint.model.RectShape;
 import paint.model.Shape;
 import paint.ui.PaintCanvas;
@@ -53,6 +54,7 @@ public final class PaintTests {
         run("文档与命中", PaintTests::testDrawing);
         run("撤销/重做", PaintTests::testCommands);
         run("文件格式", PaintTests::testFileFormat);
+        run("画笔与线宽", PaintTests::testPencilAndWidth);
         run("文件存取防线", PaintTests::testStore);
         run("离屏渲染像素", PaintTests::testRender);
         run("交互语义", PaintTests::testInteraction);
@@ -565,6 +567,128 @@ public final class PaintTests {
                 "选择工具不能创建形状");
         throwsSomething(IllegalArgumentException.class, "null",
                 () -> canvas.setTool(null), "工具为 null 要拒");
+    }
+
+    // ------------------------------------------------ 画笔与线宽（拓展轮 2026-10-07）
+    private static void testPencilAndWidth() throws Exception {
+        // 画笔模型：构造/不可变/命中/平移
+        PencilShape squiggle = new PencilShape(List.of(
+                new paint.model.Point(0, 0), new paint.model.Point(10, 10),
+                new paint.model.Point(20, 0)), Color.ORANGE, 4);
+        eq(squiggle.pointCount(), 3, "笔迹点数");
+        eq(squiggle.strokeWidth(), 4, "画笔带线宽");
+        check(squiggle.contains(5, 5), "笔迹段上的点应命中");
+        check(!squiggle.contains(50, 50), "远离笔迹的点不命中");
+        Shape moved = squiggle.translatedBy(3, 4);
+        check(moved != squiggle, "平移返回新实例（不可变纪律）");
+        eq(moved.bounds().x, 3, "平移后的外接框");
+        eq(moved.strokeWidth(), 4, "平移保留线宽");
+        throwsSomething(IllegalArgumentException.class, "至少",
+                () -> new PencilShape(List.of(new paint.model.Point(0, 0)), Color.RED, 2),
+                "单点笔迹要拒");
+        throwsSomething(IllegalArgumentException.class, "线宽",
+                () -> new PencilShape(List.of(new paint.model.Point(0, 0),
+                        new paint.model.Point(1, 1)), Color.RED, 33),
+                "线宽越界要拒");
+
+        // 画笔序列化往返（默认线宽不带 w 尾缀 / 非默认带）
+        PencilShape plain = new PencilShape(List.of(
+                new paint.model.Point(1, 2), new paint.model.Point(3, 4)), Color.BLACK, 2);
+        check(plain.serialize().startsWith("pencil #000000 2 1 2 3 4"),
+                "默认线宽不写尾缀（老格式零变化）");
+        check(squiggle.serialize().endsWith(" w4"), "非默认线宽带 w 尾缀");
+        Drawing doc = drawingOf(plain, squiggle);
+        Drawing back = DrawingFormat.parse(DrawingFormat.serialize(doc));
+        eq(back.shapes(), doc.shapes(), "画笔+线宽往返必须完全相等");
+
+        // 线宽在三种图形上的序列化与读回
+        Shape wideRect = new RectShape(0, 0, 10, 10, Color.RED, 8);
+        check(wideRect.serialize().endsWith(" w8"), "矩形线宽尾缀");
+        Shape wideLine = new LineShape(0, 0, 5, 5, Color.BLUE, 6);
+        Drawing wide = drawingOf(wideRect, wideLine);
+        Drawing wideBack = DrawingFormat.parse(DrawingFormat.serialize(wide));
+        eq(wideBack.shapes(), wide.shapes(), "带线宽的形状往返相等");
+        // 老格式（没有 w 尾缀）读回默认线宽：向后兼容
+        Drawing legacy = DrawingFormat.parse("pad 1\nline 0 0 5 5 #0000FF\n");
+        eq(legacy.get(0).strokeWidth(), Shape.STROKE_WIDTH, "老文件读回默认线宽");
+        eq(legacy.get(0), new LineShape(0, 0, 5, 5, Color.BLUE), "老文件读回等于默认宽度形状");
+
+        // 坏线宽尾缀逐个拒绝
+        for (String bad : List.of(
+                "pad 1\nline 0 0 5 5 #0000FF w0\n",
+                "pad 1\nline 0 0 5 5 #0000FF w33\n",
+                "pad 1\nline 0 0 5 5 #0000FF wx\n",
+                "pad 1\npencil #000000 2 0 0 5 5 w33\n",
+                "pad 1\npencil #000000 1 0 0\n",          // 点数 < 2
+                "pad 1\npencil #000000 3 0 0 5 5\n")) {   // 点数与坐标数不符
+            checks++;
+            try {
+                DrawingFormat.parse(bad);
+                FAILURES.add("group:坏线宽/坏笔迹被接受：" + bad.replace("\n", "\\n"));
+            } catch (DrawingFormatException expected) {
+                check(!expected.problems().isEmpty(), "坏笔迹要有问题描述：" + bad);
+            }
+        }
+
+        // 画布上的画笔流：按下无预览 → 首拖成形 → 逐点追加 → 松手提交
+        Drawing pencilDoc = new Drawing();
+        CommandHistory pencilHistory = new CommandHistory();
+        PaintCanvas pencilCanvas = new PaintCanvas(pencilDoc, pencilHistory);
+        pencilCanvas.setTool(Tool.PENCIL);
+        pencilCanvas.setStrokeWidth(4);
+        pencilCanvas.pressAt(0, 0, false);
+        check(pencilCanvas.preview() == null, "画笔按下时还没有预览（首拖才成形）");
+        pencilCanvas.dragTo(10, 10);
+        check(pencilCanvas.preview() instanceof PencilShape, "首拖成形为画笔预览");
+        pencilCanvas.dragTo(10, 10);
+        eq(((PencilShape) pencilCanvas.preview()).pointCount(), 2,
+                "同点重复采样不生长");
+        pencilCanvas.dragTo(20, 5);
+        pencilCanvas.dragTo(30, 10);
+        eq(((PencilShape) pencilCanvas.preview()).pointCount(), 4, "逐点追加");
+        check(pencilCanvas.releaseAt(30, 10), "松手提交一笔");
+        eq(pencilDoc.size(), 1, "一笔 = 一个形状");
+        eq(((PencilShape) pencilDoc.get(0)).pointCount(), 4, "提交的笔迹点数如实");
+        eq(pencilDoc.get(0).strokeWidth(), 4, "提交的笔迹带线宽");
+        pencilCanvas.pressAt(5, 5, false);
+        check(!pencilCanvas.releaseAt(5, 5), "画笔单击（无拖拽）不成笔迹");
+        eq(pencilDoc.size(), 1, "误点没有改文档");
+        pencilHistory.undo();
+        eq(pencilDoc.size(), 0, "一笔可整体撤销");
+
+        // 方向键微调：1px / Shift 10px，无选中不动，微调可撤销
+        Drawing nudgeDoc = new Drawing();
+        CommandHistory nudgeHistory = new CommandHistory();
+        PaintCanvas nudgeCanvas = new PaintCanvas(nudgeDoc, nudgeHistory);
+        nudgeCanvas.setTool(Tool.RECT);
+        nudgeCanvas.pressAt(10, 10, false);
+        nudgeCanvas.dragTo(30, 30);
+        nudgeCanvas.releaseAt(30, 30);
+        eq(((RectShape) nudgeDoc.get(0)).x(), 10, "微调前的位置");
+        check(nudgeCanvas.pressKey(java.awt.event.KeyEvent.VK_RIGHT, false, false),
+                "有选中时方向键必须处理");
+        eq(((RectShape) nudgeDoc.get(0)).x(), 11, "→ 微调 1px");
+        nudgeCanvas.pressKey(java.awt.event.KeyEvent.VK_LEFT, false, true);
+        eq(((RectShape) nudgeDoc.get(0)).x(), 1, "Shift+← 大步 10px（11-10）");
+        check(nudgeCanvas.pressKey(java.awt.event.KeyEvent.VK_UP, false, false), "↑ 有响应");
+        eq(((RectShape) nudgeDoc.get(0)).y(), 9, "↑ 微调 1px（10-1）");
+        nudgeCanvas.pressKey(java.awt.event.KeyEvent.VK_ESCAPE, false, false);
+        check(!nudgeCanvas.nudgeBy(1, 0), "取消选中后微调不动");
+        nudgeHistory.undo();
+        eq(((RectShape) nudgeDoc.get(0)).y(), 10, "微调是一条独立命令可撤销");
+
+        // 工厂与画布的线宽校验
+        eq(ShapeFactory.create(Tool.RECT, 0, 0, 5, 5, Color.BLACK).strokeWidth(),
+                Shape.STROKE_WIDTH, "工厂默认宽度");
+        eq(ShapeFactory.create(Tool.LINE, 0, 0, 5, 5, Color.BLACK, 8).strokeWidth(),
+                8, "工厂带宽度");
+        throwsSomething(IllegalArgumentException.class, "线宽",
+                () -> nudgeCanvas.setStrokeWidth(0), "线宽下限要拒");
+        throwsSomething(IllegalArgumentException.class, "线宽",
+                () -> nudgeCanvas.setStrokeWidth(33), "线宽上限要拒");
+        throwsSomething(IllegalArgumentException.class, "不由两点工厂产出",
+                () -> ShapeFactory.create(Tool.PENCIL, 0, 0, 1, 1, Color.BLACK),
+                "画笔不走两点工厂");
     }
 
     /** 快照栈必须和真实历史用同一个深度，否则两边"能撤销到多远"不一样，比较就失去意义。 */

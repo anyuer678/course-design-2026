@@ -5,6 +5,10 @@ word-break:break-all}
 .result.err{border-color:var(--errline);background:var(--errbg);color:var(--err)}
 .result a{font-weight:650}
 .list li{display:flex;justify-content:space-between;gap:.6rem}
+/* L3 短链删除按钮（2026-10-07）：小号危险色描边按钮 */
+.btn-del{font:inherit;font-size:.72rem;padding:.15rem .55rem;border:1px solid var(--errline, #b91c1c);
+color:var(--err, #b91c1c);background:transparent;border-radius:6px;cursor:pointer;flex:none}
+.btn-del:hover{background:var(--errbg, #fef2f2)}
 .statcard{display:flex;flex-direction:column}
 table.grid{width:100%;border-collapse:separate;border-spacing:0;font-size:.86rem;
 background:var(--card);border:1px solid var(--line);border-radius:10px;overflow:hidden}

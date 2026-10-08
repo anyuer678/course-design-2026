@@ -6,6 +6,8 @@ import java.util.List;
 import paint.model.Drawing;
 import paint.model.EllipseShape;
 import paint.model.LineShape;
+import paint.model.PencilShape;
+import paint.model.Point;
 import paint.model.RectShape;
 import paint.model.Shape;
 
@@ -121,40 +123,65 @@ public final class DrawingFormat {
     private static Shape parseShape(String line, int lineNo, List<String> problems) {
         String[] parts = line.split("\\s+");
         String kind = parts[0];
-        int expected = switch (kind) {
-            case "line" -> 6;
-            case "rect", "ellipse" -> 6;
-            default -> -1;
-        };
-        if (expected == -1) {
+        // 画笔是变长格式：颜色 + 点数 + 2×点数 个坐标（+ 可选线宽尾缀）；其余固定 6 字段
+        boolean pencil = "pencil".equals(kind);
+        boolean known = pencil || "line".equals(kind)
+                || "rect".equals(kind) || "ellipse".equals(kind);
+        if (!known) {
             problems.add("第 " + lineNo + " 行：不认识的类型 " + kind);
             return null;
         }
-        if (parts.length != expected) {
-            problems.add("第 " + lineNo + " 行：需要 " + expected + " 个字段，实际 " + parts.length);
+        // 线宽尾缀（wN，可选）：非画笔在末尾第 7 字段；画笔在最后一个字段。
+        int width = Shape.STROKE_WIDTH;
+        if (parts.length >= (pencil ? 5 : 7)) {
+            String tail = parts[parts.length - 1];
+            if (tail.length() >= 2 && tail.charAt(0) == 'w') {
+                width = Shape.parseWidthSuffix(tail);
+                if (width < 0) {
+                    problems.add("第 " + lineNo + " 行：线宽尾缀要写成 w1..w"
+                            + Shape.MAX_WIDTH + "，实际是 " + tail);
+                    return null;
+                }
+                String[] trimmed = new String[parts.length - 1];
+                System.arraycopy(parts, 0, trimmed, 0, parts.length - 1);
+                parts = trimmed;
+            } else if (!pencil && parts.length != 6) {
+                problems.add("第 " + lineNo + " 行：需要 6 个字段，实际 " + parts.length);
+                return null;
+            }
+        }
+        if (pencil) {
+            if (parts.length < 5) {
+                problems.add("第 " + lineNo + " 行：pencil 至少要 颜色+点数+2 个坐标，实际 "
+                        + parts.length + " 个字段");
+                return null;
+            }
+            return parsePencil(parts, width, lineNo, problems);
+        }
+        if (parts.length != 6) {
+            problems.add("第 " + lineNo + " 行：需要 6 个字段，实际 " + parts.length);
             return null;
         }
-        List<Integer> numbers = new ArrayList<>();
+        Integer[] numbers = new Integer[4];
         for (int i = 1; i <= 4; i++) {
-            Integer value = parseInt(parts[i]);
-            if (value == null) {
+            numbers[i - 1] = parseInt(parts[i]);
+            if (numbers[i - 1] == null) {
                 problems.add("第 " + lineNo + " 行：第 " + i + " 个字段不是整数：" + parts[i]);
                 return null;
             }
-            numbers.add(value);
         }
         Color color = parseColor(parts[5]);
         if (color == null) {
             problems.add("第 " + lineNo + " 行：颜色必须是 #RRGGBB，实际是 " + parts[5]);
             return null;
         }
-        int x1 = numbers.get(0), y1 = numbers.get(1), x2 = numbers.get(2), y2 = numbers.get(3);
+        int x1 = numbers[0], y1 = numbers[1], x2 = numbers[2], y2 = numbers[3];
         if (!inRange(x1) || !inRange(y1) || !inRange(x2) || !inRange(y2)) {
             problems.add("第 " + lineNo + " 行：坐标超出 ±" + COORD_LIMIT);
             return null;
         }
         return switch (kind) {
-            case "line" -> new LineShape(x1, y1, x2, y2, color);
+            case "line" -> new LineShape(x1, y1, x2, y2, color, width);
             default -> {
                 // rect/ellipse 的第 3、4 个字段是宽高，必须非负；
                 // 手改文件里写成 "x1 y1 x2 y2" 是常见误用，宁可报错也不猜
@@ -167,10 +194,52 @@ public final class DrawingFormat {
                     yield null;
                 }
                 yield "rect".equals(kind)
-                        ? new RectShape(x1, y1, x1 + x2, y1 + y2, color)
-                        : new EllipseShape(x1, y1, x1 + x2, y1 + y2, color);
+                        ? new RectShape(x1, y1, x1 + x2, y1 + y2, color, width)
+                        : new EllipseShape(x1, y1, x1 + x2, y1 + y2, color, width);
             }
         };
+    }
+
+    /** pencil 行：parts = [pencil, #RRGGBB, 点数, x1, y1, …]，width 已从尾缀解析。 */
+    private static Shape parsePencil(String[] parts, int width, int lineNo,
+                                     List<String> problems) {
+        Color color = parseColor(parts[1]);
+        if (color == null) {
+            problems.add("第 " + lineNo + " 行：颜色必须是 #RRGGBB，实际是 " + parts[1]);
+            return null;
+        }
+        Integer count = parseInt(parts[2]);
+        if (count == null || count < PencilShape.MIN_POINTS
+                || count > PencilShape.MAX_POINTS) {
+            problems.add("第 " + lineNo + " 行：点数须在 " + PencilShape.MIN_POINTS
+                    + ".." + PencilShape.MAX_POINTS + "，实际是 " + parts[2]);
+            return null;
+        }
+        if (parts.length != 3 + 2 * count) {
+            problems.add("第 " + lineNo + " 行：点数说 " + count + "，实际给了 "
+                    + (parts.length - 3) + " 个坐标字段");
+            return null;
+        }
+        List<Point> points = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            Integer x = parseInt(parts[3 + 2 * i]);
+            Integer y = parseInt(parts[4 + 2 * i]);
+            if (x == null || y == null) {
+                problems.add("第 " + lineNo + " 行：第 " + (i + 1) + " 个点不是整数坐标");
+                return null;
+            }
+            if (!inRange(x) || !inRange(y)) {
+                problems.add("第 " + lineNo + " 行：坐标超出 ±" + COORD_LIMIT);
+                return null;
+            }
+            points.add(new Point(x, y));
+        }
+        try {
+            return new PencilShape(points, color, width);
+        } catch (IllegalArgumentException bad) {
+            problems.add("第 " + lineNo + " 行：" + bad.getMessage());
+            return null;
+        }
     }
 
     private static boolean inRange(int value) {

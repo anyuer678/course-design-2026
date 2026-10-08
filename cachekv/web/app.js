@@ -201,6 +201,9 @@
       $("live-dot").className = "dot";
       $("hero-live") && ($("hero-live").textContent = "● 服务在线");
 
+      // K2：TTL 分布条（服务器权威数据；倒计时只在两次刷新之间本地推算）
+      renderTtlDist(keys);
+
       // 趋势采样
       if (LAST_HITS !== null) {
         SERIES.push({ t: Date.now(),
@@ -224,6 +227,42 @@
   }
 
   // ---------------- 键空间表
+  // K2 TTL 剩余可视化（2026-10-07）：分布条 + 秒级倒计时（服务器 2s 校准，
+  // 中间由 expires_at 本地推算，同一台机器时钟无偏差，偏差也会被刷新覆盖）
+  function renderTtlDist(keys) {
+    var box = $("ttl-dist"), bar = $("ttl-dist-bar"), legend = $("ttl-dist-legend");
+    if (!box || !bar || !legend) return;               // 安全绑定：缺元素只降级
+    var soon = 0, short = 0, long = 0, forever = 0;
+    keys.forEach(function (k) {
+      if (k.ttl === null || k.ttl === undefined) forever += 1;
+      else if (k.ttl < 60) soon += 1;
+      else if (k.ttl < 300) short += 1;
+      else long += 1;
+    });
+    var total = keys.length;
+    box.hidden = total === 0;
+    if (!total) { bar.textContent = ""; legend.textContent = ""; return; }
+    function seg(cls, n) {
+      var s = el("span", cls);
+      s.style.width = (n / total * 100) + "%";
+      return s;
+    }
+    bar.textContent = "";
+    [[ "b-soon", soon ], ["b-short", short], ["b-long", long], ["b-forever", forever]]
+      .forEach(function (p) { if (p[1]) bar.appendChild(seg(p[0], p[1])); });
+    legend.textContent = "TTL 分布：即将过期(<1m) " + soon + " · 5 分钟内 " + short +
+      " · 更长 " + long + " · 永久 " + forever;
+  }
+  function tickCountdown() {
+    var keys = (STATE.overview && STATE.overview.keys) || [];
+    var live = keys.some(function (k) { return k.expires_at; });
+    if (!live) return;                                 // 全是永久键就不必重画
+    var now = Date.now() / 1000;
+    keys.forEach(function (k) {
+      if (k.expires_at) k.ttl = k.expires_at - now;    // 负数=刚过期，下轮刷新会被服务端摘除
+    });
+    renderKeys();
+  }
   function renderKeys() {
     var keys = visibleKeys();
     var rows = $("key-rows");
@@ -398,4 +437,5 @@
 
   refresh();
   setInterval(refresh, 2000);
+  setInterval(tickCountdown, 1000);   // K2：秒级倒计时（每秒由 expires_at 本地推算）
 })();

@@ -37,6 +37,7 @@ NO_STORE = ("Cache-Control", "no-store")
 SVG_TYPE = ("Content-Type", "image/svg+xml")
 DOWNLOAD_TYPE = ("Content-Type", "application/octet-stream")
 QR_SUFFIX = "/qr.svg"
+DELETE_SUFFIX = "/delete"              # L3：查看页删除表单的提交地址后缀
 
 
 class LinkBoxApp(ShortUrlApp):
@@ -54,10 +55,15 @@ class LinkBoxApp(ShortUrlApp):
 
     def routes(self) -> list:
         return super().routes() + [
+            # L3 短链删除：DELETE /api/links/<码>（B31 原路由只读，删除走产品层）。
+            # GET /api/links/* 只注册了 GET/HEAD，DELETE 首中本条。
+            (("DELETE", "/api/links/*"), self.delete_link),
             (("POST", "/api/stash"), self.create_stash),
             (("GET", "/api/stash/*"), self.stash_api),
             (("DELETE", "/api/stash/*"), self.delete_stash),
             (("GET", f"/s/*{QR_SUFFIX}"), self.stash_qr),
+            # L3 暂存删除表单：必须在 POST /s/* 之前注册（fnmatch 首中分发）
+            (("POST", f"/s/*{DELETE_SUFFIX}"), self.stash_delete_page),
             (("GET", "/s/*"), self.stash_page),
             (("HEAD", "/s/*"), self.stash_page),
             (("POST", "/s/*"), self.stash_page_post),   # M3：口令表单，口令不进 URL
@@ -220,7 +226,75 @@ class LinkBoxApp(ShortUrlApp):
         self.stash.delete(code)
         return 204, [JSON_TYPE], b""
 
-    # ------------------------------------------------ 文件暂存：上传（轮八）
+    # ------------------------------------------------ L3：短链删除 / 暂存查看页删除
+    def delete_link(self, request):
+        """DELETE /api/links/<码>：删除短链（管理能力，B31 引擎新增 Store.delete）。
+        404 不存在 / 204 已删；删掉后再访问 /l/<码> 自然 404。"""
+        code, problem = self._code_from(request.path, "/api/links/")
+        if problem is not None:
+            return 400, [JSON_TYPE], self._error(problem)
+        if not self.store.delete(code):
+            return 404, [JSON_TYPE], self._error(f"短码 {code} 不存在")
+        return 204, [JSON_TYPE], b""
+
+    def _form_fields(self, request) -> tuple[dict | None, tuple | None]:
+        """口令/删除表单共用的表单体解析（与 stash_page_post 同口径）。"""
+        ctype = request.header("content-type")
+        if ctype is not None and \
+                ctype.split(";")[0].strip() != "application/x-www-form-urlencoded":
+            return None, (415, [TEXT_TYPE],
+                          "表单要用 application/x-www-form-urlencoded 提交\n".encode("utf-8"))
+        try:
+            fields = urllib.parse.parse_qs(request.body.decode("utf-8"),
+                                           keep_blank_values=True)
+        except UnicodeDecodeError:
+            return None, (400, [TEXT_TYPE], "表单体不是 UTF-8\n".encode("utf-8"))
+        return fields, None
+
+    def stash_delete_page(self, request):
+        """查看页删除表单的提交端：404 -> 410（顺手清残留）-> 口令门 -> 删除。
+        口令走请求体（与 M3 口令表单同口径，不进 URL/浏览器历史）。"""
+        stem = request.path[:-len(DELETE_SUFFIX)] if \
+            request.path.endswith(DELETE_SUFFIX) else request.path
+        code, problem = self._code_from(stem, "/s/")
+        if problem:
+            return 400, [TEXT_TYPE], problem.encode("utf-8")
+        fields, err = self._form_fields(request)
+        if err:
+            return err
+        candidate = (fields.get("passcode") or [None])[0]
+        try:
+            rec = self.stash.get(code, now=self.clock())
+        except StashGone:
+            self.stash.delete(code)      # 过期行删除等价清理（与 delete_stash 同口径）
+            return 200, [HTML_TYPE, NO_STORE], \
+                self._page("已删除", "这条暂存已过期，现在顺手清掉了残留记录。")
+        if rec is None:
+            return 404, [HTML_TYPE], \
+                self._page("暂存不存在", f"没有找到 {code!r}。")
+        if rec.has_passcode:
+            verdict = self._verify_passcode(self.stash, code, candidate)
+            if verdict == "locked":
+                return 429, [HTML_TYPE, ("Retry-After", "60"), NO_STORE], \
+                    self._page("尝试过于频繁", "口令尝试太多次：请稍后再来。")
+            if not verdict:
+                hint = "口令不正确，没有删除。" if candidate is not None else ""
+                return 200, [HTML_TYPE, NO_STORE], \
+                    self._page("请确认", f"暂存 {code} 设有访问口令，删除需先输口令。",
+                               extra_html=self._delete_form(code, protected=True, hint=hint))
+        self.stash.delete(code)
+        return 200, [HTML_TYPE, NO_STORE], \
+            self._page("已删除", f"暂存 {code} 已删除，原链接即刻失效。")
+
+    def _delete_form(self, code: str, *, protected: bool = False,
+                     hint: str = "") -> str:
+        """查看页的删除表单（受保护的多一个口令框）。口令提交走 POST body。"""
+        hint_html = f'<p class="err">{html.escape(hint)}</p>' if hint else ""
+        pass_input = '\n  <input type="password" name="passcode" placeholder="访问口令">' \
+            if protected else ""
+        return (f'{hint_html}<form method="post" action="/s/{code}/delete" class="del">'
+                f'{pass_input}\n  <button type="submit">删除这条暂存</button></form>')
+
     def _query_param(self, request, key: str) -> str | None:
         return dict(request.query).get(key)
 
@@ -413,7 +487,9 @@ class LinkBoxApp(ShortUrlApp):
                           note=f"创建于 {rec.created_at:.0f}，"
                                f"过期于 {rec.expires_at:.0f}（Unix 时间）"
                                + ("（设有访问口令）" if rec.has_passcode else ""),
-                          qr=qr, qr_download="/s/" + code + "/qr.svg")
+                          qr=qr, qr_download="/s/" + code + "/qr.svg",
+                          extra_html=self._delete_form(code,
+                                                       protected=rec.has_passcode))
         return 200, [HTML_TYPE, NO_STORE], body
 
     # ------------------------------------------------ 暂存：二维码（/s/<code>/qr.svg）
@@ -475,7 +551,8 @@ button{{font-size:1rem;padding:.5rem .9rem;border:0;border-radius:6px;background
         return page.encode("utf-8")
 
     def _page(self, title: str, body_html: str, note: str = "",
-              qr: str | None = None, qr_download: str | None = None) -> bytes:
+              qr: str | None = None, qr_download: str | None = None,
+              extra_html: str = "") -> bytes:
         safe_title = html.escape(title)
         note_html = f'<p class="note">{html.escape(note)}</p>' if note else ""
         qr_html = ""
@@ -492,7 +569,10 @@ button{{font-size:1rem;padding:.5rem .9rem;border:0;border-radius:6px;background
 <style>body{{font-family:system-ui,"Microsoft YaHei",sans-serif;margin:2rem auto;max-width:46rem;padding:0 1rem;color:#16181d}}
 pre{{white-space:pre-wrap;word-break:break-word;background:#0f1115;color:#e6e9ef;padding:1rem;border-radius:8px;font-size:15px}}
 h1{{font-size:1.3rem}}h2{{font-size:1.05rem}}.note{{color:#5f6773;font-size:.9rem}}a{{color:#1d4ed8}}
-svg{{background:#fff;border:1px solid #e3e6ec;border-radius:8px}}</style></head>
-<body><h1>{safe_title}</h1>{note_html}<pre>{body_html}</pre>{qr_html}
+svg{{background:#fff;border:1px solid #e3e6ec;border-radius:8px}}
+form.del{{margin:1.5rem 0 0;padding-top:1rem;border-top:1px solid #e3e6ec}}
+form.del input{{font-size:1rem;padding:.5rem .6rem;border:1px solid #c8cdd6;border-radius:6px;width:min(20rem,100%);margin-bottom:.5rem;display:block}}
+form.del button{{font-size:.95rem;padding:.45rem .8rem;border:0;border-radius:6px;background:#b91c1c;color:#fff}}</style></head>
+<body><h1>{safe_title}</h1>{note_html}<pre>{body_html}</pre>{qr_html}{extra_html}
 <p class="note"><a href="/">← LinkBox 首页</a> · <a href="qr.svg">二维码单独打开</a></p></body></html>"""
         return page.encode("utf-8")

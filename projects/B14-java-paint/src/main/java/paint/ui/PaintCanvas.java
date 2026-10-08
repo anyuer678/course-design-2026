@@ -8,12 +8,14 @@ import java.awt.event.KeyListener;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.util.List;
 import javax.swing.JPanel;
 import paint.command.AddShapeCommand;
 import paint.command.CommandHistory;
 import paint.command.MoveShapeCommand;
 import paint.command.RemoveShapeCommand;
 import paint.model.Drawing;
+import paint.model.PencilShape;
 import paint.model.Point;
 import paint.model.Shape;
 
@@ -43,6 +45,7 @@ public final class PaintCanvas extends JPanel implements MouseListener, MouseMot
 
     private Tool tool = Tool.RECT;
     private Color color = Color.RED;
+    private int strokeWidth = Shape.STROKE_WIDTH;
     private Point pressAt;
     private Shape preview;
     private int movingIndex = -1;
@@ -88,6 +91,19 @@ public final class PaintCanvas extends JPanel implements MouseListener, MouseMot
         color = newColor == null ? Color.BLACK : newColor;
     }
 
+    /** 新画形状用的线宽（对已有形状没有影响——形状不可变）。 */
+    public int strokeWidth() {
+        return strokeWidth;
+    }
+
+    public void setStrokeWidth(int newWidth) {
+        if (newWidth < Shape.MIN_WIDTH || newWidth > Shape.MAX_WIDTH) {
+            throw new IllegalArgumentException(
+                    "线宽须在 " + Shape.MIN_WIDTH + ".." + Shape.MAX_WIDTH + "：" + newWidth);
+        }
+        strokeWidth = newWidth;
+    }
+
     public Shape preview() {
         return preview;
     }
@@ -115,7 +131,9 @@ public final class PaintCanvas extends JPanel implements MouseListener, MouseMot
         pressAt = new Point(x, y);
         if (tool.isDrawingTool()) {
             movingIndex = -1;
-            preview = ShapeFactory.create(tool, x, y, x, y, color);
+            // 画笔是生长式预览：首拖才成形（见 dragTo），按下时先不放预览
+            preview = tool == Tool.PENCIL ? null
+                    : ShapeFactory.create(tool, x, y, x, y, color, strokeWidth);
             repaint();
             return;
         }
@@ -128,8 +146,19 @@ public final class PaintCanvas extends JPanel implements MouseListener, MouseMot
         if (pressAt == null) {
             return;
         }
+        if (tool.isDrawingTool() && tool == Tool.PENCIL) {
+            // 画笔：首拖用"按下点+当前点"起步，之后逐点追加（不可变：每次换新实例）
+            if (preview == null) {
+                preview = new PencilShape(
+                        List.of(pressAt, new Point(x, y)), color, strokeWidth);
+            } else {
+                preview = ((PencilShape) preview).extendedTo(x, y);
+            }
+            repaint();
+            return;
+        }
         if (tool.isDrawingTool() && preview != null) {
-            preview = ShapeFactory.create(tool, pressAt.x(), pressAt.y(), x, y, color);
+            preview = ShapeFactory.create(tool, pressAt.x(), pressAt.y(), x, y, color, strokeWidth);
             repaint();
         }
     }
@@ -142,9 +171,17 @@ public final class PaintCanvas extends JPanel implements MouseListener, MouseMot
         int dx = x - pressAt.x();
         int dy = y - pressAt.y();
         boolean committed = false;
-        if (tool.isDrawingTool()) {
+        if (tool == Tool.PENCIL) {
+            // 画笔的误点口径：首尾位移过小（拖了但没画开）就不成笔迹
+            if (preview != null && (Math.abs(dx) >= MIN_DRAG || Math.abs(dy) >= MIN_DRAG)) {
+                history.run(new AddShapeCommand(drawing, preview));
+                committed = true;
+            }
+            preview = null;
+        } else if (tool.isDrawingTool()) {
             if (Math.abs(dx) >= MIN_DRAG || Math.abs(dy) >= MIN_DRAG) {
-                Shape shape = ShapeFactory.create(tool, pressAt.x(), pressAt.y(), x, y, color);
+                Shape shape = ShapeFactory.create(tool, pressAt.x(), pressAt.y(), x, y,
+                        color, strokeWidth);
                 history.run(new AddShapeCommand(drawing, shape));
                 committed = true;
             }
@@ -160,6 +197,17 @@ public final class PaintCanvas extends JPanel implements MouseListener, MouseMot
         return committed;
     }
 
+    /** 方向键微调的语义入口：把选中形状平移 (dx,dy)，没有选中返回 false。 */
+    public boolean nudgeBy(int dx, int dy) {
+        int selected = drawing.selection();
+        if (selected < 0 || (dx == 0 && dy == 0)) {
+            return false;
+        }
+        history.run(new MoveShapeCommand(drawing, selected, dx, dy));
+        repaint();
+        return true;
+    }
+
     /** 键盘：返回是否被处理，方便测试与调用方判断。 */
     public boolean pressKey(int keyCode, boolean ctrlDown, boolean shiftDown) {
         if (!ctrlDown && (keyCode == KeyEvent.VK_DELETE || keyCode == KeyEvent.VK_BACK_SPACE)) {
@@ -169,6 +217,17 @@ public final class PaintCanvas extends JPanel implements MouseListener, MouseMot
             }
             history.run(new RemoveShapeCommand(drawing, selected));
             return true;
+        }
+        if (!ctrlDown && (keyCode == KeyEvent.VK_LEFT || keyCode == KeyEvent.VK_RIGHT
+                || keyCode == KeyEvent.VK_UP || keyCode == KeyEvent.VK_DOWN)) {
+            // 方向键微调：单步 1 像素，按住 Shift 10 像素（与 boardweb 同口径）
+            int step = shiftDown ? 10 : 1;
+            return switch (keyCode) {
+                case KeyEvent.VK_LEFT -> nudgeBy(-step, 0);
+                case KeyEvent.VK_RIGHT -> nudgeBy(step, 0);
+                case KeyEvent.VK_UP -> nudgeBy(0, -step);
+                default -> nudgeBy(0, step);
+            };
         }
         if (ctrlDown && keyCode == KeyEvent.VK_Z) {
             if (shiftDown) {
