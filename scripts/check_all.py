@@ -43,7 +43,7 @@ def steps(deep: bool) -> list:
         ("dorm 管理文档核对（check_pm）", [PY, "projects/dorm-repair/checks/check_pm.py"]),
         ("交付齐全性（README+run.bat 引用扫描）", [PY, "scripts/scan_refs.py", "projects"]),
         ("产品层：webframe 微框架（31 项双入口）", [PY, "-m", "pytest", "webframe/tests", "-q"]),
-        ("产品层：Studio 门户（20 项：认证+矩阵+八产品真启停+操作审计）", [PY, "-m", "pytest", "studio/tests", "-q"]),
+        ("产品层：Studio 门户（21 项：认证+矩阵+八产品真启停+操作审计）", [PY, "-m", "pytest", "studio/tests", "-q"]),
         ("产品层：LinkBox（104 项双入口）", [PY, "-m", "pytest", "linkbox/tests", "-q"]),
         ("产品层：SimLab 仿真馆（37 项：记录+引擎+播放器+实时重算）", [PY, "-m", "pytest", "simlab/tests", "-q"]),
         ("产品层：DataScope 工作台（34 项：清洗+挖掘+报告+配方+服务）", [PY, "-m", "pytest", "datascope/tests", "-q"]),

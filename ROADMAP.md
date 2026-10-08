@@ -800,6 +800,9 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   校验）、方向键 1px/Shift 10px 微调（nudgeBy 语义入口）；PaintFrame 工具栏加
   画笔+线宽三档+只读属性面板；board Cli 加 width/scribble/nudge 三操作供无头驱动。
   测试：LinkBox 98→104（+6，标签 93 上轮漂移一并归位）、SensorHub 19→25（+6）、
-  Studio 18→20（+2）、board 11→12（+1）+ B14 引擎自检 7054→7106（+52，8→9 组，
-  showcase 随引擎重生成）；矩阵 pytest 口径 270→**290**（+自检 154=**444**）；
-  五份 README（根/linkbox/studio/sensorhub/board）与 check_all 标签同日实数对齐。
+  Studio 18→21（+3，含 10-08 走查抓出的审计跨线程修复与回归）、board 11→12（+1）
+  + B14 引擎自检 7054→7106（+52，8→9 组，showcase 随引擎重生成）；矩阵 pytest
+  口径 270→**291**（+自检 154=**445**）；五份 README（根/linkbox/studio/sensorhub/
+  board）与 check_all 标签同日实数对齐。走查复验（浏览器串行）：Studio 审计页
+  真实行（refused 琥珀 pill）/LinkBox 删除按钮+暂存删除表单/CacheKV 分布条+倒计时/
+  SensorHub 阈值编辑器+告警确认/SimLab 分享链接+hash 复原，全部 PASS console 零错误。
