@@ -396,6 +396,30 @@ class TestAudit(unittest.TestCase):
         self.assertGreaterEqual(reopened.count(), 6)
         reopened.close()
 
+    def test_audit_connection_follows_using_thread(self):
+        """跨线程回归（2026-10-08 浏览器走查抓出）：构造在主线程、使用在别的线程
+        （webframe 事件循环形态）——惰性连接跟首用线程走，不再 ProgrammingError。"""
+        import threading
+        from studio.audit import AuditLog
+        path = Path(self._tmp.name) / "threaded.sqlite3"
+        log = AuditLog(path)                       # 主线程只构造，不触发连接
+        box = {}
+
+        def worker():
+            try:
+                log.record("start", "linkbox", "ok", "来自事件循环线程")
+                box["rows"] = log.tail(10)
+            except Exception as exc:               # 旧实现在这里抛 ProgrammingError
+                box["error"] = exc
+
+        thread = threading.Thread(target=worker)
+        thread.start()
+        thread.join(timeout=5)
+        self.assertNotIn("error", box, f"跨线程使用失败：{box.get('error')}")
+        self.assertEqual(box["rows"][0]["outcome"], "ok")
+        self.assertEqual(log.count(), 1)           # 同一连接再从构造线程读（惰性后单归属）
+        log.close()
+
 
 class TestOverRealSocket(unittest.TestCase):
     @classmethod
