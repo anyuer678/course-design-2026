@@ -29,6 +29,7 @@ select,input[type=number]{font:inherit;font-size:.85rem;padding:.3rem .45rem;bor
 .props input:disabled{opacity:.45}
 .note{color:var(--muted);font-size:.84rem;text-align:center;padding:.2rem 0 .8rem}
 #save-state{font-size:.84rem;color:var(--muted);min-width:6.5rem}
+#ws-state{font-size:.84rem;color:var(--muted);min-width:6.5rem;text-align:right}
 kbd{background:var(--line-soft,#efefef);border:1px solid var(--line);border-radius:4px;padding:0 .3rem;font-size:.8rem}
 </style>
 </head>
@@ -56,6 +57,7 @@ kbd{background:var(--line-soft,#efefef);border:1px solid var(--line);border-radi
   <span class="sep"></span>
   <button class="btn primary" id="btn-export">导出 PNG</button>
   <span class="spacer" style="flex:1"></span>
+  <span id="ws-state" title="协同状态：●实时同步在线人数；○仅本地（断线重连中）">—</span>
   <span id="save-state">—</span>
 </div>
 <canvas id="board" width="1120" height="640"></canvas>
@@ -69,7 +71,8 @@ kbd{background:var(--line-soft,#efefef);border:1px solid var(--line);border-radi
   <label>线宽 <input type="number" id="p-width" min="1" max="40" step="1" disabled></label>
   <span class="note">← ↑ → ↓ 微调 1px（按住 Shift 10px）；Delete 删除选中</span>
 </div>
-<p class="note">自动保存（改动后 1 秒落盘，保留最近 10 份备份）· 贴图支持文件上传与 <kbd>Ctrl+V</kbd> 粘贴截图 ·
+<p class="note">协同白板：打开多个窗口即可互见笔画（<span id="ws-state2">状态见右上角</span>）·
+  自动保存（改动后 1 秒落盘，保留最近 10 份备份）· 贴图支持文件上传与 <kbd>Ctrl+V</kbd> 粘贴截图 ·
   导出 PNG 直接下载</p>
 <script src="/static/app.js"></script>
 </body>

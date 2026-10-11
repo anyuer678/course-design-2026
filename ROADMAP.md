@@ -761,6 +761,22 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   **--check 失败分支补"长度+首个差异行"诊断输出**——远程一击定位，零猜测；
   本地 file:// 浅克隆复现 runner（unshallow 验证 fetch-depth 假说）。
   最终 run 38144537749 conclusion=success。CI 徽章候选待用户（README 未放）。
+- ✅ **轮二十一：BoardWeb 协同白板（旗舰 B，10-11）+ netlab 滞留回收真 bug 修复**。
+  GAP-ANALYSIS 第二梯队⑤：`/ws/board` 广播枢纽复用轮十八手写 RFC 6455（webframe
+  `ws_route` 桥 netlab），增量 add/clear + 结构性变更（撤销/删除/微调/属性）全量
+  sync，服务端不回显发送方，peers 进出都推，56KiB 超限如实报错（netlab 单帧 64KiB
+  上限内）；前端 WS 优先、徽标"●协同 N 人/○本地模式"、断线 3s 重连。测试 5 条真
+  套接字集成（握手/计数/不回显/sync/坏消息/超限），boardweb 13 全绿。**走查抓出
+  netlab 基建真 bug**：空闲 >idle_timeout 的 WS 连接收到补推帧被"ws stuck output"
+  误杀——旧 `_timeout` 用 last_active（读活动）判出站滞留，帧入队与超时清扫同
+  tick 竞速（插桩日志实锤：帧龄 0ms、连接空闲 25s → 杀）；修法 = Conn 新增
+  `outbuf_since`，滞留看"outbuf 持续未清时长"，`_tick` 集中判定，`_timeout` 只管
+  干等 408；回归测试 `test_ws_idle_push.py` 钉死（该场景修复前必红）。此 bug 同样
+  潜伏在 sensorhub 实时推送（推送间隔 >5s 的静默会话首帧必死），本次一并修好。
+  双页面无头走查全链路证据：徽标 2 人 / A 笔画达 B（1603px）/ B 矩形达 A /
+  清空同步归零，截图在 `p-验收/ws-BoardWeb协同-2026-10-11/`。B11 展示页测试
+  钉数 92→105（测试数增长随页走）。netlab 115 / webframe 31 / sensorhub 28 /
+  boardweb 13 全绿。
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
   cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 

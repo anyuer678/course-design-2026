@@ -1,5 +1,5 @@
 """boardweb/server.py —— 画板 Web 版（用户 2026-10-07："画板要内嵌网页、要图形
-工具/微调/贴图"）：跑在自研 webframe 上，与桌面 Swing 版（board/，:8023）并存。
+工具/微调/贴图"；2026-10-11 加协同：/ws/board 实时广播笔画）。
 
 API：
     GET  /                       画板页（HTML5 Canvas；静态资产在 /static）
@@ -8,7 +8,12 @@ API：
     POST /api/img?name=          上传贴图（原始字节 ≤8MiB，png/jpg/jpeg/gif/webp）
     GET  /img/<file>             读贴图（文件名白名单，防穿越）
     GET  /api/backups            备份清单（文件名 + 时间）
+    WS   /ws/board               协同通道：add/clear 增量广播，undo/删除/微调等
+                                 结构性变更走全量 sync；服务端不回显发送方；
+                                 peers 计数进出都推。单线程事件循环，hub 免锁。
 只绑回环。存储：data/doc.json + data/backups/ + data/img/。
+协同与持久化的边界：实时层只管"别人画的我看得见"，落盘仍是各端自动保存
+（last-save-wins + version 单调），不引入 OT/CRDT——课设口径的如实简化。
 """
 from __future__ import annotations
 
@@ -139,6 +144,71 @@ def build_app(data_dir: Path | None = None) -> MicroApp:
             raise HttpFail(404, "not found")
         return Response(path.read_bytes(), content_type=IMG_EXT[path.suffix[1:]],
                         headers=[("Cache-Control", "max-age=86400")])
+
+    # ------------------------------------------------ 协同白板（/ws/board）
+    # hub = 本 app 实例的活跃会话集。netlab 事件循环单线程跑全部 WS 回调，
+    # 集合增删与广播天然串行，不需要锁。
+    peers: set = set()
+
+    def broadcast(text: str, skip=None) -> None:
+        for s in list(peers):
+            if s is skip or s.closing:
+                continue
+            s.send(text)
+
+    def peers_msg() -> str:
+        return json.dumps({"type": "peers", "peers": len(peers)},
+                          ensure_ascii=False)
+
+    @app.ws("/ws/board")
+    def ws_board(session):
+        peers.add(session)
+        session.send(json.dumps({"type": "hello", "peers": len(peers)},
+                                ensure_ascii=False))
+        broadcast(peers_msg(), skip=session)
+
+        def on_message(text):
+            try:
+                msg = json.loads(text)
+                kind = msg["type"]
+            except (ValueError, KeyError, TypeError):
+                session.send('{"type":"error","error":"消息须为含 type 的 JSON"}')
+                return
+            if kind == "add":
+                shape = msg.get("shape")
+                if not isinstance(shape, dict):
+                    session.send('{"type":"error","error":"add 须带 shape 对象"}')
+                    return
+                broadcast(json.dumps({"type": "add", "shape": shape},
+                                     ensure_ascii=False), skip=session)
+            elif kind == "clear":
+                broadcast('{"type":"clear"}', skip=session)
+            elif kind == "sync":
+                shapes = msg.get("shapes")
+                if not isinstance(shapes, list):
+                    session.send('{"type":"error","error":"sync 须带 shapes 数组"}')
+                    return
+                payload = json.dumps({"type": "sync", "shapes": shapes},
+                                     ensure_ascii=False)
+                # 单帧上限 64KiB（netlab），留余量；超限如实报错，保存通道不受影响
+                if len(payload.encode("utf-8")) > 56 * 1024:
+                    session.send('{"type":"error",'
+                                 '"error":"画板内容过大，协同同步失败（保存不受影响）"}')
+                    return
+                broadcast(payload, skip=session)
+            elif kind == "ping":
+                session.send('{"type":"pong"}')
+            else:
+                session.send(json.dumps(
+                    {"type": "error", "error": f"未知类型 {kind!r}"},
+                    ensure_ascii=False))
+
+        def on_close():
+            peers.discard(session)
+            broadcast(peers_msg())
+
+        session.on_message = on_message
+        session.on_close = on_close
 
     return app
 

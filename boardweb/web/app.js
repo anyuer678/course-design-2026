@@ -13,10 +13,19 @@
   var drawing = null;              // 进行中的 shape
   var dragOff = null;              // 移动中的偏移 {dx,dy}
   var undoStack = [], redoStack = [];
+  var dragging = false;            // 拖动移动中（pointerup 时补发一次全量 sync）
   var dirty = false, saveTimer = null;
   var imgCache = {};               // url -> HTMLImageElement
+  var ws = null, wsPeers = 0;      // 协同通道与在线人数
 
   function status(text) { $("save-state").textContent = text; }
+  function wsStatus() {
+    var text = (ws && ws.readyState === 1)
+      ? "●协同 " + wsPeers + " 人" : "○本地模式";
+    $("ws-state").textContent = text;
+    $("ws-state2").textContent = (ws && ws.readyState === 1)
+      ? "实时协同中" : "当前仅本地";
+  }
   function markDirty() {
     dirty = true;
     status("改动未保存…");
@@ -102,6 +111,7 @@
     }
     s.color = $("p-color").value; s.width = Number($("p-width").value) || s.width;
     render(); markDirty();
+    wsSend({ type: "sync", shapes: shapes });
   }
   function moveShape(s, dx, dy) {
     if (s.type === "pen") s.pts.forEach(function (p) { p[0] += dx; p[1] += dy; });
@@ -142,6 +152,7 @@
       if (selected >= 0) {
         var b = bbox(shapes[selected]);
         dragOff = { dx: p[0] - b.x, dy: p[1] - b.y, last: p.slice() };
+        dragging = true;
         pushUndo();
       }
       render(); return;
@@ -161,31 +172,36 @@
       render(); return;
     }
     if (tool === "select" && selected >= 0 && dragOff) {
-      moveSel(p[0] - dragOff.last[0], p[1] - dragOff.last[1]);
+      moveSel(p[0] - dragOff.last[0], p[1] - dragOff.last[1], true);
       dragOff.last = p;
     }
   });
   canvas.addEventListener("pointerup", function () {
     if (drawing) {
-      var keep = drawing.type !== "pen" || drawing.pts.length > 1;
-      shapes.push(drawing);
+      var s = drawing;
+      var keep = s.type !== "pen" || s.pts.length > 1;
+      shapes.push(s);
       selected = keep ? shapes.length - 1 : -1;
       drawing = null;
       if (!keep) undoStack.pop();
+      else wsSend({ type: "add", shape: s });
       render(); markDirty();
     }
+    if (dragging) { dragging = false; wsSend({ type: "sync", shapes: shapes }); }
     dragOff = null;
   });
-  function moveSel(dx, dy) {
+  function moveSel(dx, dy, quiet) {
     if (selected < 0) return;
     moveShape(shapes[selected], dx, dy);
     render(); markDirty();
+    if (!quiet) wsSend({ type: "sync", shapes: shapes });
   }
   function deleteSel() {
     if (selected < 0) return;
     pushUndo();
     shapes.splice(selected, 1);
     selected = -1; render(); markDirty();
+    wsSend({ type: "sync", shapes: shapes });
   }
   document.addEventListener("keydown", function (ev) {
     if (/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName)) return;
@@ -203,18 +219,21 @@
     redoStack.push(JSON.stringify(shapes));
     shapes = JSON.parse(undoStack.pop());
     selected = -1; render(); markDirty();
+    wsSend({ type: "sync", shapes: shapes });
   }
   function redo() {
     if (!redoStack.length) return;
     undoStack.push(JSON.stringify(shapes));
     shapes = JSON.parse(redoStack.pop());
     selected = -1; render(); markDirty();
+    wsSend({ type: "sync", shapes: shapes });
   }
   $("btn-undo").addEventListener("click", undo);
   $("btn-redo").addEventListener("click", redo);
   $("btn-clear").addEventListener("click", function () {
     if (!shapes.length || !window.confirm("清空整块画板？（可撤销）")) return;
     pushUndo(); shapes = []; selected = -1; render(); markDirty();
+    wsSend({ type: "clear" });
   });
 
   // ------------------------------------------------ 工具切换
@@ -244,6 +263,7 @@
                     w: im.width, h: im.height, color: "#000", width: 1 };
           shapes.push(s); selected = shapes.length - 1;
           render(); markDirty();
+          wsSend({ type: "add", shape: s });
           status("贴图已插入");
         };
         im.src = url;
@@ -294,12 +314,51 @@
     });
     if (!left) done();
   }
+
+  // ------------------------------------------------ 协同（WebSocket）
+  function wsSend(obj) {
+    if (ws && ws.readyState === 1) {
+      try { ws.send(JSON.stringify(obj)); } catch (e) { /* 断线由 onclose 收口 */ }
+    }
+  }
+  function wsConnect() {
+    if (ws && (ws.readyState === 0 || ws.readyState === 1)) return;
+    try {
+      ws = new WebSocket((location.protocol === "https:" ? "wss://" : "ws://")
+                         + location.host + "/ws/board");
+    } catch (e) { ws = null; wsStatus(); return; }
+    ws.onopen = wsStatus;
+    ws.onmessage = function (ev) {
+      var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.type === "hello" || m.type === "peers") {
+        wsPeers = m.peers; wsStatus();
+      } else if (m.type === "add") {
+        var s = m.shape;
+        if (s && s.type === "image" && !imgCache[s.img]) preloadImages([s], render);
+        shapes.push(s); render(); markDirty();
+      } else if (m.type === "clear") {
+        shapes = []; selected = -1; render(); markDirty();
+      } else if (m.type === "sync") {
+        shapes = Array.isArray(m.shapes) ? m.shapes : [];
+        selected = -1;
+        preloadImages(shapes, render);
+        markDirty();
+      }
+    };
+    ws.onclose = function () {
+      ws = null; wsPeers = 0; wsStatus();
+      setTimeout(wsConnect, 3000);       // 断线退回本地模式，3 秒重连
+    };
+    ws.onerror = function () { try { ws.close(); } catch (e) { /* already */ } };
+  }
+
   function boot() {
     fetch("/api/doc").then(function (r) { return r.json(); }).then(function (d) {
       shapes = d.shapes || [];
       preloadImages(shapes, function () { render(); });
       status("已加载（v" + (d.version || 0) + "）");
     });
+    wsConnect();
   }
 
   $("btn-export").addEventListener("click", function () {
@@ -310,5 +369,6 @@
   });
 
   disableProps();
+  wsStatus();
   boot();
 })();

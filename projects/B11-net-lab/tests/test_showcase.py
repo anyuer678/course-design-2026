@@ -87,7 +87,7 @@ class TestPayload(unittest.TestCase):
         self.assertIn("字节一致=True", g["notes"]["real_udp"])
 
     def test_test_count_from_two_core_files(self):
-        self.assertEqual(self.payload["method_count"], 92)
+        self.assertEqual(self.payload["method_count"], 106)
 
 
 class TestRenderedPage(unittest.TestCase):
@@ -100,7 +100,7 @@ class TestRenderedPage(unittest.TestCase):
     def test_pinned_numbers_appear_in_page(self):
         text = sc.OUT.read_text(encoding="utf-8")
         # 状态码表 25 条 = 原 23 + 401/410（2026-10-04 LinkBox 产品层需要，见 B11 README）
-        for token in ("92 项", "状态码表 25 条", "HTTP/1.1 414 URI Too Long", "189"):
+        for token in ("106 项", "状态码表 25 条", "HTTP/1.1 414 URI Too Long", "189"):
             self.assertIn(token, text)
 
     def test_no_external_references(self):

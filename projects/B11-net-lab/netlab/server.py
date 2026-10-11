@@ -40,14 +40,15 @@ class Stats:
 class Conn:
     """一条连接的状态机：收 → 解析出一个完整请求 → 处理 → 排队发送。"""
 
-    __slots__ = ("sock", "addr", "inbuf", "outbuf", "last_active", "closing", "alive",
-                 "half_closed", "ws")
+    __slots__ = ("sock", "addr", "inbuf", "outbuf", "outbuf_since", "last_active",
+                 "closing", "alive", "half_closed", "ws")
 
     def __init__(self, sock: socket.socket, addr):
         self.sock = sock
         self.addr = addr
         self.inbuf = b""
         self.outbuf = b""
+        self.outbuf_since: float | None = None   # outbuf 从空变非空的时刻（滞留计）
         self.last_active = time.monotonic()
         self.closing = False        # 承诺的响应已排队，发完就该收尾
         self.alive = True
@@ -139,13 +140,30 @@ class Server:
         if self._sock is None:
             return
         now = time.monotonic()
-        # 先算每个连接还剩多少空闲额度；到点的先踢掉，
-        # 否则超时值会变成负数，select 就退化成"一直等"。
+        # 出站滞留看 outbuf 自身"持续未清"的时长，不看 last_active（读活动）：
+        # 给空闲 25s 的长连接补推一帧，帧龄是 0ms，绝不能按"滞留"误杀——
+        # 2026-10-11 boardweb 协同实测抓出（帧入队与超时清扫同 tick 竞速）。
+        # 真正的只写不读：outbuf 连续一个空闲窗口没被 select 写出去 → 回收。
         for conn in list(self.conns.values()):
-            if self.idle_timeout - (now - conn.last_active) <= 0:
+            if conn.outbuf:
+                if conn.outbuf_since is None:
+                    conn.outbuf_since = now
+                elif now - conn.outbuf_since >= self.idle_timeout:
+                    self.stats.timed_out += 1
+                    if self.verbose:
+                        print(f"  [连接] 回收 {conn.addr} （outbuf 滞留 "
+                              f"{now - conn.outbuf_since:.1f}s：对端只写不读）")
+                    self._close(conn, "stuck output")
+                    continue
+            else:
+                conn.outbuf_since = None
+            # 空闲额度只约束"没有未发响应"的连接；到点的先踢掉，
+            # 否则超时值会变成负数，select 就退化成"一直等"。
+            if conn.outbuf_since is None and \
+                    self.idle_timeout - (now - conn.last_active) <= 0:
                 self._timeout(conn)
         left = [self.idle_timeout - (time.monotonic() - c.last_active)
-                for c in self.conns.values()]
+                for c in self.conns.values() if c.outbuf_since is None]
         wait = max(min([0.02] + left, default=0.02), 0.0)
         # 收尾中的连接也要留在可读集合里：回收它的唯一信号是对端那个 FIN，
         # 不读就永远等不到 EOF。
@@ -282,23 +300,9 @@ class Server:
             pass
 
     def _timeout(self, conn: Conn) -> None:
+        # 出站滞留已由 _tick 的 outbuf_since 集中判定；这里只管"无未发响应
+        # 却干等"的空闲：HTTP 空闲 408 收尾，WS 是长连接不吃空闲超时。
         if conn.ws is not None:
-            # WS 是长连接，不吃 HTTP 空闲超时；活性由出站推送续命（_write 写出续命
-            # 对 WS 同样生效），对端真死了会在 recv/send 的错误路径上被回收。
-            # outbuf 卡死（对端只写不读）沿用同一套滞留回收。
-            if conn.outbuf and \
-                    time.monotonic() - conn.last_active >= self.idle_timeout:
-                self.stats.timed_out += 1
-                self._close(conn, "ws stuck output")
-            return
-        if conn.outbuf:
-            # 还有承诺的响应没发出去：只要仍有进展（部分写出会在 _write 续命）就再宽限；
-            # 整整一个空闲窗口零进展 = 对端只写不读，强制回收——否则 max_conn 会被
-            # 这类连接占满导致全站 503（2026-10-07 审查收口的槽位耗尽面）。
-            if time.monotonic() - conn.last_active < self.idle_timeout:
-                return
-            self.stats.timed_out += 1
-            self._close(conn, "stuck output")
             return
         self.stats.timed_out += 1
         if conn.closing:
