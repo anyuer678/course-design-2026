@@ -209,11 +209,23 @@ def render(payload: dict) -> str:
                     cards, repro)
 
 
+def _deps_available() -> bool:
+    """环境探测：本页需要编译好的 C 导出器（build/ 不进 git，未编译即缺）。
+
+    缺环境退出码 3 = SKIP，不算检查失败——"没编译过"与"页面过期"分开记账。
+    """
+    return (BUILD / "export_trace.exe").is_file()
+
+
 def main(argv) -> int:
     ap = argparse.ArgumentParser(description="B33 展示页生成器（口径：showcase/SPEC.md）")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--write", action="store_true")
     args = ap.parse_args(argv[1:])
+    if not _deps_available():
+        print("[skip] build/export_trace.exe 不存在——先在项目里跑 run.bat 的编译步，"
+              "再回来生成本页（退出码 3：仓库级校验按 SKIP 记账，不算失败）")
+        return 3
     payload = collect()
     fresh = render(payload)
     if args.write:

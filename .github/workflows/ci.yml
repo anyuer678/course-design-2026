@@ -21,10 +21,17 @@ jobs:
         shell: pwsh
 
       - uses: actions/checkout@v4
+        with:
+          # B39/B40 的证据核验与展示页要逐条核对历史提交号，浅克隆必红
+          fetch-depth: 0
 
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+
+      - name: Install test tooling (pytest only - products stay stdlib-only)
+        run: pip install pytest
+        shell: pwsh
 
       - name: Toolchain
         run: |

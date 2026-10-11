@@ -315,11 +315,24 @@ document.body.appendChild(s);
 """
 
 
+def _deps_available() -> bool:
+    """环境探测：本页数据需要真跑 Spark demo（pyspark）。缺环境退出码 3 = SKIP。"""
+    try:
+        import pyspark  # noqa: F401
+        return True
+    except (ImportError, OSError):
+        return False
+
+
 def main(argv) -> int:
     ap = argparse.ArgumentParser(description="B29 展示页生成器（口径：showcase/SPEC.md）")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--write", action="store_true")
     args = ap.parse_args(argv[1:])
+    if not _deps_available():
+        print("[skip] pyspark 不可用——本页数据需要 Spark local 现场跑 40 万行合成日志，"
+              "当前机器无法执行（退出码 3：仓库级校验按 SKIP 记账，不算失败）")
+        return 3
     payload = collect()
     fresh = render(payload)
     if args.write:

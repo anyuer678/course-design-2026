@@ -349,11 +349,24 @@ document.body.appendChild(s);
 """
 
 
+def _deps_available() -> bool:
+    """环境探测：本页需要 cv2（缩略图重编码）。缺环境退出码 3 = SKIP，不算检查失败。"""
+    try:
+        import cv2  # noqa: F401
+        return True
+    except (ImportError, OSError):
+        return False
+
+
 def main(argv) -> int:
     ap = argparse.ArgumentParser(description="B24 展示页生成器（口径：showcase/SPEC.md）")
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--write", action="store_true")
     args = ap.parse_args(argv[1:])
+    if not _deps_available():
+        print("[skip] cv2 不可用——本页数据需要 OpenCV 现场重编码，"
+              "当前机器无法执行（退出码 3：仓库级校验按 SKIP 记账，不算失败）")
+        return 3
     payload = collect()
     fresh = render(payload)
     if args.write:

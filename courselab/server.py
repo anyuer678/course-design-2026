@@ -1430,7 +1430,12 @@ def selftest(port: int = 7901) -> int:
         check("实验台脚本经 /showcase/ 可加载", r.status == 200 and b"lab-slot" in body)
 
     # 目录穿越：指向"仓库外真实存在的文件"（自检临时库），必须被 404 挡住
-    rel = os.path.relpath(str(Path(tmp.name) / "app.db"), str(REPO)).replace("\\", "/")
+    try:
+        rel = os.path.relpath(str(Path(tmp.name) / "app.db"), str(REPO)).replace("\\", "/")
+    except ValueError:
+        # 跨盘符（仓库在 D:、系统临时目录在 C: 的 runner 上必现）：relpath 无相对路径可言。
+        # 穿越语义不变——载荷仍是"逃出仓库的真实文件"，绝对路径形式同样必须被白名单闸 404。
+        rel = (Path(tmp.name) / "app.db").as_posix().removeprefix("/")
     status, data, _ = get("/repo/" + rel)
     check("目录穿越（仓库外真实文件）被拒", status == 404)
     # 内容源白名单（2026-10-07 审查收口）：数据目录/凭据/脚本匿名一律 404

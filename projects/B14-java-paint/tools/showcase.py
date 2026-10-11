@@ -279,6 +279,11 @@ def main(argv) -> int:
             return 1
         if OUT.read_text(encoding="utf-8") != fresh:
             print("展示页与现算不一致（页面过期或手改过）：跑 python tools/showcase.py --write")
+            print(f"长度：磁盘 {len(disk)} / 现算 {len(fresh)}")
+            for i, (x, y) in enumerate(zip(disk.splitlines(), fresh.splitlines())):
+                if x != y:
+                    print(f"首个差异行 {i}：磁盘={x[:100]!r} 现算={y[:100]!r}")
+                    break
             return 1
         print("展示页新鲜：与现算逐字一致（自检/离屏演示/PNG）。")
         return 0
