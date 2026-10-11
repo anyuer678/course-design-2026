@@ -43,7 +43,9 @@ def _run(args) -> str:
 
 
 def _norm(text: str) -> str:
-    return re.sub(r"\d+(?:\.\d+)? ms", "<当场> ms", text)
+    # 连前导对齐空格一起吃掉：表格里耗时列宽度随读数位数变（"0.926     <当场>" vs
+    # "0.926    <当场>" 曾让 --check 翻烙饼），规范化必须把对齐位移一并抹平。
+    return re.sub(r" +\d+(?:\.\d+)? ms", " <当场> ms", text)
 
 
 def _parse_sections(text: str) -> list:

@@ -148,10 +148,10 @@ class TestSeedsChecker(unittest.TestCase):
         def mutate(seeds):
             for seed in seeds:
                 for probe in seed["probes"]:
-                    if probe.get("kind") == "import-check" and probe["module"] == "numpy":
+                    if probe.get("kind") == "import-check" and probe["module"] == "json":
                         probe["expected"] = False
         problems = self.problems(mutate)
-        self.assertTrue(any("numpy" in p and "import" in p for p in problems), problems)
+        self.assertTrue(any("json" in p and "import" in p for p in problems), problems)
 
     def test_empty_question_turns_red(self):
         problems = self.problems(lambda s: s[0].__setitem__("question", ""))

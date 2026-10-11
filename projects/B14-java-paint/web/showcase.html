@@ -89,7 +89,7 @@ footer,.sw-footer{color:var(--kb-text-3);border-top:1px solid var(--kb-border)}
 <p>纯 Java（零第三方库）：图形类体系与命令模式、原子写盘与读取防线、离屏渲染像素对账、
 Swing 事件语义、随机操作 vs 快照模型。本页数字全部现算——生成器按 run.bat 同命令行自包含
 构建，再真跑自检与离屏演示；<b>图是当场画出来的真产物</b>，不是示意图。</p></div>
-<section id="facts" class="sw-cards"><div class="sw-card"><b>自检（headless）</b><span>7106 项检查、0 失败；9 组：模型、文档与命中、撤销/重做、文件格式、画笔与线宽、文件存取防线、离屏渲染像素、交互语义、随机操作 vs 快照模型</span></div><div class="sw-card"><b>离屏演示</b><span>画 3 个形状 [rect, ellipse, line] → 撤销 → 重做；像素 红 1160 / 蓝 834 / 绿 642（三条绘制路径都真的落到画面上）</span></div><div class="sw-card"><b>真画出来的图</b><span>内嵌 PNG 3404 字节（每次现画现取）；确定性：sha1 a2b8218b2571…（多次运行逐字节相同，测试钉住）</span></div><div class="sw-card"><b>类体系</b><span>main 21 个源文件（包：command、io、model、ui + 顶层 App）；测试 1 个入口 PaintTests（无框架，一个 main）</span></div><div class="sw-card"><b>构建</b><span>javac 21.0.12，--release 17 -encoding UTF-8 编译进 build/（与 run.bat 同命令行）</span></div><div class="sw-card"><b>真窗口交互</b><span>Swing 窗口的观感、手感与键盘交互只能你实跑（run.bat 第 5 步，我不代勾）</span></div></section>
+<section id="facts" class="sw-cards"><div class="sw-card"><b>自检（headless）</b><span>7106 项检查、0 失败；9 组：模型、文档与命中、撤销/重做、文件格式、画笔与线宽、文件存取防线、离屏渲染像素、交互语义、随机操作 vs 快照模型</span></div><div class="sw-card"><b>离屏演示</b><span>画 3 个形状 [rect, ellipse, line] → 撤销 → 重做；像素 红/蓝/绿 = <当场>（collect 断言全部非零；具体值随 JDK 渲染管线而变）——三条绘制路径都真的落到画面上</span></div><div class="sw-card"><b>真画出来的图</b><span>内嵌 PNG 3404 字节（每次现画现取）；确定性：sha1 a2b8218b2571…（多次运行逐字节相同，测试钉住）</span></div><div class="sw-card"><b>类体系</b><span>main 21 个源文件（包：command、io、model、ui + 顶层 App）；测试 1 个入口 PaintTests（无框架，一个 main）</span></div><div class="sw-card"><b>构建</b><span>--release 17 -encoding UTF-8 编译进 build/（与 run.bat 同命令行；javac 版本随机器，不进页面）</span></div><div class="sw-card"><b>真窗口交互</b><span>Swing 窗口的观感、手感与键盘交互只能你实跑（run.bat 第 5 步，我不代勾）</span></div></section>
 <section id="demo" class="sw-panel"><h3>现场证据（点页签切换）</h3>
 <div class="pj-tabs">
 <button type="button" class="pj-tab" data-tab="1">1 自检 8 组</button>
@@ -101,7 +101,7 @@ Swing 事件语义、随机操作 vs 快照模型。本页数字全部现算—�
 <div class="pj-pane" data-pane="2"><pre>画完 3 个形状：[rect, ellipse, line]
 撤销一次（去掉线段）：[rect, ellipse]
 重做回来：[rect, ellipse, line]
-离屏像素统计：红 1160、蓝 834、绿 642（三个都应为正，说明三条绘制路径都真的落到画面上）
+离屏像素统计：红 &lt;当场&gt;、蓝 &lt;当场&gt;、绿 &lt;当场&gt;（三个都应为正，说明三条绘制路径都真的落到画面上）
 PNG 写到临时目录：&lt;临时目录&gt;b14-demo&lt;随机&gt;.png（3404 字节），故意不放进项目目录，免得每次演示都留垃圾文件</pre></div>
 <div class="pj-pane" data-pane="3"><p>data URI 内嵌，sha1 a2b8218b2571…——真产物，
 不是示意图；跑 run.bat 第 3 步会重新画一张。</p>

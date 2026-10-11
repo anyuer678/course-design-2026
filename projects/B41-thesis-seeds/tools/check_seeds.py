@@ -4,7 +4,7 @@
     - files 里的行数用**重算值逐字比对**（谁动了代码，这里立刻红）；
     - probes 是"缺口证明"：code-count 的 glob 必须真匹配到文件
       （否则"计数 0"毫无意义），计数与 expected 相等才算通过；
-      import-check 用当前解释器实跑 import（numpy 在位 / sklearn 缺失就是这条）；
+      import-check 用当前解释器实跑 import（夹具用 stdlib 的 json，跨机器确定）；
     - evidence 的锚点必须真出现在对应 README 里；
     - 每条种子至少 1 个文件、1 个探针，文本段不许空。
 
@@ -47,6 +47,10 @@ def synthetic_seed() -> dict:
 
     收官后 seeds=[]，但"改坏必须红"的规则不能因此失去牙齿——负面对照先注入这条
     夹具再改坏。钉在 data/iris.csv（151 行，结构稳定）；锚点用 B23 README 的现役短语。
+    探针模块必须选**任何 Python 3 都存在的标准库**（json）：夹具要跨机器确定——
+    曾钉在 numpy 上，CI runner 没装 numpy，"改坏探针期望值"负面对照当场失效
+    （改坏了却没红，页面如实记成 BUG）。import-check 的意义是"期望与实际不符必须红"，
+    用 stdlib 模块两头都确定，牙齿才钉得住。
     """
     return {
         "id": "synthetic-fixture", "title": "合成夹具（注入用）",
@@ -55,7 +59,7 @@ def synthetic_seed() -> dict:
                      "anchor": "54 项双入口同数"},
         "files": [{"path": "projects/B23-ml-from-scratch/data/iris.csv", "lines": 151}],
         "probes": [{"name": "夹具探针", "kind": "import-check",
-                    "module": "numpy", "expected": True}],
+                    "module": "json", "expected": True}],
         "data": "夹具", "resources": "夹具", "evaluation": "夹具", "risks": "夹具",
     }
 

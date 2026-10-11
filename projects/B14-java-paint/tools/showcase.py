@@ -169,7 +169,11 @@ def collect() -> dict:
 
     demo = _java(["-cp", cp_main, "paint.App", "--demo"])
     m = re.search(r"离屏像素统计：红 (\d+)、蓝 (\d+)、绿 (\d+)", demo)
-    pixels = m.groups() if m else ("?", "?", "?")
+    if not m:
+        raise SystemExit("demo 输出里找不到像素统计——解析规则要跟着改")
+    pixels = tuple(int(g) for g in m.groups())
+    if min(pixels) <= 0:
+        raise SystemExit(f"离屏像素计数出现 0（{pixels}）——绘制路径真断了，这不是环境差异")
     m = re.search(r"([A-Za-z]:\\[^\r\n（）]*b14-demo\d+\.png)", demo)
     if not m:
         raise SystemExit("demo 输出里找不到 PNG 路径——解析规则要跟着改")
@@ -177,22 +181,27 @@ def collect() -> dict:
     png = png_path.read_bytes()
     sha = hashlib.sha1(png).hexdigest()
     demo_norm = demo.replace(m.group(1), "<临时目录>b14-demo<随机>.png")
+    # 像素计数是运行时值：JDK 渲染管线/抗锯齿随机器而变（曾致 --check 翻烙饼）。
+    # 非零断言在上方守卫里，页面只记 <当场>。
+    demo_norm = re.sub(r"离屏像素统计：红 \d+、蓝 \d+、绿 \d+",
+                       "离屏像素统计：红 <当场>、蓝 <当场>、绿 <当场>", demo_norm)
 
     main_files = sorted((ROOT / "src" / "main" / "java" / "paint").rglob("*.java"))
     pkgs = sorted({p.parent.name for p in main_files if p.parent.name != "paint"})
-    javac_ver = _run([shutil.which("javac") or "javac", "-version"]).strip()
+    _run([shutil.which("javac") or "javac", "-version"])   # javac 必须在位；版本号不进页面（随机器变）
 
     facts = [
         ["自检（headless）", f"{checks} 项检查、{fails} 失败；{len(modules)} 组："
                        + "、".join(modules)],
         ["离屏演示", "画 3 个形状 [rect, ellipse, line] → 撤销 → 重做；"
-                 f"像素 红 {pixels[0]} / 蓝 {pixels[1]} / 绿 {pixels[2]}"
-                 "（三条绘制路径都真的落到画面上）"],
+                 "像素 红/蓝/绿 = <当场>（collect 断言全部非零；具体值随 JDK 渲染管线而变）"
+                 "——三条绘制路径都真的落到画面上"],
         ["真画出来的图", f"内嵌 PNG {len(png)} 字节（每次现画现取）；确定性：sha1 {sha[:12]}…"
                     "（多次运行逐字节相同，测试钉住）"],
         ["类体系", f"main {len(main_files)} 个源文件（包：{'、'.join(pkgs)} + 顶层 App）"
                f"；测试 1 个入口 PaintTests（无框架，一个 main）"],
-        ["构建", f"{javac_ver}，--release 17 -encoding UTF-8 编译进 build/（与 run.bat 同命令行）"],
+        ["构建", "--release 17 -encoding UTF-8 编译进 build/（与 run.bat 同命令行；"
+               "javac 版本随机器，不进页面）"],
         ["真窗口交互", "Swing 窗口的观感、手感与键盘交互只能你实跑（run.bat 第 5 步，我不代勾）"],
     ]
     return {"facts": facts, "selftest": selftest.rstrip(), "demo": demo_norm.rstrip(),

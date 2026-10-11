@@ -96,7 +96,7 @@ footer,.sw-footer{color:var(--kb-text-3);border-top:1px solid var(--kb-border)}
 B23 的决策树），<strong>指标只说明口径自洽，不外推生产</strong>。下面三张图是 build/ 里的真实产物内联。</p>
 
 <h2>实测数字（本页现算）</h2>
-<section id="facts" class="cards"><div class="card"><b>测试</b><span>36 项（27 同步核心 + 9 展示页自测；tests/ def test_ 现数）</span></div><div class="card"><b>数据账（模拟）</b><span>10 台 × 480 步 = 4800 条读数；故障 30 次（overheat 10 / wear 20）；账本 spike 147 / freeze 142 / dropout 0</span></div><div class="card"><b>样本账</b><span>724 个窗口；排除故障后暂态 66 个（t≥f 到恢复结束）；正样本 训练 96/580；测试 24/144；按设备：训练 8 台，测试 2 台（0..7 训练 / (8, 9) 测试）</span></div><div class="card"><b>三模型（best-F1）</b><span>阈值基线 F1 0.340 / 树 F1 0.864·AUC 0.899 / LR F1 0.857·AUC 0.926（测试设备）</span></div><div class="card"><b>误报解剖</b><span>固定阈值 20/20 条误报窗内含 spike/freeze（share 1.00）</span></div><div class="card"><b>提前量</b><span>6/6 接住；逐故障 8-91:17、8-219:19、8-348:16、9-74:18、9-252:16、9-422:18；overheat 1/1；wear 5/5</span></div></section>
+<section id="facts" class="cards"><div class="card"><b>测试</b><span>36 项（27 同步核心 + 9 展示页自测；tests/ def test_ 现数）</span></div><div class="card"><b>数据账（模拟）</b><span>10 台 × 480 步 = 4800 条读数；故障 30 次（overheat 10 / wear 20）；账本 spike 147 / freeze 142 / dropout 0</span></div><div class="card"><b>样本账</b><span>724 个窗口；排除故障后暂态 66 个（t≥f 到恢复结束）；正样本 训练 96/580；测试 24/144；按设备：训练 8 台，测试 2 台（0..7 训练 / (8, 9) 测试）</span></div><div class="card"><b>三模型（best-F1）</b><span>阈值基线 F1 0.340 / 树 F1 0.864·AUC ? / LR F1 0.857·AUC ?（测试设备）</span></div><div class="card"><b>误报解剖</b><span>固定阈值 20/20 条误报窗内含 spike/freeze（share 1.00）</span></div><div class="card"><b>提前量</b><span>6/6 接住；逐故障 8-91:17、8-219:19、8-348:16、9-74:18、9-252:16、9-422:18；overheat 1/1；wear 5/5</span></div></section>
 
 <h2>展示区</h2>
 <section id="demo" class="panel">
@@ -132,9 +132,9 @@ B23 的决策树），<strong>指标只说明口径自洽，不外推生产</str
   3) 三个模型对比：固定阈值 / B23 决策树 / 手写逻辑回归（耗时列【实测】）
 ==============================================================================
    模型                      阈值   报警     精确率     召回率     F1    AUC      耗时[实测]
-   固定阈值(铭牌100/2.0)         --   29   0.310   0.375  0.340     --       &lt;当场&gt; ms
-   B23 决策树               0.14   20   0.950   0.792  0.864  0.899    &lt;当场&gt; ms
-   手写逻辑回归(L2)            0.50   18   1.000   0.750  0.857  0.926     &lt;当场&gt; ms
+   固定阈值(铭牌100/2.0)         --   29   0.310   0.375  0.340     -- &lt;当场&gt; ms
+   B23 决策树               0.14   20   0.950   0.792  0.864  0.899 &lt;当场&gt; ms
+   手写逻辑回归(L2)            0.50   18   1.000   0.750  0.857  0.926 &lt;当场&gt; ms
   双实现互拍                       GD vs Newton 最大权差 1.91e-03（L2 保证唯一最优）
 
 ==============================================================================
@@ -169,7 +169,7 @@ B23 的决策树），<strong>指标只说明口径自洽，不外推生产</str
     <div data-pane-id="models" hidden>
       <p class="note">测试设备上的三模型对比（best-F1 运营点；原始输出含耗时列，此处按口径结构化）：</p>
       <table class="plain"><tr><th>模型</th><th class="num">阈值</th><th class="num">报警</th>
-      <th class="num">精确率</th><th class="num">召回率</th><th class="num">F1</th><th class="num">AUC</th></tr><tr><td>固定阈值(铭牌100/2.0)</td><td class="num">--</td><td class="num">29</td><td class="num">0.310</td><td class="num">0.375</td><td class="num">0.340</td><td class="num">--</td></tr><tr><td>B23 决策树</td><td class="num">0.14</td><td class="num">20</td><td class="num">0.950</td><td class="num">0.792</td><td class="num">0.864</td><td class="num">0.899</td></tr><tr><td>手写逻辑回归(L2)</td><td class="num">0.50</td><td class="num">18</td><td class="num">1.000</td><td class="num">0.750</td><td class="num">0.857</td><td class="num">0.926</td></tr></table>
+      <th class="num">精确率</th><th class="num">召回率</th><th class="num">F1</th><th class="num">AUC</th></tr><tr><td>固定阈值(铭牌100/2.0)</td><td class="num">--</td><td class="num">29</td><td class="num">0.310</td><td class="num">0.375</td><td class="num">0.340</td></tr><tr><td>B23 决策树</td><td class="num">0.14</td><td class="num">20</td><td class="num">0.950</td><td class="num">0.792</td><td class="num">0.864</td></tr><tr><td>手写逻辑回归(L2)</td><td class="num">0.50</td><td class="num">18</td><td class="num">1.000</td><td class="num">0.750</td><td class="num">0.857</td></tr></table>
       <p class="note">同一模型的代价曲线（点列由 sweep 现算）——选点才是运营决策：</p>
       <table class="plain"><tr><th>口径</th><th class="num">阈值</th><th class="num">报警</th>
       <th class="num">精确率</th><th class="num">召回率</th></tr><tr><td>best-F1</td><td class="num">0.50</td><td class="num">18</td><td class="num">1.000</td><td class="num">0.750</td></tr><tr><td>召回≥95%</td><td class="num">0.02</td><td class="num">111</td><td class="num">0.207</td><td class="num">0.958</td></tr><tr><td>告警预算≤24</td><td class="num">0.22</td><td class="num">24</td><td class="num">0.833</td><td class="num">0.833</td></tr></table>
