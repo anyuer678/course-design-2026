@@ -265,6 +265,21 @@
                     "b12-knapsack": renderKnapsack,
                     "b34-astar": renderAstar };
 
+  // ECharts 助手（2026-10-11 回放图表化）：实例跟随 stage 逐帧重建——
+  // stage.textContent="" 会移除旧容器，实例必须跟着 dispose，否则泄漏。
+  // 回放每 450ms 一帧，动画关掉保证帧与帧干净切换。
+  var CHART = null;
+  function chartIn(stage, height) {
+    if (CHART) { CHART.dispose(); CHART = null; }
+    if (!window.echarts) return null;
+    var box = el("div");
+    box.style.cssText = "width:100%;height:" + (height || 260) + "px";
+    stage.appendChild(box);
+    CHART = window.echarts.init(box);
+    return CHART;
+  }
+  window.addEventListener("resize", function () { if (CHART) CHART.resize(); });
+
   function draw() {
     if (!record) return;
     var frame = record.frames[t];
@@ -282,42 +297,90 @@
     var dist = frame.state.dist || [];
     var settled = frame.state.settled || [];
     var current = frame.state.current;
-    var table = el("table", "grid");
-    var head = el("tr");
-    head.appendChild(el("th", "", "顶点"));
-    head.appendChild(el("th", "", "当前估计距离"));
-    head.appendChild(el("th", "", "状态"));
-    table.appendChild(head);
-    dist.forEach(function (d, v) {
-      var tr = el("tr");
-      tr.appendChild(el("td", "", "v" + v));
-      tr.appendChild(el("td", "", d === null ? "∞" : String(d)));
-      var stateText = settled.indexOf(v) >= 0 ? "已确定" : "待定";
-      if (v === current) stateText = "★ 本轮确定";
-      var cls = v === current ? "cur" : (settled.indexOf(v) >= 0 ? "settled" : "");
-      tr.appendChild(el("td", cls, stateText));
-      table.appendChild(tr);
+    var c = chartIn(stage, 280);
+    if (!c) { stage.appendChild(el("p", "note", "ECharts 未加载（assets 缺失）")); return; }
+    var labels = dist.map(function (_, v) { return "v" + v; });
+    var maxDist = 0;
+    dist.forEach(function (d) { if (d !== null) maxDist = Math.max(maxDist, d); });
+    var data = dist.map(function (d, v) {
+      if (d === null) {
+        return { value: 0, itemStyle: { color: "transparent" },
+                 label: { show: true, position: "top", formatter: "∞",
+                          color: "#94a3b8", fontSize: 13 } };
+      }
+      var color = v === current ? "#f59e0b"
+        : (settled.indexOf(v) >= 0 ? "#2563eb" : "#94a3b8");
+      return { value: d, itemStyle: { color: color, borderRadius: [4, 4, 0, 0] } };
     });
-    stage.appendChild(table);
+    c.setOption({
+      animation: false,
+      grid: { left: 48, right: 24, top: 40, bottom: 36 },
+      tooltip: { trigger: "axis",
+        formatter: function (ps) {
+          var p = ps[0];
+          var d = dist[ps[0].dataIndex];
+          var state = ps[0].dataIndex === current ? "★ 本轮确定"
+            : (settled.indexOf(ps[0].dataIndex) >= 0 ? "已确定" : "待定");
+          return p.name + "　" + state + "<br/>距离：" + (d === null ? "∞" : d);
+        } },
+      xAxis: { type: "category", data: labels },
+      yAxis: { type: "value", minInterval: 1, name: "距离" },
+      series: [{ type: "bar", data: data, barMaxWidth: 46,
+                 label: { show: true, position: "top", fontSize: 12 } }]
+    });
+    stage.appendChild(el("p", "note",
+      "蓝=已确定 · 橙=本轮确定 · 灰=待定（∞ 为尚不可达）——距离随播放逐步收敛。"));
   }
 
   function renderKnapsack(stage, frame) {
-    var rows = frame.state.rows || [];
+    // 末帧只有 chosen/best 没有 rows（引擎口径）——向前找最近带表的帧，
+    // 让最后一画面停留在"完整 DP 表 + 选中结论"上，而不是一张空图。
+    var state = frame.state;
+    if (!state.rows) {
+      for (var i = t; i >= 0; i--) {
+        if (record.frames[i].state.rows) { state = record.frames[i].state; break; }
+      }
+    }
+    var rows = state.rows || [];
     var weights = record.params.weights || [];
-    var table = el("table", "grid");
-    var head = el("tr");
-    head.appendChild(el("th", "", "物品 \\ 容量"));
     var capacity = rows.length ? rows[0].length - 1 : 0;
-    for (var w = 0; w <= capacity; w++) head.appendChild(el("th", "", String(w)));
-    table.appendChild(head);
-    rows.forEach(function (row, i) {
-      var tr = el("tr");
-      tr.appendChild(el("th", "", i === 0 ? "（无）" : "第" + (i - 1) + "件 w" + weights[i - 1]));
-      row.forEach(function (value) { tr.appendChild(el("td", "", String(value))); });
-      if (i === frame.state.item + 1) tr.className = "cur";
-      table.appendChild(tr);
+    var c = chartIn(stage, 300);
+    if (!c) { stage.appendChild(el("p", "note", "ECharts 未加载（assets 缺失）")); return; }
+    var yLabels = rows.map(function (_, i) {
+      return i === 0 ? "（无）" : "第" + (i - 1) + "件 w" + weights[i - 1];
     });
-    stage.appendChild(table);
+    var data = [];
+    var maxV = 0;
+    rows.forEach(function (row, i) {
+      row.forEach(function (value, w) {
+        data.push([w, i, value]);
+        if (value > maxV) maxV = value;
+      });
+    });
+    var option = {
+      animation: false,
+      grid: { left: 90, right: 90, top: 36, bottom: 44 },
+      tooltip: { formatter: function (ps) {
+        return ps.value[0] === 0 ? "不放任何物品" :
+          "容量 " + ps.value[0] + " · 前 " + ps.value[1] + " 件 · 最优价值 " + ps.value[2];
+      } },
+      xAxis: { type: "category", name: "容量", data:
+        Array.from({ length: capacity + 1 }, function (_, w) { return String(w); }) },
+      yAxis: { type: "category", data: yLabels, inverse: true },
+      visualMap: { min: 0, max: Math.max(maxV, 1), calculable: false, orient: "vertical",
+        right: 8, top: "center", itemHeight: 120,
+        inRange: { color: ["#eff6ff", "#93c5fd", "#2563eb"] },
+        text: ["最优价值", "0"], textStyle: { fontSize: 11 } },
+      series: [{ type: "heatmap", data: data, label: { show: true, fontSize: 11 } }]
+    };
+    if (typeof state.item === "number" && state.item >= 0) {
+      option.series[0].markArea = { silent: true, itemStyle: { color: "rgba(244,63,94,.10)" },
+        data: [[{ yAxis: state.item + 1 }, { yAxis: state.item + 1 }]] };
+      option.tooltip.formatter = function (ps) {
+        return "容量 " + ps.value[0] + " · 前 " + ps.value[1] + " 件 · 最优价值 " + ps.value[2];
+      };
+    }
+    c.setOption(option);
     if (frame.state.chosen) {
       stage.appendChild(el("p", "note", "选中物品：" + frame.state.chosen.join("、")
         + "，最优价值 " + frame.state.best));

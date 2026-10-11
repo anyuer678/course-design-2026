@@ -25,3 +25,9 @@ border-radius:8px;background-color:var(--card);color:var(--ink)}
 
 #account { scroll-margin-top: 4.5rem; }
 
+
+/* 监控大盘（2026-10-11 ECharts 化）：审计数据两图并排，窄屏摞叠 */
+.dash{display:grid;grid-template-columns:1.6fr 1fr;gap:.8rem;margin:.6rem 0 .9rem}
+.dash-chart{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:.4rem;height:260px}
+@media (max-width:900px){.dash{grid-template-columns:1fr}}

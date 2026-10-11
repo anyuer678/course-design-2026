@@ -163,8 +163,74 @@
   // ------------------------------------------------ 操作审计（M2，登录后可见）
   var OUTCOME_CLS = { ok: "pill ok", refused: "pill warn",
                       failed: "pill err", timeout: "pill err" };
+
+  // 监控大盘（2026-10-11 ECharts 化）：审计账本两图——各产品启停堆叠 + 结果分布环。
+  // 数据全来自 /api/audit，前端只做聚合；未登录/无事件时整块隐藏。
+  var DASH = { actions: null, outcomes: null };
+  var OUTCOME_COLOR = { ok: "#10b981", refused: "#f59e0b",
+                        failed: "#f43f5e", timeout: "#a855f7" };
+  function dashChart(key) {
+    if (!window.echarts) return null;
+    if (!DASH[key]) DASH[key] = echarts.init($("dash-" + key));
+    return DASH[key];
+  }
+  window.addEventListener("resize", function () {
+    Object.keys(DASH).forEach(function (k) { if (DASH[k]) DASH[k].resize(); });
+  });
+
+  function renderDash(events) {
+    var dash = $("dash");
+    if (!dash) return;
+    if (!events.length) { dash.hidden = true; return; }
+    dash.hidden = false;
+    var c1 = dashChart("actions");
+    if (c1) {
+      var byProduct = {}, order = [];
+      events.forEach(function (e) {
+        if (!byProduct[e.pid]) { byProduct[e.pid] = { start: 0, stop: 0 }; order.push(e.pid); }
+        if (e.action === "start" || e.action === "stop") byProduct[e.pid][e.action] += 1;
+      });
+      order.sort(function (a, b) {
+        return (byProduct[b].start + byProduct[b].stop) -
+               (byProduct[a].start + byProduct[a].stop);
+      });
+      c1.setOption({
+        grid: { left: 76, right: 20, top: 42, bottom: 30 },
+        tooltip: { trigger: "axis" },
+        legend: { top: 6 },
+        xAxis: { type: "value", minInterval: 1, name: "次数" },
+        yAxis: { type: "category", data: order, inverse: true },
+        series: [
+          { name: "启动", type: "bar", stack: "total",
+            data: order.map(function (p) { return byProduct[p].start; }),
+            itemStyle: { color: "#2563eb" }, barMaxWidth: 22 },
+          { name: "停止", type: "bar", stack: "total",
+            data: order.map(function (p) { return byProduct[p].stop; }),
+            itemStyle: { color: "#94a3b8" }, barMaxWidth: 22 }
+        ]
+      });
+    }
+    var c2 = dashChart("outcomes");
+    if (c2) {
+      var byOutcome = {};
+      events.forEach(function (e) {
+        byOutcome[e.outcome] = (byOutcome[e.outcome] || 0) + 1;
+      });
+      c2.setOption({
+        tooltip: { trigger: "item", formatter: "{b}：{c} 次（{d}%）" },
+        legend: { bottom: 4 },
+        series: [{ type: "pie", radius: ["42%", "66%"], center: ["50%", "44%"],
+          label: { show: true, formatter: "{b} {c}", fontSize: 11 },
+          data: Object.keys(byOutcome).map(function (k) {
+            return { name: k, value: byOutcome[k],
+                     itemStyle: { color: OUTCOME_COLOR[k] || "#94a3b8" } };
+          }) }]
+      });
+    }
+  }
+
   function refreshAudit() {
-    if (!user) return;                       // 未登录：保持占位行，不发请求（401 噪音）
+    if (!user) { $("dash").hidden = true; return; }   // 未登录：不发请求（401 噪音）
     fetch("/api/audit?limit=50").then(function (r) {
       return r.json().then(function (d) { return { status: r.status, d: d }; });
     }).then(function (r) {
@@ -172,11 +238,13 @@
       if (!rows) return;
       rows.textContent = "";
       if (r.status !== 200) {
+        $("dash").hidden = true;
         rows.appendChild(el("tr")).appendChild(
           el("td", "note", "审计读取失败（HTTP " + r.status + "）"));
         return;
       }
       var events = r.d.events || [];
+      renderDash(events);
       if (!events.length) {
         rows.appendChild(el("tr")).appendChild(
           el("td", "note", "还没有启停动作——启动或停止一个产品后这里开始记账。"));

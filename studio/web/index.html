@@ -51,6 +51,10 @@
 
       <div class="overline">Audit</div>
       <h2 id="audit">操作审计 <span class="note">（启停动作的账，含拒绝与失败；需登录查看）</span></h2>
+      <div id="dash" class="dash" hidden>
+        <div class="dash-chart" id="dash-actions"></div>
+        <div class="dash-chart" id="dash-outcomes"></div>
+      </div>
       <table class="kb">
         <thead><tr>
           <th>时间</th><th>动作</th><th>产品</th><th>结果</th><th>说明</th>
@@ -85,6 +89,7 @@
     <footer>Studio P0 · 数据只在本机 · 只绑 127.0.0.1 · UI 共享设计系统 kb.css 2.1</footer>
   </div>
 </div>
+<script src="/static/assets/echarts.min.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

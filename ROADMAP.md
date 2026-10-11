@@ -687,6 +687,17 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   直调回归）+ sensorhub 25 + cachekv 19 = 81 全绿；无头 Edge 走查：加载示例→配方→
   清洗→报告全链自动、三 canvas 真渲染、零 console 错误、截图目检
   （p-验收/echarts-datascope*.png）。
+- ✅ **轮十六：ECharts 第三片——SimLab 回放 + Studio 大盘（10-11）**：
+  **SimLab**：Dijkstra 距离表→状态着色柱状图（蓝=已确定/橙=本轮确定/∞ 透明柱顶标）、
+  背包 DP 表→热力图（visualMap 渐变 + 当前行 markArea，末帧向前复用最近带 rows 的帧
+  修"末帧空图"）；实例跟随 stage 逐帧 dispose 重建（450ms/帧、animation 关）；
+  A* 迷宫维持手写 SVG。**Studio**：审计区新增监控大盘两图（各产品启停堆叠条 +
+  结果分布环），数据全来自既有 /api/audit 前端纯聚合、服务端零改动、3s 轮询复用实例。
+  当场抓两真缺陷：dashChart 键位错（$("actions") 应为 dash-actions）、背包末帧空图。
+  **安全**：走查脚本曾硬编码门户口令→改运行时读 gitignore 的 password.txt，grep 确认
+  无残留才提交。验证：studio 30 + simlab 28 + datascope 37 = 95 全绿；无头 Edge 双产品
+  走查（含播放 3 帧验证逐帧重建）零意外 console 错误、截图目检
+  （p-验收/echarts-轮十六走查-2026-10-11.md）。
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
   cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 
