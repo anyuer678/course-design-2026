@@ -36,6 +36,7 @@ import time
 from collections import deque
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]          # 仓库根
 PY = sys.executable
@@ -335,14 +336,40 @@ class Handler(SimpleHTTPRequestHandler):
     def log_message(self, fmt, *args):        # 静音：实验台不打自己访问日志
         pass
 
+    # Origin 门（2026-10-08 安全加固）：/lab/api/* 能起停项目服务、发原始字节，
+    # 而 _body() 不看 Content-Type——恶意网页用 text/plain 简单请求（免 preflight）
+    # 就能跨站驱动。此处按来源放行：非浏览器脚本（无 Origin）、file:// 页面
+    # （Origin: null）、与 Host 同源的浏览器控制台；其余跨站一律 403。
+    def _origin_allowed(self, origin: str | None) -> bool:
+        if not origin:
+            return True                       # 脚本/curl 没有 Origin：非浏览器语境
+        if origin == "null":
+            return True                       # file:// 打开的展示页（既有使用方式）
+        try:
+            parsed = urlsplit(origin)
+        except ValueError:
+            return False
+        if parsed.scheme != "http":
+            return False
+        host = (self.headers.get("Host") or "").lower()
+        return parsed.netloc.lower() == host  # 同源：Origin 与 Host 头逐字一致
+
+    def _cors_headers(self) -> list:
+        """CORS 只镜像允许的来源（不再 ACAO:*）——同源本就不需要，file:// 镜像 null。"""
+        origin = self.headers.get("Origin")
+        if not origin or not self._origin_allowed(origin):
+            return []
+        return [("Access-Control-Allow-Origin", origin),
+                ("Access-Control-Allow-Headers", "Content-Type"),
+                ("Access-Control-Allow-Methods", "GET, POST, OPTIONS")]
+
     def _json(self, obj: dict, code: int = 200) -> None:
         body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(body)))
-        self.send_header("Access-Control-Allow-Origin", "*")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type")
-        self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+        for name, value in self._cors_headers():
+            self.send_header(name, value)
         self.end_headers()
         self.wfile.write(body)
 
@@ -438,6 +465,10 @@ class Handler(SimpleHTTPRequestHandler):
     def do_POST(self):
         if not self.path.startswith("/lab/api/"):
             return self._json({"ok": False, "error": "unknown"}, 404)
+        origin = self.headers.get("Origin")
+        if not self._origin_allowed(origin):
+            return self._json({"ok": False,
+                               "error": "跨站请求被拒绝（Origin 门）"}, 403)
         if not _is_loopback(self.client_address[0]):
             return self._json({"ok": False,
                                "error": "控制 API 只接受本机（回环）请求；局域网可访问静态页"}, 403)
