@@ -128,9 +128,13 @@ def _run(args) -> str:
 
 
 def _norm(text: str) -> str:
-    """三条毫秒规则（left 原样、只换数字），见模块 docstring。"""
-    text = re.sub(r"(写 8KB 记录（60 次中位数）\s+plain\s+)[\d.]+ ms", r"\1<当场> ms", text)
-    text = re.sub(r"(写 8KB \+ fsync（60 次中位数）\s+fsync\s+)[\d.]+ ms", r"\1<当场> ms", text)
+    """三条毫秒规则。数字连前后的对齐空格一起规范成单空格：demo.py 的数字列
+    按宽度对齐，中位数 5.43 和 10.21 的空格数不同——只换数字会留下"残留
+    对齐空格"跨机漂移（2026-10-11 CI 实测 B37 同类问题的 B41 版）。"""
+    text = re.sub(r"(写 8KB 记录（60 次中位数）)\s+(plain)\s+[\d.]+ ms",
+                  r"\1 \2 <当场> ms", text)
+    text = re.sub(r"(写 8KB \+ fsync（60 次中位数）)\s+(fsync)\s+[\d.]+ ms",
+                  r"\1 \2 <当场> ms", text)
     text = re.sub(r"(边际成本 ≈ )[\d.]+ ms/条", r"\1<当场> ms/条", text)
     return text
 

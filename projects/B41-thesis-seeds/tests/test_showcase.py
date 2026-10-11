@@ -61,8 +61,12 @@ class TestPayload(unittest.TestCase):
         self.assertEqual(chosen[-1]["evidence"]["path"], "projects/B23-ml-from-scratch/README.md")
 
     def test_norm_rules(self):
+        # 规范化把数字与前后对齐空格一起压成单空格：demo 数字列按宽度对齐，
+        # 中位数宽度跨机不同，保留原空格会漂（2026-10-11 CI 实测）。
         sample = "  写 8KB 记录（60 次中位数）             plain    0.398 ms"
-        self.assertEqual(sc._norm(sample), "  写 8KB 记录（60 次中位数）             plain    <当场> ms")
+        self.assertEqual(sc._norm(sample), "  写 8KB 记录（60 次中位数） plain <当场> ms")
+        sample = "  写 8KB + fsync（60 次中位数）   fsync  12.34 ms"
+        self.assertEqual(sc._norm(sample), "  写 8KB + fsync（60 次中位数） fsync <当场> ms")
         sample = "  解读                            「提交即持久」的边际成本 ≈ 0.304 ms/条（本机介质相关，仅供参考）"
         self.assertIn("<当场> ms/条", sc._norm(sample))
 
