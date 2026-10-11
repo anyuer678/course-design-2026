@@ -421,6 +421,11 @@ def main(argv) -> int:
         disk = OUT.read_text(encoding="utf-8")
         if disk != fresh:
             print("展示页与现算不一致（页面过期或手改过）：跑 python tools/showcase.py --write")
+            print(f"长度：磁盘 {len(disk)} / 现算 {len(fresh)}")
+            for i, (x, y) in enumerate(zip(disk.splitlines(), fresh.splitlines())):
+                if x != y:
+                    print(f"首个差异行 {i}：磁盘={x[:120]!r} 现算={y[:120]!r}")
+                    break
             return 1
         print("展示页新鲜：与现算逐字一致（旅程/边界/GBN 演示全量解析）。")
         return 0
