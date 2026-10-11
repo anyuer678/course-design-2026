@@ -248,9 +248,11 @@ class DaemonTest(unittest.TestCase):
         (self.data / "坏文档.pad").write_text("这不是 pad 文件\n", encoding="utf-8")
         (self.data / "好文档.pad").write_text(PAD_DOC, encoding="utf-8")
         _, port = self.start_daemon()
-        reply = self.probe_until(port, "corrupt=1")
-        self.assertIn("docs=2", reply)
-        self.assertIn("backups=1", reply)                 # 只有能解析的那份入了备份
+        # 等 backups=1（备份带 IO，是慢动作），不能等先出现的 corrupt=1——
+        # 慢机器/CI runner 上探针会抢在备份完成前命中，误报 backups=0。
+        reply = self.probe_until(port, "backups=1")
+        self.assertIn("corrupt=1", reply)
+        self.assertIn("docs=2", reply)                    # 坏文档也如实入账
         self.assertFalse((self.data / "backups" / "坏文档").exists())
 
     def test_parent_watchdog(self):

@@ -277,7 +277,8 @@ def main(argv) -> int:
         if not OUT.is_file():
             print(f"{OUT.relative_to(ROOT)} 不存在——跑 python tools/showcase.py --write")
             return 1
-        if OUT.read_text(encoding="utf-8") != fresh:
+        disk = OUT.read_text(encoding="utf-8")
+        if disk != fresh:
             print("展示页与现算不一致（页面过期或手改过）：跑 python tools/showcase.py --write")
             print(f"长度：磁盘 {len(disk)} / 现算 {len(fresh)}")
             for i, (x, y) in enumerate(zip(disk.splitlines(), fresh.splitlines())):

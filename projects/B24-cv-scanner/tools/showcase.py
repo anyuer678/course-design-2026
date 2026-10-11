@@ -20,7 +20,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-import cv2
+# cv2 延迟到使用处再 import：模块顶层 import 会在"本机没装 OpenCV"时
+# 直接 ModuleNotFoundError，main() 里的探测（退出码 3 = SKIP）根本没机会跑。
 
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "web" / "showcase.html"
@@ -76,6 +77,7 @@ def _thumb(path: Path, fmt: str = "jpeg", width: int = 340) -> dict:
     两者对同一输入像素都是确定性的（同机同版本库）。
     """
     from cvscan import io as cvio
+    import cv2
     image = cvio.load_png(path)
     h, w = image.shape[:2]
     scale = width / w
