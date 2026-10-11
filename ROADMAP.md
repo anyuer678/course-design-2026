@@ -744,6 +744,23 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   一层图 + 亮点清单 + 截图墙 + compose 快速开始与边界说明）。
   本沙箱黑名单拦 wsl.exe → Docker Desktop 起不来，compose config 静态校验
   已过，`docker compose up -d --build` 实测留给用户本地执行。
+- ✅ **轮二十：GitHub Actions CI 上线（10-11）**：GAP-ANALYSIS 第三梯队⑦收官。
+  `.github/workflows/ci.yml`（windows-latest 对齐本机 CRLF 语义、fetch-depth: 0
+  ——B39/B40 证据核验要逐条核对历史提交号、pip install pytest 仅作 CI 工具链、
+  跑 scripts/check_all.py，产品保持零依赖）。**首推即照妖镜，7 轮跑绿**，
+  每轮修的都是真问题：①浅克隆致 B39/B40 红（fetch-depth:0 修）；②runner 无
+  pytest（产品层 0.0s 秒挂）；③CourseLab relpath 跨盘符崩溃（D: 仓库 C: 临时
+  目录，捕获 ValueError 改绝对路径穿越载荷）；④引擎依赖类生成器推广 SKIP
+  探测协议（B24 cv2 / B29 pyspark / B33 编译产物，退出码 3 = [note] 不算失败，
+  SPEC.md 已记约定；B24 顶层 import cv2 拆雷——顶层 import 会让探测没机会跑）；
+  ⑤board 测试时序竞争（等慢动作 backups=1 而非先到的 corrupt=1）；⑥三个跨机
+  易变生成器根治：B37 耗时列对齐空格、B14 像素计数+javac 版本+Java 版本号
+  <当场> 化（非零守卫进 collect，真回归照样红）、B41 夹具探针 numpy→json
+  （runner 没装 numpy，负面对照"改坏了却不红"）；⑦B11 peak_open/open_now
+  规范化补双引号 JSON 盲区（连接异步回收时点 1/2 随机器漂）。方法论：
+  **--check 失败分支补"长度+首个差异行"诊断输出**——远程一击定位，零猜测；
+  本地 file:// 浅克隆复现 runner（unshallow 验证 fetch-depth 假说）。
+  最终 run 38144537749 conclusion=success。CI 徽章候选待用户（README 未放）。
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
   cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 
