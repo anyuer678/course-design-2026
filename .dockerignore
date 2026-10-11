@@ -1,0 +1,28 @@
+# Version control / local tooling
+.git
+.workbuddy/
+scripts/
+node_modules/
+
+# Runtime data & credentials - NEVER bake into images (named volumes take over)
+**/__pycache__/
+**/*.pyc
+**/data/
+**/runs/
+**/logs/
+**/backup/
+**/*.sqlite
+**/*.sqlite3
+**/password.txt
+**/secret.key
+courselab/config.json
+
+# Big dirs / draft docs irrelevant to any container
+p-验收/
+thesis/
+board/
+g2/
+webkit/
+screenshots/
+ACCIDENT-2026-10-02.md
+.venv/

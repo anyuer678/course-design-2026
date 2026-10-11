@@ -1,5 +1,18 @@
 # CacheKV —— 自托管键值缓存（P3）
 
+![CacheKV 截图](../screenshots/cachekv.png)
+
+**这个产品解决什么**：给产品当缓存层——TTL 过期、原子快照持久化、
+命中/未命中统计页，浏览器与 HTTP API 双通道可用。
+
+**Docker**（仓库根为构建上下文）：
+
+```bash
+docker build -f cachekv/Dockerfile -t kcsuite-cachekv .
+docker run -p 8021:8021 kcsuite-cachekv
+# 或一键全家桶：docker compose up -d --build
+```
+
 **定位**：给自己（和其他产品）用的键值缓存——TTL 过期、快照持久化、统计页。
 **零件库纪律**：KV 引擎与快照持久化**直接 import B38 mini-redis 的真实实现**
 （`redislite.store.Store`：SET/GET/DEL/EXPIRE/TTL/INCR + 惰性/主动过期双策略 +

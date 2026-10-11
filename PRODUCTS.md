@@ -68,6 +68,7 @@ B24（保留 demo 形态）、B25（分词并入 P4 做文本特征）。课程�
 | 八 | **真功能轮**（用户 10-05 定调："不要演示测试脚本，要真功能"） | ✅ 收官：CourseLab M12 作业提交与批改闭环 ✅（10-05：路由+四页 UI 接通、重交清分/已批可改分、自检 132→145 双入口、浏览器走查 8/8）；LinkBox 文件互传 ✅（10-05：原始字节上传 ≤32 MiB + attachment 下载 + /f/ 扫码即下载，测试 41→53 双入口）；下一站：P-验收真实使用周（等用户） |
 | 九 | **UI 2.1 生产控制台化**（用户 10-05/06："UI 急需大改/对齐生产/只要浅色"） | ✅ 收官（10-06）：设计依据收敛到 courselab/docs/DESIGN-SPEC.md v2.1（Geist 克制工程风）；共享样式 webkit/kb.css 唯一源 + sync_assets 同步七产品 + scan_refs 第三遍新鲜度核验；六产品前端重排为生产控制台形态（CacheKV 仪表盘/DataScope 四步向导/SimLab 回放库/SensorHub 瓦片/LinkBox 侧边栏/Studio 门户），逐个浏览器验收通过；全矩阵回归 215/215 + 全仓体检 15/15；Board 专项 Nimbus 皮肤（引擎零改动）；详见 ROADMAP 轮九条目 |
 | 十 | **画板 Web 版 boardweb（10-07，用户"画板功能低下：要图案/内嵌/微调/贴图"）** | ✅ 收官：HTML5 Canvas 画板 :8025（画笔/直线/矩形/椭圆 + 选择拖动/方向键微调/属性面板 + 文件上传与 Ctrl+V 贴图 + 撤销重做 + 自动保存轮转备份）；第九个 managed 产品接入门户 |
+| 十一 | **交付面三件套（10-11，GAP-ANALYSIS 第三梯队⑥⑦）** | ✅ 收官：8 个 Web 产品各一 Dockerfile（python:3.12-slim + 标准库，构建期零 pip install，构建上下文含引擎子树）+ 根 docker-compose 一键起全家（端口 1:1、命名卷、healthcheck）；8 产品截图（screenshots/，无头 Edge 带交互采集）进各自 README 与根 README"产品矩阵速览"（电梯稿 + 自研架构图 + 亮点清单）；容器模式边界如实登记（Studio 探活/CourseLab 实验运行器）。详见 ROADMAP 轮十九 |
 
 ## 六、P-验收清单（真实使用 ≥1 周，由用户本人执行，AI 不代勾）
 

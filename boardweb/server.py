@@ -146,9 +146,10 @@ def build_app(data_dir: Path | None = None) -> MicroApp:
 def main(argv=None) -> int:
     import argparse
     ap = argparse.ArgumentParser(description="画板 Web 版（只绑回环）")
+    ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = ap.parse_args(argv)
-    server = MicroServer(build_app(), port=args.port)
+    server = MicroServer(build_app(), host=args.host, port=args.port)
     port = server.start()
     print(f"画板 Web 版已启动：http://127.0.0.1:{port}/   （Ctrl+C 退出）")
     try:

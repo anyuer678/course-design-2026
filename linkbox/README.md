@@ -1,5 +1,18 @@
 # LinkBox —— 自托管工具站（短链 / 文本暂存 / 文件互传）
 
+![LinkBox 截图](../screenshots/linkbox.png)
+
+**这个产品解决什么**：手机↔电脑传链接/文字/文件总要经过第三方？自己跑一个——
+短链缩短、文本暂存（带过期与访问口令）、二维码取件，数据只落本机。
+
+**Docker**（仓库根为构建上下文）：
+
+```bash
+docker build -f linkbox/Dockerfile -t kcsuite-linkbox .
+docker run -p 8018:8018 kcsuite-linkbox
+# 或一键全家桶：docker compose up -d --build
+```
+
 **产品定位**：一个跑在自己电脑上的工具站——短链缩短、文本暂存（带过期）、
 文件互传（手机↔电脑扫码取件）。数据只在本机，浏览器可用、手机同局域网可访问。
 它是课程任务 B31（短链系统）的产品化延续：**引擎复用、产品新建**——短链核心

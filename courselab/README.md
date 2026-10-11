@@ -1,5 +1,19 @@
 # CourseLab 课程工坊 —— 课程项目平台（毕设工程）
 
+![CourseLab 截图](../screenshots/courselab.png)
+
+**这个产品解决什么**：把 33 个课程项目从"散落在仓库里的文件夹"升格为
+能登录、能在线运行实验、能布置任务评测、有看板与审计的 Web 平台。
+
+**Docker**（仓库根为构建上下文；容器含完整课程内容代理，
+在线实验运行器依赖本机 Windows shell，推荐本机 `run.bat` 模式）：
+
+```bash
+docker build -f courselab/Dockerfile -t kcsuite-courselab .
+docker run -p 8024:8024 kcsuite-courselab
+# 或一键全家桶：docker compose up -d --build
+```
+
 **每个课程各有一个小型项目平台**：把课设仓库里的 33 个项目、自包含展示页、实验台与练习册，
 升格成一个能登录、能在线运行、能管理、能部署的 Web 平台（一份底座，每门课程一个工作区）。
 

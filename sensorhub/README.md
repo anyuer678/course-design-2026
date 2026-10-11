@@ -1,5 +1,18 @@
 # SensorHub —— 物联网监测（P6）：传感器 → MQTT → SQLite → 曲线 → 告警
 
+![SensorHub 截图](../screenshots/sensorhub.png)
+
+**这个产品解决什么**：一条完整可观测的 IoT 链路——模拟传感器经手写 MQTT
+broker 落库，WebSocket 实时曲线、越限告警、设备账本 vs 入库实收对账。
+
+**Docker**（仓库根为构建上下文）：
+
+```bash
+docker build -f sensorhub/Dockerfile -t kcsuite-sensorhub .
+docker run -p 8022:8022 kcsuite-sensorhub
+# 或一键全家桶：docker compose up -d --build
+```
+
 **定位**：把 B35 手写 MQTT 的"真件"编排成一条常驻生产线——3 台模拟传感器各自
 用真套接字连上真 broker 发布读数，入库端订阅落 SQLite，产品侧对入库读数做
 **阈值告警**并给出监测台（总账 + 对账表 + SVG 曲线 + 告警台账）。

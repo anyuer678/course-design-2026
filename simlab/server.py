@@ -140,9 +140,10 @@ def main(argv=None) -> int:
     import argparse
     import threading
     ap = argparse.ArgumentParser(description="SimLab 播放器（只绑回环）")
+    ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     args = ap.parse_args(argv)
-    server = build_server(port=args.port)
+    server = build_server(host=args.host, port=args.port)
     port = server.start()
     print(f"SimLab 播放器已启动： http://127.0.0.1:{port}/   （Ctrl+C 退出）")
     print(f"记录目录： {RUNS_DIR}")

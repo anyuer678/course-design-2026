@@ -1,5 +1,18 @@
 # boardweb —— 画板 Web 版（P7 的网页形态，2026-10-07 起交付）
 
+![BoardWeb 截图](../screenshots/boardweb.png)
+
+**这个产品解决什么**：不装桌面软件也能画——浏览器里画笔/图形/选择微调、
+贴图粘贴、撤销重做，自动保存 + 轮转备份，与桌面 Swing 版并存。
+
+**Docker**（仓库根为构建上下文）：
+
+```bash
+docker build -f boardweb/Dockerfile -t kcsuite-boardweb .
+docker run -p 8025:8025 kcsuite-boardweb
+# 或一键全家桶：docker compose up -d --build
+```
+
 **定位**：浏览器里的画板，内嵌 Studio 门户（第九个 managed 产品）——回应
 "画板要内嵌网页、要图形工具、要微调、要贴图"。桌面 Swing 版（`board/`，:8023）
 保留并存，两者备份纪律同源（原子写 + 轮转留底）。

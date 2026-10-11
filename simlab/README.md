@@ -1,5 +1,18 @@
 # SimLab —— 仿真馆（P5）：真实引擎的运行记录与回放
 
+![SimLab 截图](../screenshots/simlab.png)
+
+**这个产品解决什么**：演示常见于"画出来的动画"——SimLab 的每一帧都是
+真实引擎（B12 Dijkstra/背包 DP、B34 A*）现算的产出，改参数即改即算。
+
+**Docker**（仓库根为构建上下文）：
+
+```bash
+docker build -f simlab/Dockerfile -t kcsuite-simlab .
+docker run -p 8019:8019 kcsuite-simlab
+# 或一键全家桶：docker compose up -d --build
+```
+
 **定位**：终结"PPT 式演示"——showcase 页是静态回放，SimLab 是
 **参数 → 真实引擎现算 → 统一运行记录 → 播放器回放**。
 轮三之一交付记录格式与引擎适配器；**轮三之二（本轮）交付播放器服务**：

@@ -1,0 +1,113 @@
+# Portfolio family bucket: 8 web products, one command.
+#
+#   docker compose up -d --build
+#
+# Every image is pure stdlib on python:3.12-slim (zero pip installs).
+# Data lives in named volumes; host ports match the product matrix 1:1.
+#
+# Local-mode (run.bat) vs container-mode: Studio's one-click start/stop and
+# its TCP status panel target 127.0.0.1, so in container mode the panel will
+# honestly report siblings as offline. Point your browser at the ports below.
+name: kcsuite
+
+services:
+  studio:
+    build: { context: ., dockerfile: studio/Dockerfile }
+    ports: ["8017:8017"]
+    volumes: [studio-data:/app/studio/data]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8017/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  linkbox:
+    build: { context: ., dockerfile: linkbox/Dockerfile }
+    ports: ["8018:8018"]
+    volumes: [linkbox-data:/app/linkbox/data]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8018/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  simlab:
+    build: { context: ., dockerfile: simlab/Dockerfile }
+    ports: ["8019:8019"]
+    volumes: [simlab-runs:/app/simlab/runs]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8019/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  datascope:
+    build: { context: ., dockerfile: datascope/Dockerfile }
+    ports: ["8020:8020"]
+    volumes: [datascope-data:/app/datascope/data]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8020/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  cachekv:
+    build: { context: ., dockerfile: cachekv/Dockerfile }
+    ports: ["8021:8021"]
+    volumes: [cachekv-data:/app/cachekv/data]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8021/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  sensorhub:
+    build: { context: ., dockerfile: sensorhub/Dockerfile }
+    ports: ["8022:8022"]
+    volumes: [sensorhub-data:/app/sensorhub/data]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8022/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  courselab:
+    build: { context: ., dockerfile: courselab/Dockerfile }
+    ports: ["8024:8024"]
+    volumes:
+      - courselab-data:/app/courselab/data
+      - courselab-logs:/app/courselab/logs
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8024/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  boardweb:
+    build: { context: ., dockerfile: boardweb/Dockerfile }
+    ports: ["8025:8025"]
+    volumes: [boardweb-data:/app/boardweb/data]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8025/', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+volumes:
+  studio-data:
+  linkbox-data:
+  simlab-runs:
+  datascope-data:
+  cachekv-data:
+  sensorhub-data:
+  courselab-data:
+  courselab-logs:
+  boardweb-data:

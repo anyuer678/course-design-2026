@@ -1,5 +1,18 @@
 # Studio —— 产品矩阵门户（P0）
 
+![Studio 门户截图](../screenshots/studio.png)
+
+**这个产品解决什么**：作品集有了入口——九个产品一眼看清"做了什么、活没活着"：
+产品目录、一键启停、TCP 探活状态面板（在线 = 端口连得上，不撒谎）、统一导航。
+
+**Docker**（仓库根为构建上下文）：
+
+```bash
+docker build -f studio/Dockerfile -t kcsuite-studio .
+docker run -p 8017:8017 kcsuite-studio
+# 或一键全家桶：docker compose up -d --build
+```
+
 **定位**：课设产品矩阵的入口——产品目录、一键启停、状态面板、导航。
 **门户本身跑在自研 [webframe](../webframe/README.md) 微框架上**（netlab 协议层
 + 本框架路由/静态/JSON 管线），是"框架是真交付物"的现场证明。

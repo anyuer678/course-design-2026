@@ -233,11 +233,12 @@ def main(argv=None) -> int:
     import argparse
     import threading
     ap = argparse.ArgumentParser(description="Studio 产品门户（只绑回环）")
+    ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     ap.add_argument("--linkbox-port", type=int, default=8018)
     ap.add_argument("--lab-port", type=int, default=7788)
     args = ap.parse_args(argv)
-    server, _, auth = build_server(port=args.port,
+    server, _, auth = build_server(host=args.host, port=args.port,
                                    linkbox_port=args.linkbox_port,
                                    lab_port=args.lab_port)
     port = server.start()

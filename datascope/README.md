@@ -1,5 +1,18 @@
 # DataScope —— 数据工作台（P4）：CSV 导入 / 画像 / 清洗管线
 
+![DataScope 截图](../screenshots/datascope.png)
+
+**这个产品解决什么**：把"发我一份 CSV"到"给出清洗报告"变成一条自助流水线——
+导入 → 列画像 → 按配方清洗 → 挖掘（Apriori/K-means）→ 报告，每步计数可对账。
+
+**Docker**（仓库根为构建上下文）：
+
+```bash
+docker build -f datascope/Dockerfile -t kcsuite-datascope .
+docker run -p 8020:8020 kcsuite-datascope
+# 或一键全家桶：docker compose up -d --build
+```
+
 **定位**：把"发我一份 CSV"变成产品——导入 → 列画像 → 按配方清洗 →
 导出清洗后数据 + 清洗报告。**报告即账本**（继承 B26 的账本纪律）：
 每个清洗步骤的计数都是"动过多少行/格"的账，不是文案。

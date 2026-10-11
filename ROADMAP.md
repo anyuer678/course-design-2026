@@ -724,6 +724,26 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   全过；无头 Edge 徽标=实时推送、3.5s 末尾 seq 10584→10588、console 零错误、
   截图目检（p-验收/ws-轮十八走查-2026-10-11.md）。存量库前 1 万余行历史覆写
   不可逆（不再恶化）；Studio HTTP 代理不转发 WS，实时曲线直连 :8022。
+- ✅ **轮十九：Docker 三件套（README + 截图 + Docker，10-11）**：GAP-ANALYSIS
+  第三梯队⑥⑦落地。**① --host 参数**：studio/datascope/cachekv/sensorhub/simlab/
+  boardweb 六个 server 的 main() 补 `--host`（默认仍 127.0.0.1，容器内传 0.0.0.0；
+  build_server 本就收 host，仅暴露 CLI），六产品 pytest 回归全绿。**② Docker**：
+  8 个 Web 产品各一 Dockerfile（构建上下文统一仓库根、只 COPY 自身 + 引擎子树：
+  linkbox←B11/B31、datascope←B26、cachekv←B38、sensorhub←B35、simlab←B12/B34、
+  courselab←projects/+showcase/ 全树供内容代理），镜像 = python:3.12-slim +
+  标准库、构建期零 pip install；根 docker-compose.yml 一键起全家（端口 1:1、
+  9 个命名卷接数据、urllib healthcheck）；.dockerignore 排除 data/runs/logs/
+  password/secret（凭据与运行数据不进镜像）。容器模式边界如实登记：Studio 探活
+  写死 127.0.0.1（兄弟容器显示离线是预期）、CourseLab 实验运行器依赖本机
+  Windows shell；Board 桌面版与实验台非 Web 服务不进 compose。**③ 截图**：
+  scripts/shoot.js 无头 Edge 采集 8 产品（viewport 1360×850 @2x，带交互步骤：
+  DataScope 加载示例、CacheKV 注入演示、SensorHub 切 WS 曲线页并滚动到图），
+  存 screenshots/（1.9MB）零 console 错误，逐张目检；BoardWeb 画布保留真实
+  使用痕迹。**④ README**：8 产品 README 标题下插截图 + "这个产品解决什么" +
+  单产品 Docker 命令；根 README 新增"产品矩阵速览"（电梯稿表 + 自研架构
+  一层图 + 亮点清单 + 截图墙 + compose 快速开始与边界说明）。
+  本沙箱黑名单拦 wsl.exe → Docker Desktop 起不来，compose config 静态校验
+  已过，`docker compose up -d --build` 实测留给用户本地执行。
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
   cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 

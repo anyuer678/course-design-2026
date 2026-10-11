@@ -2,6 +2,69 @@
 
 通过可运行的实验理解课程，逐步形成少量可复现、能解释的代表作品；执行计划见 [PLAN.md](PLAN.md)。
 
+## 产品矩阵速览（作品集门面）
+
+九个可运行产品，全部**零第三方依赖**：纯 Python 标准库 + 自研地基（webframe 微框架 / netlab 事件循环），
+引擎层 import 六个课程项目的真实实现（B11 网络协议、B12 算法、B26 挖掘、B31 短链、B35 MQTT、B38 Redis），零重写。
+
+| 产品 | 30 秒电梯稿 | 端口 |
+|---|---|---|
+| [Studio](studio/) | 作品集门户：产品目录、一键启停、TCP 探活状态面板——"在线 = 端口连得上"，不撒谎 | :8017 |
+| [CourseLab](courselab/) | 把 33 个课程项目升格为能登录、能在线做实验、能布置任务与评测的教学平台 | :8024 |
+| [LinkBox](linkbox/) | 自托管工具站：短链 / 文本暂存（带口令与过期）/ 文件互传 / 二维码，数据只在本机 | :8018 |
+| [DataScope](datascope/) | CSV 自助分析：列画像 → 配方清洗 → Apriori/K-means 挖掘 → 每步计数可对账的报告 | :8020 |
+| [SimLab](simlab/) | 算法仿真回放：每一帧都是真实引擎现算的产出，改参数即改即算，拒绝 PPT 式演示 | :8019 |
+| [CacheKV](cachekv/) | 自托管键值缓存：TTL、原子快照持久化、命中/未命中统计页 | :8021 |
+| [SensorHub](sensorhub/) | IoT 全真件链路：传感器 → 手写 MQTT broker → SQLite → WebSocket 实时曲线 → 阈值告警 | :8022 |
+| [BoardWeb](boardweb/) | 浏览器画板：图形/选择微调/贴图粘贴/撤销重做 + 轮转备份（桌面 Swing 版并存） | :8025 |
+| [Board](board/)（桌面版） | Java Swing 画板，7106 项自动检查（含离屏像素对快照影子模型） | :8023 |
+
+架构一层图（自研成分标注）：
+
+```text
+        浏览器 / 手机（原生 HTML/JS + ECharts 本地化，无前端框架）
+           │  HTTP · WebSocket（RFC 6455 服务器侧手写：握手/帧/掩码/ping-pong）
+   ┌───────┴────────────────────────────────────────────┐
+   │  webframe 微框架 + netlab 单线程事件循环             │ ← 自研地基，8 个 Web 产品同底座
+   ├────────────────────────────────────────────────────┤
+   │  产品层   studio · courselab · linkbox · datascope  │
+   │           simlab · cachekv · sensorhub · boardweb   │ ← 产品只做产品层
+   ├────────────────────────────────────────────────────┤
+   │  引擎层   B11 netlab · B12 算法 · B26 挖掘 · B31 短链 │
+   │           B35 MQTT broker · B38 mini-redis           │ ← import 原项目真实实现，零重写
+   ├────────────────────────────────────────────────────┤
+   │  存储     SQLite / 快照文件 / 轮转备份（可审计）      │
+   └────────────────────────────────────────────────────┘
+```
+
+亮点清单（面试可展开）：
+
+- **协议手写**：RFC 6455 WebSocket（帧编解码/分片/重连）、MQTT 3.1.1 broker、QR 编码器（RS 纠错逐字节对规范）、mini-Raft 一致性
+- **零依赖纪律**：不装 Flask/Redis/MQTT 服务器/前端框架；ECharts 唯一本地化第三方 js（离线可开）
+- **测试口径**：产品矩阵 pytest 291+ 与 CourseLab 自检 154，双入口（pytest + run.bat）全绿；B14 桌面版 7106 项自检
+- **报告即账本**：清洗计数、入库对账、审计日志——数字过期即红，文案不可替代账
+
+产品截图（真实运行截图，无头 Edge 采集，含实时数据）：
+
+| | |
+|---|---|
+| ![Studio 门户](screenshots/studio.png) | ![CourseLab](screenshots/courselab.png) |
+| ![LinkBox](screenshots/linkbox.png) | ![DataScope](screenshots/datascope.png) |
+| ![SimLab](screenshots/simlab.png) | ![CacheKV](screenshots/cachekv.png) |
+| ![SensorHub](screenshots/sensorhub.png) | ![BoardWeb](screenshots/boardweb.png) |
+
+### Docker 一键全家桶
+
+```bash
+docker compose up -d --build
+# 8 个 Web 产品，端口与矩阵 1:1：8017/8018/8019/8020/8021/8022/8024/8025
+```
+
+- 镜像 = `python:3.12-slim` + 标准库，**构建期零 pip install**；数据持久化在命名卷，凭据与运行数据不进镜像
+- 容器模式边界（如实登记）：Studio 状态面板探活写死 127.0.0.1，容器模式下兄弟产品显示离线是预期；
+  CourseLab 在线实验运行器依赖本机 Windows shell（`cmd /c run.bat`），容器内课程内容完整，跑实验请用本机模式
+- 桌面 Swing 画板（Board :8023）与实验台（:7788）不是 Web 服务，不进 compose，按各自 README 本机运行
+
 ## 范围与执行方式
 
 - 保留 B1–B41 共 **41 项任务**，不等于 41 个独立软件；B15–B22 共用一个报修系统，B39–B41 以复盘和成果整理为主。

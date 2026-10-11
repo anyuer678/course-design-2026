@@ -277,13 +277,14 @@ def main(argv=None) -> int:
     import argparse
     import threading
     ap = argparse.ArgumentParser(description="SensorHub 物联网监测（只绑回环）")
+    ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
     ap.add_argument("--interval", type=float, default=1.0,
                     help="节拍秒数（必须 > 0；服务模式下引擎跑在节拍线程里）")
     args = ap.parse_args(argv)
     if args.interval <= 0:
         ap.error("--interval 必须 > 0（服务模式不能关节拍线程）")
-    server, engine = build_server(port=args.port, interval=args.interval)
+    server, engine = build_server(host=args.host, port=args.port, interval=args.interval)
     engine.start()
     port = server.start()
     status = engine.status()

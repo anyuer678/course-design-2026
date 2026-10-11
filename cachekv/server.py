@@ -237,9 +237,10 @@ def main(argv=None) -> int:
     import argparse
     import threading
     ap = argparse.ArgumentParser(description="CacheKV 自托管键值缓存（只绑回环）")
+    ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=8021)
     args = ap.parse_args(argv)
-    server, engine, saver = build_server(port=args.port)
+    server, engine, saver = build_server(host=args.host, port=args.port)
     port = server.start()
     saver.start()
     print(f"CacheKV 已启动： http://127.0.0.1:{port}/   （Ctrl+C 退出）")
