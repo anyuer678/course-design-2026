@@ -48,6 +48,9 @@ boardweb/data/
 .vscode/
 .qoder-tmp/
 
+# 助手工作区数据（记忆/日志，非项目交付物；2026-10-11 起）
+.workbuddy/
+
 # Java / Maven 构建产物（B18）
 target/
 *.class
