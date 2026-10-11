@@ -219,13 +219,16 @@ public final class BackupDaemon implements AutoCloseable {
             System.exit(2);
         }
         BackupDaemon daemon = new BackupDaemon(dataRoot, interval, keep, port);
-        if (parentPid >= 0) {
-            daemon.startWatchdog(parentPid);
-        }
         System.out.println("BOARD LISTENING " + daemon.port());
         System.out.println("数据目录 " + dataRoot.toAbsolutePath() + "；备份桶 keep=" + keep
                 + "；轮询 " + interval + "ms");
         System.out.flush();
+        // 看门狗必须在 boot 行打印之后才开查：首轮即发现的"父已死"也要让
+        // LISTENING 先出门——启动器/测试都靠这行确认就绪（2026-10-11 CI 实测
+        // 快慢机竞速：看门狗抢跑会让读首行的一方读到退出宣告而非 LISTENING）。
+        if (parentPid >= 0) {
+            daemon.startWatchdog(parentPid);
+        }
         daemon.startAcceptor();
         if (window) {
             SafeStore docs = new SafeStore(dataRoot);
