@@ -163,6 +163,9 @@ def collect() -> dict:
     cp_test = str(CLASSES) + os.pathsep + str(TEST_CLASSES)
 
     selftest = _java(["-cp", cp_test, "paint.PaintTests"])
+    # Java 版本随机器（dev 机 21、CI runner 17）——自检输出原样内嵌前必须归一，
+    # 否则 --check 又翻烙饼（第四轮 CI 诊断首个差异行直接钉死这里）。
+    selftest = re.sub(r"Java 版本 \d+", "Java 版本 <当场>", selftest)
     modules = re.findall(r"^·\s*(.+?)\s*…\s*ok\s*$", selftest, re.M)
     m = re.search(r"全部通过：(\d+) 项检查，(\d+) 失败", selftest)
     checks, fails = (m.group(1), m.group(2)) if m else ("?", "?")
@@ -185,6 +188,7 @@ def collect() -> dict:
     # 非零断言在上方守卫里，页面只记 <当场>。
     demo_norm = re.sub(r"离屏像素统计：红 \d+、蓝 \d+、绿 \d+",
                        "离屏像素统计：红 <当场>、蓝 <当场>、绿 <当场>", demo_norm)
+    demo_norm = re.sub(r"Java 版本 \d+", "Java 版本 <当场>", demo_norm)
 
     main_files = sorted((ROOT / "src" / "main" / "java" / "paint").rglob("*.java"))
     pkgs = sorted({p.parent.name for p in main_files if p.parent.name != "paint"})
