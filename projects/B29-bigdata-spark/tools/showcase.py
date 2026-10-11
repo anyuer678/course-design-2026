@@ -45,12 +45,12 @@ def _norm(text: str) -> str:
     text = re.sub(r"(生成 40 万行用时)\s+[\d.]+ s", r"\1 <当场>", text)
     text = re.sub(r"(耗时（3 次取中——单次实测）)\s+plain [\d.]+ ms / salted [\d.]+ ms",
                   r"\1 plain <当场> ms / salted <当场> ms", text)
-    # Spark 退出时 JVM 往 stdout 打 3 行进程树清理（原文还是本机代码页字节，PID 每次不同）——
-    # 整行移除，留一条说明；否则页面随 PID 漂移。
+    # Spark 退出时 JVM 往 stdout 打进程树清理（原文还是本机代码页字节，PID 每次不同）——
+    # 整行移除，留一条说明；**说明里不写行数**——JVM 每次打印的清理行数本身会漂
+    # （2/3/4 行都出现过），写进页面就等于把易变量又请了回来（--check 翻烙饼的根因）。
     lines = text.splitlines()
     kept = [ln for ln in lines if "PID" not in ln]
-    removed = len(lines) - len(kept)
-    kept.append(f"（Spark JVM 退出清理日志 {removed} 行已按规则移除：含 PID，每次运行必不同。）")
+    kept.append("（Spark JVM 退出清理日志已按规则整行移除：含 PID，每次运行必不同。）")
     return "\n".join(kept) + "\n"
 
 

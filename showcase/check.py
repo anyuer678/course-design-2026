@@ -372,6 +372,11 @@ def project_check(root: Path, entry: dict) -> tuple:
     except subprocess.TimeoutExpired:
         return [f"{entry['id']} 的生成器 --check 超时（300 秒）"], []
     tail = [line for line in (proc.stdout or "").strip().splitlines() if line][-3:]
+    if proc.returncode == 3:
+        # 生成器约定：退出码 3 = 环境不可用（如 B8 需要 WSL 现场而本机没有），
+        # 记 note 不算失败——"检查不了"与"检查不过"必须分开记账。
+        note = tail[-1] if tail else "环境不可用，无法现算"
+        return [], [f"{entry['id']}：{note}"]
     if proc.returncode != 0:
         detail = " / ".join(tail) or (proc.stderr or "").strip().splitlines()[-1:]
         return [f"{entry['id']} 的生成器 --check 失败：{detail}"], []

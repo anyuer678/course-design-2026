@@ -112,6 +112,25 @@ echo "@@DONE@@"
 """
 
 
+def _wsl_available() -> bool:
+    """环境探测：wsl 可调用且目标发行版存在。
+
+    覆盖三种"本机根本没有 WSL 现场"的情形：没装 wsl（FileNotFoundError）、
+    执行被安全策略拒绝（OSError/WinError 5）、发行版列表里没有 DISTRO。
+    探测通过才去做真正的现场采集。
+    """
+    env = dict(os.environ, WSL_UTF8="1")
+    try:
+        probe = subprocess.run(["wsl", "-l", "-q"], capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", env=env, timeout=30)
+    except OSError:
+        return False
+    if probe.returncode != 0:
+        return False
+    names = [n.strip() for n in (probe.stdout or "").replace("\x00", "").splitlines()]
+    return DISTRO in names
+
+
 def _wsl(script: str) -> str:
     env = dict(os.environ)
     env["WSL_UTF8"] = "1"
@@ -418,6 +437,10 @@ def main(argv) -> int:
     ap.add_argument("--check", action="store_true")
     ap.add_argument("--write", action="store_true")
     args = ap.parse_args(argv[1:])
+    if not _wsl_available():
+        print(f"[skip] WSL 或发行版 {DISTRO} 不可用——本页数据需要 WSL 现场采集，"
+              "当前机器无法执行（退出码 3：仓库级校验按 SKIP 记账，不算失败）")
+        return 3
     payload = collect()
     fresh = render(payload)
     if args.write:

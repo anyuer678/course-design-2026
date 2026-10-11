@@ -1,0 +1,39 @@
+# CI: repo-wide health check (scripts/check_all.py).
+# Everything is stdlib Python + Node syntax check; no pip installs needed.
+# windows-latest matches the dev machine's git CRLF semantics (core.autocrlf=true),
+# which the byte-level checks (e.g. run.bat must be CRLF) depend on.
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check-all:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Configure git CRLF semantics (match dev machine)
+        run: git config --global core.autocrlf true
+        shell: pwsh
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Toolchain
+        run: |
+          python --version
+          node --version
+        shell: pwsh
+
+      - name: check_all (portfolio-wide health check)
+        env:
+          PYTHONUTF8: '1'
+        run: python scripts/check_all.py
+        shell: pwsh

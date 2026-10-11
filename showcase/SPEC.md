@@ -31,7 +31,9 @@
 ## 二、生成器与校验规范
 
 - 生成器：`projects/<P>/tools/showcase.py`，两种模式——
-  `--write` 现算并写出 `projects/<P>/web/showcase.html`；`--check` 重算比对（不写盘），退出码 0/1。
+  `--write` 现算并写出 `projects/<P>/web/showcase.html`；`--check` 重算比对（不写盘），退出码 0/1；
+  **退出码 3 = 环境不可用**（如 B8 需要 WSL 现场采集而本机没有 wsl/发行版——生成器必须先探测再采集，
+  不得让缺环境变成假红；`check.py` 把 3 记为 `[note]`，与"检查不过"分开记账）。
 - 项目内测试：新鲜度、数据抽查（与现算源一致）、自包含 lint、负面对照。
 - 仓库级：`showcase/check.py` 统一再验（结构 + 自包含 + node --check + 逐项目 `--check`
   子进程 + 总入口新鲜度与链接）；负面对照在 `showcase/tests/`。
