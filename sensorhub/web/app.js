@@ -165,79 +165,142 @@
     return chart;
   }
   var RULE_KEY = { temp: "temp_max", vib: "vib_max" };
+
+  // ---------------- WebSocket 实时曲线（轮十八，2026-10-11）
+  // 优先走 /ws/live（手写 RFC 6455 服务器推送，1s 增量）；断线自动退回
+  // 2s HTTP 轮询，恢复后自动重连——两种来源共用同一份渲染数据 CUR。
+  var WS = null, WS_OK = false, WS_RETRY = null;
+  var CUR = null;                                     // {device, metric, pts, anoms}
+
+  function setBadge() {
+    $("live-badge").textContent = WS_OK ? "● 实时推送（WebSocket）" : "○ 轮询模式（2s）";
+  }
+  function connectWS() {
+    if (WS) { try { WS.close(); } catch (e) {} }
+    try {
+      WS = new WebSocket("ws://" + location.host + "/ws/live");
+    } catch (e) { WS_OK = false; setBadge(); return; }
+    WS.onopen = function () {
+      WS_OK = true; setBadge();
+      if (lastQuery) subscribe(lastQuery.device, lastQuery.metric);
+    };
+    WS.onmessage = function (ev) {
+      var m;
+      try { m = JSON.parse(ev.data); } catch (e) { return; }
+      if (m.type === "snapshot") {
+        CUR = { device: m.device, metric: m.metric,
+                pts: m.points || [], anoms: m.anomalies || [] };
+        $("chart").hidden = false;
+        drawChart();
+      } else if (m.type === "append" && CUR &&
+                 m.device === CUR.device && m.metric === CUR.metric) {
+        CUR.pts = CUR.pts.concat(m.points || []).slice(-500);
+        (m.anomalies || []).forEach(function (a) { CUR.anoms.push(a); });
+        drawChart();
+      }
+    };
+    WS.onclose = function () {
+      WS_OK = false; setBadge();
+      if (WS_RETRY) clearTimeout(WS_RETRY);
+      WS_RETRY = setTimeout(connectWS, 3000);          // 断线重连，期间轮询兜底
+    };
+    WS.onerror = function () { try { WS.close(); } catch (e) {} };
+  }
+  function subscribe(device, metric) {
+    if (WS && WS.readyState === 1) {
+      WS.send(JSON.stringify({ device: device, metric: metric }));
+      return true;
+    }
+    return false;
+  }
+
+  function drawChart() {
+    if (!CUR || !CUR.pts.length) {
+      var c0 = getChart();
+      if (c0) c0.clear();
+      return;
+    }
+    var c = getChart();
+    if (!c) { $("chartnote").textContent = "ECharts 未加载（assets 缺失）"; return; }
+    var pts = CUR.pts, anoms = CUR.anoms;
+    var series = [{
+      name: CUR.metric, type: "line", smooth: true, showSymbol: false,
+      data: pts.map(function (p) { return [p[0], p[1]]; }),
+      lineStyle: { width: 2, color: "#2563eb" },
+      areaStyle: { color: "rgba(37,99,235,.10)" }
+    }];
+    var thr = RULES[RULE_KEY[CUR.metric]];
+    if (typeof thr === "number") {
+      series[0].markLine = {
+        silent: true, symbol: "none",
+        lineStyle: { color: "#f43f5e", type: "dashed", width: 1.5 },
+        label: { formatter: "阈值 " + thr, position: "insideEndTop" },
+        data: [{ yAxis: thr }]
+      };
+    }
+    var yMin = typeof thr === "number"
+      ? function (v) {
+          return Math.floor(Math.min(v.min, thr) - (v.max - v.min) * 0.05);
+        }
+      : null;
+    if (anoms.length) {
+      series.push({
+        name: "自报异常", type: "scatter", symbolSize: 9,
+        itemStyle: { color: "#f43f5e" },
+        data: anoms.map(function (a) { return [a.seq, a.temp]; }),
+        tooltip: {
+          formatter: function (p) {
+            var a = anoms[p.dataIndex] || {};
+            return "seq " + p.value[0] + " · " + p.value[1] +
+              (a.label ? "（" + a.label + "）" : "");
+          }
+        }
+      });
+    }
+    c.setOption({
+      animation: false,                               // 1s 增量推进，关动画防闪烁
+      grid: { left: 48, right: 24, top: 32, bottom: 36 },
+      tooltip: { trigger: "axis" },
+      xAxis: { type: "value", name: "seq", min: "dataMin", max: "dataMax" },
+      yAxis: { type: "value", scale: true, name: CUR.metric, min: yMin },
+      series: series
+    });
+    c.resize();                                       // 容器尺寸曾变过则自救
+    $("chartnote").textContent = CUR.device + " · " + CUR.metric +
+      (CUR.metric === "temp" ? "（温度曲线叠加设备自报异常点）" : "") +
+      " · 近 " + pts.length + " 点" +
+      (WS_OK ? " · 实时推送中" : " · 轮询刷新");
+  }
+
   function showChart() {
     var dev = $("device").value;
     if (!dev) return;
     lastQuery = { device: dev, metric: $("metric").value };
-    renderChart();
+    // 先显示容器再 init（教训入账 2026-10-11：隐藏时 echarts.init 拿不到宽度，
+    // canvas 只有 100px——console 零错误但视觉压扁，必须目检才能抓到）
+    $("chart").hidden = false;
+    getChart();
+    if (subscribe(dev, lastQuery.metric)) return;     // WS 在线：订阅后等快照
+    renderChart();                                    // 离线：HTTP 兜底
   }
   function renderChart() {
     if (!lastQuery) return;
     var dev = lastQuery.device, metric = lastQuery.metric;
-    // 先显示容器再 init（教训入账 2026-10-11：隐藏时 echarts.init 拿不到宽度，
-    // canvas 只有 100px——console 零错误但视觉压扁，必须目检才能抓到）
-    $("chart").hidden = false;
-    var c = getChart();
     fetch("/api/series?device=" + encodeURIComponent(dev) +
           "&metric=" + encodeURIComponent(metric) + "&limit=500")
       .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
       .then(function (r) {
-        var note = dev + " · " + metric +
-          (metric === "temp" ? "（温度曲线叠加设备自报异常点）" : "");
-        if (!c) { $("chartnote").textContent = "ECharts 未加载（assets 缺失）——" + note; return; }
         if (!r.ok) { $("chartnote").textContent = (r.d && r.d.error) || "曲线加载失败"; return; }
-        var pts = r.d.points || [];
-        if (!pts.length) {
-          c.clear();
+        CUR = { device: dev, metric: metric,
+                pts: r.d.points || [], anoms: r.d.anomalies || [] };
+        if (!CUR.pts.length) {
+          var c = getChart();
+          if (c) c.clear();
           $("chartnote").textContent = "设备 " + dev + " 暂无 " + metric +
             " 数据——推一拍或注入样本后自动出现。";
           return;
         }
-        var series = [{
-          name: metric, type: "line", smooth: true, showSymbol: false,
-          data: pts.map(function (p) { return [p[0], p[1]]; }),
-          lineStyle: { width: 2, color: "#2563eb" },
-          areaStyle: { color: "rgba(37,99,235,.10)" }
-        }];
-        var thr = RULES[RULE_KEY[metric]];
-        if (typeof thr === "number") {
-          series[0].markLine = {
-            silent: true, symbol: "none",
-            lineStyle: { color: "#f43f5e", type: "dashed", width: 1.5 },
-            label: { formatter: "阈值 " + thr, position: "insideEndTop" },
-            data: [{ yAxis: thr }]
-          };
-        }
-        var yMin = typeof thr === "number"
-          ? function (v) {
-              return Math.floor(Math.min(v.min, thr) - (v.max - v.min) * 0.05);
-            }
-          : null;
-        var anoms = r.d.anomalies || [];
-        if (anoms.length) {
-          series.push({
-            name: "自报异常", type: "scatter", symbolSize: 9,
-            itemStyle: { color: "#f43f5e" },
-            data: anoms.map(function (a) { return [a.seq, a.temp]; }),
-            tooltip: {
-              formatter: function (p) {
-                var a = anoms[p.dataIndex] || {};
-                return "seq " + p.value[0] + " · " + p.value[1] +
-                  (a.label ? "（" + a.label + "）" : "");
-              }
-            }
-          });
-        }
-        c.setOption({
-          animation: false,                           // 2s 轮询刷新，关动画防闪烁
-          grid: { left: 48, right: 24, top: 32, bottom: 36 },
-          tooltip: { trigger: "axis" },
-          xAxis: { type: "value", name: "seq", min: "dataMin", max: "dataMax" },
-          yAxis: { type: "value", scale: true, name: metric, min: yMin },
-          series: series
-        });
-        c.resize();                                     // 容器尺寸曾变过则自救
-        $("chartnote").textContent = note + " · 近 " + pts.length + " 点";
+        drawChart();
       });
   }
   $("btn-chart").addEventListener("click", showChart);
@@ -269,10 +332,13 @@
   });
 
   refresh();
+  setBadge();
+  connectWS();
   setInterval(function () {
     if (!$("auto").checked) return;
     refresh();
-    // 曲线已展示时随自刷新重绘（走查 2026-10-07 的行为保留：画一次就定格是缺陷）
-    if (lastQuery && !$("chart").hidden) renderChart();
+    // 曲线已展示时随自刷新重绘（走查 2026-10-07 的行为保留：画一次就定格是缺陷）。
+    // WS 实时推送在线时图表由 onmessage 增量驱动，HTTP 轮询只管面板。
+    if (!WS_OK && lastQuery && !$("chart").hidden) renderChart();
   }, 2000);
 })();

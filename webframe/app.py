@@ -197,6 +197,9 @@ class MicroApp:
         self.session_cookie = session_cookie
         self.session_max_age = session_max_age
         self.routes: list[tuple[tuple[str, re.Pattern], object]] = []
+        # WebSocket 路由：[(编译规则, handler(session))]。升级握手与帧协议
+        # 全在 netlab（B11）；这里只做规则匹配与回调装配的登记。
+        self.ws_routes: list[tuple[re.Pattern, object]] = []
         self.port = None                      # 由 MicroServer.start() 回填
 
     # ---------------------------------------------------------------- 路由
@@ -206,6 +209,20 @@ class MicroApp:
         def decorator(fn):
             for method in methods:
                 self.routes.append(((method, compiled), fn))
+            return fn
+        return decorator
+
+    def ws(self, rule: str):
+        """WebSocket 端点：@app.ws("/ws/live")。
+
+        handler(session) 在升级成功后被调用（服务器事件循环线程），里面赋
+        session.on_message / on_poll / on_close，需要首包快照就在这里发。
+        之后 netlab 会把会话纳入事件循环泵与关闭回收。
+        """
+        compiled = _compile(rule)
+
+        def decorator(fn):
+            self.ws_routes.append((compiled, fn))
             return fn
         return decorator
 

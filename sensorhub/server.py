@@ -101,6 +101,81 @@ def build_app(engine: SensorHub, *, charts_dir: str | Path) -> MicroApp:
                          "points": points,
                          "anomalies": anomalies})
 
+    # ---------------- WebSocket 实时曲线（轮十八，2026-10-11）
+    # 升级握手/帧协议全在 netlab（手写 RFC 6455）；本端点只做订阅账本：
+    # on_message 换订阅并回快照，on_poll 每秒查增量（seq > 已发最大值才推），
+    # 回调全在服务器事件循环线程执行，引擎的 _call 线程安全靠它自己。
+    @app.ws("/ws/live")
+    def ws_live(session):
+        import json as _json
+        import time as _time
+        sub = {"device": None, "metric": "temp"}
+        state = {"last_seq": None, "last_anom": None, "due": 0.0}
+        POLL_SECONDS = 1.0
+
+        def send_snapshot():
+            device, metric = sub["device"], sub["metric"]
+            points = engine.series(device, metric, limit=500)
+            anomalies = []
+            if metric == "temp" and points:
+                seq_min = points[0][0]
+                anomalies = [{"seq": float(s), "temp": float(v), "label": label}
+                             for s, v, label in engine.anomaly_points(device)
+                             if s >= seq_min]
+            state["last_seq"] = points[-1][0] if points else None
+            anoms_seq = [a["seq"] for a in anomalies]
+            state["last_anom"] = max(anoms_seq) if anoms_seq else None
+            session.send(_json.dumps({
+                "type": "snapshot", "device": device, "metric": metric,
+                "points": points, "anomalies": anomalies}, ensure_ascii=False))
+
+        def on_message(text):
+            try:
+                msg = _json.loads(text)
+                device, metric = str(msg["device"]), str(msg.get("metric", "temp"))
+            except (ValueError, KeyError, TypeError):
+                session.send('{"type":"error","error":"消息须是 {\\"device\\",\\"metric\\"} JSON"}')
+                return
+            if metric not in METRICS:
+                session.send(_json.dumps({"type": "error",
+                                          "error": f"metric 只支持 {'/'.join(METRICS)}"}))
+                return
+            if device not in engine.known_devices():
+                session.send(_json.dumps({"type": "error",
+                                          "error": f"没有叫 {device!r} 的设备"}))
+                return
+            sub["device"], sub["metric"] = device, metric
+            state["last_seq"] = None
+            send_snapshot()
+
+        def on_poll():
+            # 事件循环每 tick（≈20ms）都会调，这里节流到每秒一次增量检查
+            now = _time.monotonic()
+            if now < state["due"] or sub["device"] is None or session.closing:
+                return
+            state["due"] = now + POLL_SECONDS
+            device, metric = sub["device"], sub["metric"]
+            points = engine.series(device, metric, limit=500)
+            fresh = ([p for p in points if state["last_seq"] is None
+                      or p[0] > state["last_seq"]] if state["last_seq"] is not None
+                     else points)
+            if not fresh:
+                return
+            state["last_seq"] = points[-1][0]
+            anoms = []
+            if metric == "temp":
+                floor = state["last_anom"] if state["last_anom"] is not None else 0
+                anoms = [{"seq": float(s), "temp": float(v), "label": label}
+                         for s, v, label in engine.anomaly_points(device) if s > floor]
+                if anoms:
+                    state["last_anom"] = max(a["seq"] for a in anoms)
+            session.send(_json.dumps({"type": "append", "device": device,
+                                      "metric": metric, "points": fresh,
+                                      "anomalies": anoms}, ensure_ascii=False))
+
+        session.on_message = on_message
+        session.on_poll = on_poll
+
     @app.get("/api/chart")
     def chart(ctx):
         device, metric = device_of(ctx), metric_of(ctx)

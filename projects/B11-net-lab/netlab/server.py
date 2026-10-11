@@ -18,6 +18,7 @@ import time
 
 from .http1 import (DEFAULT_MAX_BODY, MAX_HEADER_BYTES, HttpError, Request,
                     build_response, parse_request)
+from .websocket import WsSession, handshake_response, is_upgrade_request
 
 
 class Stats:
@@ -40,7 +41,7 @@ class Conn:
     """一条连接的状态机：收 → 解析出一个完整请求 → 处理 → 排队发送。"""
 
     __slots__ = ("sock", "addr", "inbuf", "outbuf", "last_active", "closing", "alive",
-                 "half_closed")
+                 "half_closed", "ws")
 
     def __init__(self, sock: socket.socket, addr):
         self.sock = sock
@@ -51,6 +52,7 @@ class Conn:
         self.closing = False        # 承诺的响应已排队，发完就该收尾
         self.alive = True
         self.half_closed = False    # 已经 shutdown(SHUT_WR)，只剩收摊
+        self.ws: WsSession | None = None   # 非 None = 已升级为 WebSocket 连接
 
     def fileno(self) -> int:
         return self.sock.fileno()
@@ -75,6 +77,10 @@ class Server:
         self.conns: dict[int, Conn] = {}
         self.store: dict[str, bytes] = {}
         self.routes = _default_routes(self)
+        # WebSocket 路由：[(路径通配, handler(session))]，handler 里赋回调/订阅。
+        # 升级连接不占 HTTP 超时，登记在 ws_sessions 供事件循环泵回调。
+        self.ws_routes: list = []
+        self.ws_sessions: set = set()
         self._sock: socket.socket | None = None
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
@@ -157,6 +163,10 @@ class Server:
             conn = self.conns.get(fd.fileno())
             if conn is not None:
                 self._write(conn)
+        # WS 会话的事件泵：应用在这里做"有没有新数据可推"的检查（自己节流）。
+        # list() 拷贝：on_poll 里可能 close() 改动集合。
+        for session in list(self.ws_sessions):
+            session.pump()
 
     def _accept(self) -> None:
         try:
@@ -207,8 +217,9 @@ class Server:
         self._drain(conn)
 
     def _drain(self, conn: Conn) -> None:
-        """一次 recv 可能带来多个请求（pipelining），也可能只有半个：按字节数推进。"""
-        while conn.alive and not conn.closing:
+        """一次 recv 可能带来多个请求（pipelining），也可能只有半个：按字节数推进。
+        升级为 WS 后字节流归帧解析器管，不再进 HTTP 状态机。"""
+        while conn.alive and not conn.closing and conn.ws is None:
             try:
                 parsed = parse_request(conn.inbuf, max_body=self.max_body)
             except HttpError as exc:
@@ -217,10 +228,15 @@ class Server:
                 conn.closing = True
                 return
             if parsed is None:
-                return
+                break
             request, used = parsed
             conn.inbuf = conn.inbuf[used:]
             self._handle(conn, request)
+        if conn.ws is not None and conn.inbuf:
+            # 升级应答和前几个 WS 帧挤在同一次 recv 里的情况：余量交给帧解析器。
+            data, conn.inbuf = conn.inbuf, b""
+            conn.ws.feed(data)
+            conn.last_active = time.monotonic()
 
     def _write(self, conn: Conn) -> None:
         try:
@@ -254,6 +270,8 @@ class Server:
         if not conn.alive:
             return
         conn.alive = False
+        if conn.ws is not None:
+            conn.ws.fire_close(1006)        # 异常断开也要给应用清理机会
         self.conns.pop(conn.fileno(), None)
         self.stats.open_now -= 1
         if self.verbose:
@@ -264,6 +282,15 @@ class Server:
             pass
 
     def _timeout(self, conn: Conn) -> None:
+        if conn.ws is not None:
+            # WS 是长连接，不吃 HTTP 空闲超时；活性由出站推送续命（_write 写出续命
+            # 对 WS 同样生效），对端真死了会在 recv/send 的错误路径上被回收。
+            # outbuf 卡死（对端只写不读）沿用同一套滞留回收。
+            if conn.outbuf and \
+                    time.monotonic() - conn.last_active >= self.idle_timeout:
+                self.stats.timed_out += 1
+                self._close(conn, "ws stuck output")
+            return
         if conn.outbuf:
             # 还有承诺的响应没发出去：只要仍有进展（部分写出会在 _write 续命）就再宽限；
             # 整整一个空闲窗口零进展 = 对端只写不读，强制回收——否则 max_conn 会被
@@ -303,6 +330,9 @@ class Server:
     def _handle(self, conn: Conn, request: Request) -> None:
         self.stats.requests += 1
         conn.last_active = time.monotonic()
+        if is_upgrade_request(request):
+            self._handle_ws(conn, request)
+            return
         try:
             status, headers, body = self._dispatch(request)
         except HttpError as exc:
@@ -317,6 +347,37 @@ class Server:
             conn.closing = True
         self._reply(conn, status, body, headers=headers, keep_alive=keep,
                     head=request.method == "HEAD", version=request.version)
+
+    # ------------------------------------------------ WebSocket 升级（RFC 6455）
+    def _match_ws(self, path: str):
+        """WS 路由匹配，返回 (handler, 路径参数) 或 (None, None)。
+        默认 fnmatch 通配；子类（如 webframe）可覆写成自己的规则语法。"""
+        for pattern, handler in self.ws_routes:
+            if fnmatch.fnmatch(path, pattern):
+                return handler, {}
+        return None, None
+
+    def _handle_ws(self, conn: Conn, request: Request) -> None:
+        key = request.header("sec-websocket-key")
+        if (request.header("connection") or "").lower().find("upgrade") < 0 or not key:
+            self._reply(conn, 400, b"not a valid websocket handshake")
+            conn.closing = True
+            return
+        handler, params = self._match_ws(request.path)
+        if handler is not None:
+            conn.outbuf += handshake_response(key)
+            session = WsSession(self, conn, request, path_params=params)
+            conn.ws = session
+            self.ws_sessions.add(session)
+            try:
+                handler(session)          # 应用在这里赋回调、发首包快照
+            except Exception as exc:      # 应用 bug 不能带走整个服务器
+                session.close(1011, "handler error")
+                if self.verbose:
+                    print(f"  [ws] handler 异常：{exc!r}")
+            return
+        self._reply(conn, 404, b"no such websocket endpoint")
+        conn.closing = True
 
     def _dispatch(self, request: Request):
         if request.method not in ("GET", "HEAD", "POST", "PUT", "DELETE"):

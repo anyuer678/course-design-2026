@@ -214,6 +214,13 @@ class SensorHub:
                 sim = SensorSimulator(dev, seed=self.seed + i,
                                       base_temp=self.base_temp, drift=self.drift,
                                       plan=self.plan)
+                # 轮十八教训（2026-10-11）：sim 的 seq 每次进程都从 0 重数，
+                # INSERT OR REPLACE 会把新读数覆盖进历史旧行——数据悄悄腐蚀、
+                # 长跑库的 MAX(seq) 永不前进（WS 实时推送把这条暴露成硬故障）。
+                # 断点续传：从库里该设备的最大 seq 接着发（空库保持从 0，B35 钉值不变）。
+                last = self.recorder.series(dev, limit=1)
+                if last:
+                    sim.seq = last[-1][0]
                 client = Client(f"sensorhub-sim-{dev}", port=self.broker.port)
                 client.connect()
                 self.sims[dev] = sim

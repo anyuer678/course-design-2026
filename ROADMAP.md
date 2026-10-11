@@ -710,6 +710,20 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   **ECharts 第一梯队 7/7 产品完成**（SensorHub/CacheKV/DataScope/SimLab/
   Studio/LinkBox/CourseLab）。下一梯队候选：WebSocket 实时推送、LLM 接入
   （AI 问数/AI 助教）、README+截图+Docker 作品集三件套。
+- ✅ **轮十八：手写 WebSocket（RFC 6455）+ SensorHub 实时曲线（10-11）**：
+  **netlab（B11）新增 websocket.py**——升级握手（RFC accept 向量钉住）、帧编解码
+  （掩码/扩展长度/分片/ping-pong/close/64KiB 上限）、服务器钩子（Conn.ws 槽位、
+  _handle 拦截升级、_drain 帧流接管、_timeout 豁免长连接、_tick 泵 on_poll、
+  异常断开 fire_close）；`_match_ws` 可覆写，webframe `MicroApp.ws()` 桥接
+  <param> 规则。**SensorHub `/ws/live`**：订阅→快照→1s 增量推送，前端 WS 优先
+  （徽标）+ 断线 3s 重连 + 轮询兜底，滑动窗口 500 点。**修根一个潜伏数据腐蚀**：
+  sim 进程重启 seq 从 0 重数，INSERT OR REPLACE 覆写历史（MAX(seq) 永不前进、
+  gaps 实测涨到 218）——引擎装配时从库 MAX(seq) 断点续传，旧测试钉的腐蚀语义
+  已改钉续传。修 append 消息缺 device/metric 键（前端按订阅匹配丢弃增量）。
+  验证：netlab 13+76、webframe 31、sensorhub 28（+3 WS 集成真套接字）、B35 23
+  全过；无头 Edge 徽标=实时推送、3.5s 末尾 seq 10584→10588、console 零错误、
+  截图目检（p-验收/ws-轮十八走查-2026-10-11.md）。存量库前 1 万余行历史覆写
+  不可逆（不再恶化）；Studio HTTP 代理不转发 WS，实时曲线直连 :8022。
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
   cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 

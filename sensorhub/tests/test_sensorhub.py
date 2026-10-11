@@ -225,9 +225,12 @@ class TestEngine(unittest.TestCase):
         self.addCleanup(revived.stop)
         revived.start()
         self.assertEqual(revived.status()["alerts"]["total"], total_before)
-        for _ in range(8):                     # 设备从 seq 1 重放：seq1 幂等覆盖，2..8 新增
+        for _ in range(8):
             revived.tick()
-        self.assertEqual(len(revived.readings()), 1 + 3 * 8)
+        # 轮十八（2026-10-11）修根后语义：重启从库里各设备的 MAX(seq) 续传，
+        # 不再从 seq 1 重放覆写历史（旧行为是悄悄的数据腐蚀，WS 实时推送
+        # 把"MAX(seq) 永不前进"暴露成硬故障）。dev-01/02 续自 1，dev-03 续自 301。
+        self.assertEqual(len(revived.readings()), 4 + 3 * 8)
         self.assertEqual(revived.status()["alerts"]["total"], total_before)
 
     def test_determinism_same_seed(self):

@@ -17,6 +17,14 @@ class MicroServer(Server):
         super().__init__(host=host, port=port, **kwargs)
         self.micro = app
 
+    def _match_ws(self, path: str):
+        """桥接 MicroApp 的 <param> 规则到 netlab 的 WS 升级分发。"""
+        for compiled, handler in self.micro.ws_routes:
+            m = compiled.match(path)
+            if m:
+                return handler, m.groupdict()
+        return None, None
+
     def _dispatch(self, request):
         return self.micro.handle(request)
 
