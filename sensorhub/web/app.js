@@ -21,6 +21,11 @@
   }
 
   function num(v) { return (typeof v === "number") ? v : "—"; }
+
+  // 2026-10-11 ECharts 化：阈值线数据源（refresh 每次 /api/status 顺带缓存）
+  var RULES = {};
+  var lastQuery = null;                                // {device, metric}
+  var chart = null;
   function toast(msg, kind) {
     var t = el("div", "toast " + (kind || "ok"), msg);
     $("toast-wrap").appendChild(t);
@@ -56,6 +61,7 @@
       var ruleText = Object.keys(s.rules || {}).map(function (name) {
         return name + " > " + s.rules[name];
       }).join("，");
+      RULES = s.rules || {};
       $("rules").textContent = "当前规则：" + ruleText + "（严格大于才算告警）"
         + (alertSum.unacked ? "，未确认 " + alertSum.unacked + " 条" : "");
       $("nav-alert-cnt").textContent = String(alertSum.total || 0);
@@ -134,10 +140,11 @@
   });
   $("btn-inject").addEventListener("click", function () {
     var dev = $("device").value || "dev-01";
-    var seq = Math.floor(Math.random() * 1e9);   // 只为演示注入唯一 seq
+    // 2026-10-11：seq 交给服务端 next_seq 分配（max+1）——random*1e9 造出的
+    // 离群 seq 会把曲线 X 轴拉到亿级（10-07 与 10-11 两回实测教训）
     fetch("/api/inject", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ device: dev, seq: seq, temp: 120, vib: 4.8 })
+      body: JSON.stringify({ device: dev, temp: 120, vib: 4.8 })
     }).then(function () { return fetch("/api/tick", { method: "POST" }); })
       .then(function () {
         toast("已注入越限样本（temp=120）");
@@ -146,17 +153,92 @@
         refresh();
       });
   });
+  // ---- 曲线（2026-10-11 ECharts 化：客户端渲染，数据 /api/series 现取）----
+  // 阈值线取服务端规则（严格大于才告警）；温度曲线叠加 B35 自报异常红点。
+  // /api/chart 的服务端 SVG 保留为备援，页面不再依赖 <img>。
+  function getChart() {
+    if (!window.echarts) return null;                  // 资产缺失只降级，不抛错
+    if (!chart) {
+      chart = window.echarts.init($("chart"));
+      window.addEventListener("resize", function () { chart && chart.resize(); });
+    }
+    return chart;
+  }
+  var RULE_KEY = { temp: "temp_max", vib: "vib_max" };
   function showChart() {
     var dev = $("device").value;
     if (!dev) return;
-    var metric = $("metric").value;
-    var img = $("chart");
-    img.src = "/api/chart?device=" + encodeURIComponent(dev) +
-      "&metric=" + encodeURIComponent(metric) + "&t=" + Date.now();
-    img.hidden = false;
-    var note = dev + " · " + metric + "（温度曲线叠加设备自报异常点）";
-    img.alt = note;                                  // 走查 2026-10-07：绘出后 alt 别再停在空态文案
-    $("chartnote").textContent = note;
+    lastQuery = { device: dev, metric: $("metric").value };
+    renderChart();
+  }
+  function renderChart() {
+    if (!lastQuery) return;
+    var dev = lastQuery.device, metric = lastQuery.metric;
+    // 先显示容器再 init（教训入账 2026-10-11：隐藏时 echarts.init 拿不到宽度，
+    // canvas 只有 100px——console 零错误但视觉压扁，必须目检才能抓到）
+    $("chart").hidden = false;
+    var c = getChart();
+    fetch("/api/series?device=" + encodeURIComponent(dev) +
+          "&metric=" + encodeURIComponent(metric) + "&limit=500")
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (r) {
+        var note = dev + " · " + metric +
+          (metric === "temp" ? "（温度曲线叠加设备自报异常点）" : "");
+        if (!c) { $("chartnote").textContent = "ECharts 未加载（assets 缺失）——" + note; return; }
+        if (!r.ok) { $("chartnote").textContent = (r.d && r.d.error) || "曲线加载失败"; return; }
+        var pts = r.d.points || [];
+        if (!pts.length) {
+          c.clear();
+          $("chartnote").textContent = "设备 " + dev + " 暂无 " + metric +
+            " 数据——推一拍或注入样本后自动出现。";
+          return;
+        }
+        var series = [{
+          name: metric, type: "line", smooth: true, showSymbol: false,
+          data: pts.map(function (p) { return [p[0], p[1]]; }),
+          lineStyle: { width: 2, color: "#2563eb" },
+          areaStyle: { color: "rgba(37,99,235,.10)" }
+        }];
+        var thr = RULES[RULE_KEY[metric]];
+        if (typeof thr === "number") {
+          series[0].markLine = {
+            silent: true, symbol: "none",
+            lineStyle: { color: "#f43f5e", type: "dashed", width: 1.5 },
+            label: { formatter: "阈值 " + thr, position: "insideEndTop" },
+            data: [{ yAxis: thr }]
+          };
+        }
+        var yMin = typeof thr === "number"
+          ? function (v) {
+              return Math.floor(Math.min(v.min, thr) - (v.max - v.min) * 0.05);
+            }
+          : null;
+        var anoms = r.d.anomalies || [];
+        if (anoms.length) {
+          series.push({
+            name: "自报异常", type: "scatter", symbolSize: 9,
+            itemStyle: { color: "#f43f5e" },
+            data: anoms.map(function (a) { return [a.seq, a.temp]; }),
+            tooltip: {
+              formatter: function (p) {
+                var a = anoms[p.dataIndex] || {};
+                return "seq " + p.value[0] + " · " + p.value[1] +
+                  (a.label ? "（" + a.label + "）" : "");
+              }
+            }
+          });
+        }
+        c.setOption({
+          animation: false,                           // 2s 轮询刷新，关动画防闪烁
+          grid: { left: 48, right: 24, top: 32, bottom: 36 },
+          tooltip: { trigger: "axis" },
+          xAxis: { type: "value", name: "seq", min: "dataMin", max: "dataMax" },
+          yAxis: { type: "value", scale: true, name: metric, min: yMin },
+          series: series
+        });
+        c.resize();                                     // 容器尺寸曾变过则自救
+        $("chartnote").textContent = note + " · 近 " + pts.length + " 点";
+      });
   }
   $("btn-chart").addEventListener("click", showChart);
 
@@ -190,10 +272,7 @@
   setInterval(function () {
     if (!$("auto").checked) return;
     refresh();
-    // 曲线已展示时随自刷新重绘（走查 2026-10-07：此前画一次就定格）
-    var img = $("chart");
-    if (!img.hidden && img.src.indexOf("/api/chart") >= 0) {
-      img.src = img.src.replace(/&t=\d+/, "&t=" + Date.now());
-    }
+    // 曲线已展示时随自刷新重绘（走查 2026-10-07 的行为保留：画一次就定格是缺陷）
+    if (lastQuery && !$("chart").hidden) renderChart();
   }, 2000);
 })();

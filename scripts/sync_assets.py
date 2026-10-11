@@ -6,6 +6,8 @@
 
 共享资产清单（PRODUCTS.md §四 的 webkit/ 共享目录落地）：
     webkit/kb.css -> <产品>/web/assets/kb.css
+    webkit/echarts.min.js -> <产品>/web/assets/echarts.min.js（2026-10-11 起，
+    本地化分发不走 CDN——页面保持离线可开；当前 SensorHub/CacheKV 消费）
 产品清单与 studio（含 courselab）保持一致；新增产品在这里加一行即可。
 """
 from __future__ import annotations
@@ -16,7 +18,8 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ASSETS = [("webkit/kb.css", "{product}/web/assets/kb.css")]
+ASSETS = [("webkit/kb.css", "{product}/web/assets/kb.css"),
+          ("webkit/echarts.min.js", "{product}/web/assets/echarts.min.js")]
 PRODUCTS = ["linkbox", "simlab", "datascope", "cachekv",
             "sensorhub", "courselab", "studio", "boardweb"]
 

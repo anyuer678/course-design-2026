@@ -33,7 +33,7 @@ DATA_DIR = ROOT / "data"
 DEFAULT_PORT = 8022   # 8017 studio / 8018 linkbox / 8019 simlab / 8020 datascope / 8021 cachekv
 
 _INJECT_SCHEMA = {
-    "device": (str, True), "seq": (int, True),
+    "device": (str, True), "seq": (int, False),   # 2026-10-11：seq 可省→服务端 next_seq
     "temp": (float, True), "vib": (float, True),
     "anomaly": (str, False),
 }
@@ -87,8 +87,19 @@ def build_app(engine: SensorHub, *, charts_dir: str | Path) -> MicroApp:
             raise HttpFail(400, "limit 必须是整数")
         if not 1 <= limit <= 5000:
             raise HttpFail(400, "limit 须在 1..5000")
+        # 2026-10-11 ECharts 化：异常点随曲线一起下发（此前只喂服务端 SVG），
+        # B35 自报异常只标温度；窗口与曲线对齐（最近 limit 点的 seq 范围）——
+        # 否则全历史异常摊满 X 轴、曲线被挤成一角
+        points = engine.series(device, metric, limit=limit)
+        anomalies = []
+        if metric == "temp" and points:
+            seq_min = points[0][0]
+            anomalies = [{"seq": float(s), "temp": float(v), "label": label}
+                         for s, v, label in engine.anomaly_points(device)
+                         if s >= seq_min]
         return ctx.json({"device": device, "metric": metric,
-                         "points": engine.series(device, metric, limit=limit)})
+                         "points": points,
+                         "anomalies": anomalies})
 
     @app.get("/api/chart")
     def chart(ctx):
@@ -147,12 +158,15 @@ def build_app(engine: SensorHub, *, charts_dir: str | Path) -> MicroApp:
     @app.post("/api/inject")
     def inject(ctx):
         body = ctx.json_body(_INJECT_SCHEMA)
+        seq = body.get("seq")
+        if seq is None:                      # 缺省自动分配（max+1），离群 seq 不再进库
+            seq = engine.next_seq(body["device"])
         try:
-            engine.inject(body["device"], body["seq"], body["temp"], body["vib"],
+            engine.inject(body["device"], seq, body["temp"], body["vib"],
                           body.get("anomaly", ""))
         except ValueError as exc:
             raise HttpFail(400, str(exc)) from None
-        return ctx.json({"injected": True})
+        return ctx.json({"injected": True, "seq": seq})
 
     @app.get("/")
     def index(ctx):

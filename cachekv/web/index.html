@@ -51,21 +51,13 @@
       <div class="grid">
         <div class="card">
           <h3>读取趋势（客户端采样，最近 90 个周期）</h3>
-          <svg id="sparkline" class="chart" width="100%" height="110" viewBox="0 0 560 110"
-               preserveAspectRatio="none" role="img" aria-label="读取趋势曲线"></svg>
+          <div id="sparkline" style="width:100%;height:220px" role="img" aria-label="读取趋势曲线"></div>
           <div class="note" id="spark-note">采集两个周期后开始画线——命中/未命中增量实时可见。</div>
         </div>
         <div class="card">
           <h3>命中率</h3>
           <div class="donut-wrap">
-            <svg id="donut" width="112" height="112" viewBox="0 0 120 120" role="img" aria-label="命中率">
-              <circle cx="60" cy="60" r="45" fill="none" stroke="var(--line-soft)" stroke-width="12"/>
-              <circle id="donut-arc" cx="60" cy="60" r="45" fill="none" stroke="#2563eb"
-                      stroke-width="12" stroke-linecap="round" stroke-dasharray="0 282.7"
-                      transform="rotate(-90 60 60)" style="transition:stroke-dasharray .5s ease"/>
-              <text id="donut-text" x="60" y="66" text-anchor="middle" font-size="19"
-                    font-weight="750" fill="var(--ink)">—</text>
-            </svg>
+            <div id="donut" style="width:100%;height:150px" role="img" aria-label="命中率"></div>
             <div class="note" id="donut-note">读取为 0。注入演示数据或执行 GET 后开始记账。</div>
           </div>
         </div>
@@ -96,8 +88,7 @@
         </select>
       </h2>
       <div class="ttl-dist" id="ttl-dist" hidden>
-        <div class="ttl-dist-bar" id="ttl-dist-bar"></div>
-        <div class="note" id="ttl-dist-legend"></div>
+        <div id="ttl-dist-bar" style="width:100%;height:84px"></div>
       </div>
       <table class="kb">
         <thead><tr><th>键</th><th>大小</th><th>剩余 TTL</th><th style="width:8.5rem">操作</th></tr></thead>
@@ -147,6 +138,7 @@
 </div>
 <div class="toast-wrap" id="toast-wrap"></div>
 
+<script src="/static/assets/echarts.min.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

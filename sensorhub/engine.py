@@ -371,6 +371,19 @@ class SensorHub:
                 f"设备名只允许字母/数字/下划线/短横线（1..64 字符）：{device!r}")
         self._call(job)
 
+    def next_seq(self, device: str) -> int:
+        """注入缺 seq 时的自动分配：该设备最大 seq + 1（空设备从 1 起）。
+        2026-10-11 教训入账：前端曾用 random*1e9 造 seq，离群值把曲线 X 轴
+        拉到亿级（10-07 走查同款，清数据会复发）——改服务端顺序分配保唯一。"""
+
+        def job() -> int:
+            row = self._alert_conn.execute(
+                "SELECT COALESCE(MAX(seq), 0) FROM readings WHERE device = ?",
+                (str(device),)).fetchone()
+            return int(row[0]) + 1
+
+        return self._call(job)
+
     # ---------------------------------------------------------------- 观察面
 
     def status(self) -> dict:

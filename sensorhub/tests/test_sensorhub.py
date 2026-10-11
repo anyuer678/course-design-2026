@@ -444,9 +444,20 @@ class TestServer(unittest.TestCase):
             "POST", "/api/inject", payload,
             headers=[("Content-Type", "application/json")])
         self.assertEqual(status, 200)
-        self.assertEqual(json.loads(body), {"injected": True})
+        self.assertEqual(json.loads(body), {"injected": True, "seq": 9})
         self.hub.tick()
         self.assertIn(("dev-03", 9),
+                      [(r["device"], r["seq"]) for r in self.hub.readings()])
+        # 2026-10-11：缺 seq → 服务端 next_seq 分配（该设备 max+1）。
+        # 教训：前端 random*1e9 造 seq，离群值把曲线 X 轴拉到亿级（两回实测）。
+        payload = json.dumps({"device": "dev-03", "temp": 60.0, "vib": 0.5}).encode()
+        status, _, body = self.handle(
+            "POST", "/api/inject", payload,
+            headers=[("Content-Type", "application/json")])
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["seq"], 10)
+        self.hub.tick()
+        self.assertIn(("dev-03", 10),
                       [(r["device"], r["seq"]) for r in self.hub.readings()])
         # 坏体：未知字段 / bool 冒充数字 / 非法设备名 → 400
         bad = [

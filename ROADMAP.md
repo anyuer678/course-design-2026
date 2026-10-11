@@ -662,8 +662,21 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   DESIGN-SPEC 的源头实现且更完整（145 项自检护航），kb.css 已与其 token 对齐；
   两套样式同源同规，各管各的页面。
   **全仓体检 15/15 + --deep 48/48（10-06 终验，33 项目展示页套件同绿）——轮九收官。**
+- ✅ **轮十四：ECharts 渲染层（10-11，GAP-ANALYSIS 第一梯队①，定位=作品集）**：用户
+  "不如市面课设/功能低下"→ 交付 GAP-ANALYSIS.md（差距定位：缺"面"不缺"里"）后开工。
+  `webkit/echarts.min.js`（5.6.0 本地化不走 CDN）+ sync_assets 第 9 项资产同步 8 副本。
+  **SensorHub**：曲线 img→ECharts 客户端渲染（折线+面积/阈值线含 Y 轴下限包住/自报异常
+  红点带标签/2s 自刷新），`/api/series` 增量下发 `anomalies` 且窗口与曲线对齐，
+  `/api/chart` 服务端 SVG 保留备援；**CacheKV**：趋势 sparkline→ECharts 双线、命中率
+  环→gauge、TTL 分布条→堆叠横条。当场抓三个真缺陷全修：①并行会话 lab.py Origin 门
+  NameError 半成品（6/9→9/9，独立提交 e2fec41）；②隐藏容器 init 拿 100px 宽
+  （console 绿≠视觉对，先显示再 init+resize）；③注入 random*1e9 离群 seq 拉爆 X 轴
+  （10-07 同款复发）→修根：seq 可省+服务端 next_seq（max+1）+live 库按指纹清 2 行
+  +回归钉住。验证：sensorhub 25+cachekv 19=44 全绿、无头 Edge 走查零 console 错误、
+  元素截图目检（p-验收/echarts走查-2026-10-11.md）。下一片：DataScope 报告/SimLab/
+  Studio 图表，WebSocket 实时推送与 LLM 接入按梯队另行点项。
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
-  cachekv/data/、sensorhub/data/、board/data/）。
+  cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 
 
 - ✅ **轮十：浏览器实测轮（10-07，用户"UI 崩坏/登录一塌糊涂/页面打不开/交互极差"）**：

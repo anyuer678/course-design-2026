@@ -62,6 +62,28 @@
   var SERIES = [];                                    // 读取趋势采样
   var LAST_HITS = null, LAST_MISSES = null;
 
+  // ---------------- ECharts 资产（2026-10-11 渲染层升级）
+  // 本地化 echarts.min.js（webkit/ 同步进 assets，不走 CDN，页面保持离线可开）；
+  // 资产缺失时 getChart 返回 null，调用方降级成文字，绝不抛错瘫痪整页。
+  var _charts = {};
+  function getChart(id) {
+    if (!window.echarts) return null;
+    var node = $(id);
+    if (!node) return null;
+    if (!_charts[id]) {
+      _charts[id] = window.echarts.init(node);
+      if (!_charts._resized) {
+        _charts._resized = true;
+        window.addEventListener("resize", function () {
+          Object.keys(_charts).forEach(function (k) {
+            if (_charts[k] && _charts[k].resize) _charts[k].resize();
+          });
+        });
+      }
+    }
+    return _charts[id];
+  }
+
   // ---------------- 键过滤 / 排序 / 分页
   function visibleKeys() {
     var keys = (STATE.overview && STATE.overview.keys) || [];
@@ -111,54 +133,34 @@
     if (ev.key === "Escape") closeDrawer();
   });
 
-  // ---------------- 趋势曲线（客户端采样）
+  // ---------------- 趋势曲线（客户端采样；2026-10-11 换 ECharts 渲染）
   function drawSpark() {
-    var svg = $("sparkline");
-    if (SERIES.length < 2) { svg.textContent = ""; return; }
-    var W = 560, H = 110, PAD = 6, PAD_R = 56;
-    var maxD = 1;
-    SERIES.forEach(function (p) { maxD = Math.max(maxD, p.dHits, p.dMiss); });
-    function px(i) { return PAD + i * (W - PAD - PAD_R) / (SERIES.length - 1); }
-    function py(v) { return H - 18 - v * (H - 30) / maxD; }
-    function lineOf(get) {
-      return SERIES.map(function (p, i) {
-        return (i ? "L" : "M") + px(i).toFixed(1) + " " + py(get(p)).toFixed(1);
-      }).join(" ");
-    }
-    var area = lineOf(function (p) { return p.dHits; })
-      + " L" + px(SERIES.length - 1).toFixed(1) + " " + (H - 18)
-      + " L" + px(0).toFixed(1) + " " + (H - 18) + " Z";
-    svg.textContent = "";
-    var NS = "http://www.w3.org/2000/svg";
-    var pathArea = document.createElementNS(NS, "path");
-    pathArea.setAttribute("d", area);
-    pathArea.setAttribute("fill", "rgba(37,99,235,.10)");
-    svg.appendChild(pathArea);
-    var pathHits = document.createElementNS(NS, "path");
-    pathHits.setAttribute("d", lineOf(function (p) { return p.dHits; }));
-    pathHits.setAttribute("fill", "none"); pathHits.setAttribute("stroke", "#2563eb");
-    pathHits.setAttribute("stroke-width", "2"); pathHits.setAttribute("stroke-linejoin", "round");
-    svg.appendChild(pathHits);
-    var pathMiss = document.createElementNS(NS, "path");
-    pathMiss.setAttribute("d", lineOf(function (p) { return p.dMiss; }));
-    pathMiss.setAttribute("fill", "none"); pathMiss.setAttribute("stroke", "#f43f5e");
-    pathMiss.setAttribute("stroke-width", "2"); pathMiss.setAttribute("stroke-dasharray", "4 3");
-    svg.appendChild(pathMiss);
-    // 坐标标注：起止时刻 + 峰值（生产仪表盘的最低可读标准）
-    function label(x, y, text, anchor) {
-      var t = document.createElementNS(NS, "text");
-      t.setAttribute("x", x); t.setAttribute("y", y);
-      t.setAttribute("font-size", "10"); t.setAttribute("fill", "var(--faint)");
-      t.setAttribute("text-anchor", anchor || "start");
-      t.textContent = text;
-      svg.appendChild(t);
-    }
-    var span = Math.round((SERIES[SERIES.length - 1].t - SERIES[0].t) / 1000);
-    label(PAD, H - 4, new Date(SERIES[0].t).toLocaleTimeString());
-    label(W - PAD_R, H - 4, new Date(SERIES[SERIES.length - 1].t).toLocaleTimeString(), "end");
-    label(W - PAD_R, 14, "峰值 " + maxD + " 次/2s", "end");
-    label(PAD, 14, "近 " + span + "s");
-    $("spark-note").textContent = "实线=命中增量  虚线=未命中增量（每 2s 采样，纵轴自动缩放）";
+    var c = getChart("sparkline");
+    $("spark-note").textContent = (window.echarts
+      ? "蓝=命中增量（面积）  红=未命中增量（每 2s 采样，纵轴自动缩放，悬浮可读数）"
+      : "ECharts 未加载——趋势曲线已降级。");
+    if (!c) return;
+    if (SERIES.length < 2) { c.clear(); return; }
+    var xs = SERIES.map(function (p) {
+      return new Date(p.t).toLocaleTimeString("zh-CN", { hour12: false });
+    });
+    c.setOption({
+      animation: false,                               // 2s 轮询刷新，关动画防闪烁
+      grid: { left: 44, right: 16, top: 24, bottom: 26 },
+      tooltip: { trigger: "axis" },
+      legend: { data: ["命中/2s", "未命中/2s"], top: 0, textStyle: { fontSize: 11 } },
+      xAxis: { type: "category", data: xs, axisLabel: { fontSize: 10 } },
+      yAxis: { type: "value", minInterval: 1, axisLabel: { fontSize: 10 } },
+      series: [
+        { name: "命中/2s", type: "line", smooth: true, showSymbol: false,
+          data: SERIES.map(function (p) { return p.dHits; }),
+          lineStyle: { width: 2, color: "#2563eb" },
+          areaStyle: { color: "rgba(37,99,235,.10)" } },
+        { name: "未命中/2s", type: "line", smooth: true, showSymbol: false,
+          data: SERIES.map(function (p) { return p.dMiss; }),
+          lineStyle: { width: 2, color: "#f43f5e", type: "dashed" } }
+      ]
+    });
   }
 
   // ---------------- 总览刷新（2s）
@@ -179,10 +181,25 @@
 
       var rate = s.hit_rate;
       var pct = (rate === null || rate === undefined) ? null : Math.round(rate * 100);
-      $("donut-text").textContent = pct === null ? "—" : pct + "%";
-      var C = 2 * Math.PI * 45;
-      $("donut-arc").setAttribute("stroke-dasharray",
-        (pct === null ? 0 : Math.max(pct / 100 * C, pct === 0 ? 0 : 6)) + " " + C);
+      var g = getChart("donut");
+      if (g) {
+        g.setOption({
+          animation: false,
+          series: [{
+            type: "gauge", startAngle: 210, endAngle: -30, min: 0, max: 100,
+            radius: "95%", center: ["50%", "58%"],
+            progress: { show: true, width: 12, itemStyle: { color: "#2563eb" } },
+            axisLine: { lineStyle: { width: 12, color: [[1, "#e5e7eb"]] } },
+            axisTick: { show: false }, splitLine: { show: false },
+            axisLabel: { show: false }, pointer: { show: false }, anchor: { show: false },
+            detail: {
+              valueAnimation: false, fontSize: 22, fontWeight: 750,
+              offsetCenter: [0, "-8%"], formatter: pct === null ? "—" : "{value}%"
+            },
+            data: [{ value: pct === null ? 0 : pct }]
+          }]
+        });
+      }
       $("donut-note").textContent = (s.gets || 0) === 0
         ? "读取为 0。注入演示数据或执行 GET 后开始记账。"
         : "共 " + s.gets + " 次读取：" + s.hits + " 命中 / " + s.misses + " 未命中。";
@@ -227,11 +244,11 @@
   }
 
   // ---------------- 键空间表
-  // K2 TTL 剩余可视化（2026-10-07）：分布条 + 秒级倒计时（服务器 2s 校准，
-  // 中间由 expires_at 本地推算，同一台机器时钟无偏差，偏差也会被刷新覆盖）
+  // K2 TTL 剩余可视化（2026-10-07 引入，2026-10-11 换 ECharts 堆叠条）：
+  // 服务器权威数据；倒计时只在两次刷新之间本地推算（expires_at 本地推算）
   function renderTtlDist(keys) {
-    var box = $("ttl-dist"), bar = $("ttl-dist-bar"), legend = $("ttl-dist-legend");
-    if (!box || !bar || !legend) return;               // 安全绑定：缺元素只降级
+    var box = $("ttl-dist");
+    if (!box) return;                                  // 安全绑定：缺元素只降级
     var soon = 0, short = 0, long = 0, forever = 0;
     keys.forEach(function (k) {
       if (k.ttl === null || k.ttl === undefined) forever += 1;
@@ -241,17 +258,27 @@
     });
     var total = keys.length;
     box.hidden = total === 0;
-    if (!total) { bar.textContent = ""; legend.textContent = ""; return; }
-    function seg(cls, n) {
-      var s = el("span", cls);
-      s.style.width = (n / total * 100) + "%";
-      return s;
-    }
-    bar.textContent = "";
-    [[ "b-soon", soon ], ["b-short", short], ["b-long", long], ["b-forever", forever]]
-      .forEach(function (p) { if (p[1]) bar.appendChild(seg(p[0], p[1])); });
-    legend.textContent = "TTL 分布：即将过期(<1m) " + soon + " · 5 分钟内 " + short +
-      " · 更长 " + long + " · 永久 " + forever;
+    var c = getChart("ttl-dist-bar");
+    if (!c) return;
+    if (!total) { c.clear(); return; }
+    c.setOption({
+      animation: false,
+      grid: { left: 8, right: 8, top: 24, bottom: 4, containLabel: false },
+      tooltip: { trigger: "axis", axisPointer: { type: "none" } },
+      legend: { top: 0, textStyle: { fontSize: 11 }, itemWidth: 12, itemHeight: 8 },
+      xAxis: { type: "value", show: false },
+      yAxis: { type: "category", data: [""], show: false },
+      series: [
+        { name: "即将过期 <1m", type: "bar", stack: "ttl", barWidth: 14,
+          itemStyle: { color: "#f43f5e" }, data: [soon] },
+        { name: "5 分钟内", type: "bar", stack: "ttl",
+          itemStyle: { color: "#f59e0b" }, data: [short] },
+        { name: "更长", type: "bar", stack: "ttl",
+          itemStyle: { color: "#2563eb" }, data: [long] },
+        { name: "永久", type: "bar", stack: "ttl",
+          itemStyle: { color: "#8b5cf6" }, data: [forever] }
+      ]
+    });
   }
   function tickCountdown() {
     var keys = (STATE.overview && STATE.overview.keys) || [];
