@@ -181,5 +181,74 @@ class TestCli(unittest.TestCase):
             self.assertEqual(json.loads(proc.stdout)["amount"]["type"], "float")
 
 
+class TestReportDataApi(unittest.TestCase):
+    """2026-10-11 ECharts 化：/api/report_data 以 JSON 下发报告数据（webframe 直调）。"""
+
+    def setUp(self):
+        from datascope.server import build_app
+        self.app = build_app()
+
+    def handle(self, method, path, body=b"", headers=None):
+        from netlab.http1 import Request
+        req = Request(method=method, target=path, version="1.1",
+                      headers=[(k.lower(), v) for k, v in list(headers or [])],
+                      body=body, path=path.split("?")[0],
+                      query=[tuple(p.split("=", 1)) if "=" in p else (p, "")
+                             for p in path.split("?")[1].split("&")] if "?" in path else [],
+                      keep_alive=False, content_length=len(body))
+        return self.app.handle(req)
+
+    def test_report_data_shape(self):
+        payload = json.dumps({
+            "csv": DIRTY,
+            "recipe": [{"op": "drop_duplicates"},
+                       {"op": "trim"},
+                       {"op": "fill_missing", "column": "amount", "strategy": "mean"}],
+            "mining": None,
+        }).encode("utf-8")
+        status, headers, body = self.handle(
+            "POST", "/api/report_data", body=payload,
+            headers=[("Content-Type", "application/json")])
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        report = data["report"]
+        self.assertEqual(report["rows_before"], 6)
+        self.assertEqual(report["rows_after"], 5)
+        self.assertEqual(len(report["steps"]), 3)
+        self.assertIn("profile_after", report)
+        self.assertIsNone(data["mining"])
+
+    def test_report_data_with_mining(self):
+        csv = """group,item,qty
+A,键盘,1
+A,鼠标,1
+B,键盘,1
+B,键盘,1
+C,鼠标,1
+"""
+        payload = json.dumps({
+            "csv": csv,
+            "recipe": [{"op": "drop_duplicates"}],
+            "mining": {"task": "apriori",
+                       "params": {"group_col": "group", "item_col": "item",
+                                  "min_support": 0.3, "min_confidence": 0.3}},
+        }).encode("utf-8")
+        status, _, body = self.handle(
+            "POST", "/api/report_data", body=payload,
+            headers=[("Content-Type", "application/json")])
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertEqual(data["mining"]["task"], "apriori")
+        self.assertIn("rules", data["mining"])
+
+    def test_report_data_bad_recipe_400(self):
+        payload = json.dumps({"csv": DIRTY, "recipe": [{"op": "no_such_op"}],
+                              "mining": None}).encode("utf-8")
+        status, _, _ = self.handle(
+            "POST", "/api/report_data", body=payload,
+            headers=[("Content-Type", "application/json")])
+        self.assertEqual(status, 400)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

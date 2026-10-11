@@ -125,10 +125,22 @@
             <option value="kmeans">K-means 聚类</option>
           </select>
           <button id="btn-mine" class="btn btn-ghost btn-sm">运行挖掘</button>
-          <button id="btn-report" class="btn btn-sm">生成 SVG 报告</button>
-          <button id="btn-download-svg" class="btn btn-ghost btn-sm" disabled>下载报告</button>
+          <button id="btn-report" class="btn btn-sm">生成报告</button>
+          <button id="btn-download-svg" class="btn btn-ghost btn-sm" disabled>下载 SVG 版</button>
         </div>
         <div id="mine-out"></div>
+        <div id="report-charts" hidden>
+          <div class="overline">报告 · 图 1</div>
+          <h3>清洗行数变化（每步生效后剩余行数）</h3>
+          <div id="chart-steps" style="width:100%;height:240px"></div>
+          <div class="overline">报告 · 图 2</div>
+          <h3>清洗后画像（缺失 / 去重）</h3>
+          <div id="chart-profile" style="width:100%;height:240px"></div>
+          <div class="overline">报告 · 图 3</div>
+          <h3 id="chart-mine-title">挖掘结果</h3>
+          <div id="chart-mining" style="width:100%;height:280px"></div>
+          <p class="note" id="report-note"></p>
+        </div>
       </div>
     </div>
 
@@ -136,6 +148,7 @@
   </div>
 </div>
 <div class="toast-wrap" id="toast-wrap"></div>
+<script src="/static/assets/echarts.min.js"></script>
 <script src="/static/app.js"></script>
 </body>
 </html>

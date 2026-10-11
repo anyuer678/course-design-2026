@@ -675,6 +675,18 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   +回归钉住。验证：sensorhub 25+cachekv 19=44 全绿、无头 Edge 走查零 console 错误、
   元素截图目检（p-验收/echarts走查-2026-10-11.md）。下一片：DataScope 报告/SimLab/
   Studio 图表，WebSocket 实时推送与 LLM 接入按梯队另行点项。
+- ✅ **轮十五：ECharts 第二片——DataScope 报告（10-11）**：报告从"服务端静态 SVG 一张图"
+  升级为**交互式三图**（清洗行数变化含每步柱顶数值 / 清洗后画像缺失 vs 去重双序列 /
+  挖掘结果——Apriori 规则支持度·置信度·提升度三系列、K-means 各簇样本数）。
+  `POST /api/report_data` JSON 端点与 SVG 版同源（同一 apply_recipe/mining 口径），
+  `/api/report` SVG 保留作下载兜底（前端点「下载 SVG 版」按需重取）。**顺手修掉一个
+  潜伏 bug**：`mining` 显式 null 会被 json_body 校验拒（旧版不跑挖掘直接点报告就 400）
+  → 校验器类型元组 `(dict, type(None))`，两端点同步修。**修示例数据名不副实**：
+  SAMPLE_CSV 号称"含重复"却无完全重复行，drop_duplicates 演示 23→23 平线——补一行
+  精确重复（24→23，去重真正咬合）。验证：datascope 37（新增 TestReportDataApi 3 条
+  直调回归）+ sensorhub 25 + cachekv 19 = 81 全绿；无头 Edge 走查：加载示例→配方→
+  清洗→报告全链自动、三 canvas 真渲染、零 console 错误、截图目检
+  （p-验收/echarts-datascope*.png）。
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
   cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 

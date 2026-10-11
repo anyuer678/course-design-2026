@@ -58,6 +58,7 @@ SAMPLE_CSV = """订单号,商品,数量,金额,备注
 1013,键盘,2,199.90,
 1013,鼠标,1,59.50,
 1014,键盘,1, 249.00 ,
+1005,鼠标,1,59.50,促销
 """
 
 
@@ -166,9 +167,10 @@ def build_app(recipes_dir: Path | None = None) -> MicroApp:
 
     @app.post("/api/report")
     def report(ctx):
-        """清洗（必选）+ 挖掘（可选）→ 自包含 SVG 报告（轮四之三）。"""
+        """清洗（必选）+ 挖掘（可选）→ 自包含 SVG 报告（轮四之三）。
+        2026-10-11：mining 允许显式 null——此前前端不跑挖掘点报告会被校验拦下。"""
         payload = ctx.json_body({"csv": (str, True), "recipe": (list, True),
-                                 "mining": (dict, False)})
+                                 "mining": ((dict, type(None)), False)})
         table = _csv_of(ctx, payload)
         try:
             cleaned, clean_report = datascope.apply_recipe(table, payload["recipe"])
@@ -192,6 +194,32 @@ def build_app(recipes_dir: Path | None = None) -> MicroApp:
         return Response(svg.encode("utf-8"),
                         content_type="image/svg+xml",
                         headers=[("Cache-Control", "no-store")])
+
+    @app.post("/api/report_data")
+    def report_data(ctx):
+        """2026-10-11 ECharts 化：报告数据以 JSON 下发，前端渲染交互图；
+        /api/report 的静态 SVG 保留作下载兜底。两端口径同源（同一 apply_recipe/mining）。"""
+        payload = ctx.json_body({"csv": (str, True), "recipe": (list, True),
+                                 "mining": ((dict, type(None)), False)})
+        table = _csv_of(ctx, payload)
+        try:
+            cleaned, clean_report = datascope.apply_recipe(table, payload["recipe"])
+        except datascope.RecipeError as exc:
+            raise HttpFail(400, str(exc)) from None
+        mining = None
+        if payload.get("mining"):
+            task = payload["mining"].get("task")
+            params = payload["mining"].get("params") or {}
+            try:
+                if task == "apriori":
+                    mining = apriori_from_rows(cleaned, **params)
+                elif task == "kmeans":
+                    mining = kmeans_from_rows(cleaned, **params)
+                else:
+                    raise HttpFail(400, f"mining.task 只能是 apriori/kmeans，收到 {task!r}")
+            except (ValueError, TypeError) as exc:
+                raise HttpFail(400, str(exc)) from None
+        return ctx.json({"report": clean_report, "mining": mining})
 
     @app.get("/api/sample")
     def sample(ctx):

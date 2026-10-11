@@ -1,7 +1,8 @@
-/* DataScope 控制台（UI 2.1）：数据源 → 列画像 → 清洗配方 → 挖掘与 SVG 报告。
+/* DataScope 控制台（UI 2.1）：数据源 → 列画像 → 清洗配方 → 挖掘与报告。
    判定全在服务端；本文件只做调用与渲染。
    挖掘参数与返回形状对齐 datascope/mining.py：apriori 需要 group_col/item_col，
-   kmeans 需要 columns（数值列）；规则字段为 ante/cons。 */
+   kmeans 需要 columns（数值列）；规则字段为 ante/cons。
+   2026-10-11：报告改 ECharts 交互渲染（/api/report_data），SVG 版保留下载。 */
 (function () {
   "use strict";
   function $(id) { return document.getElementById(id); }
@@ -24,7 +25,7 @@
   }
 
   var STATE = { csv: null, rows: 0, columns: [], numeric: [], recipe: [],
-                cleanedCsv: null, reportUrl: null };
+                cleanedCsv: null, reportPayload: null };
   var OPS_NEED_COL = { to_number: 1, drop_empty_rows: 1, fill_missing: 1, drop_column: 1 };
   var OP_LABEL = { drop_duplicates: "去重行", trim: "去首尾空格", to_number: "转数值",
                    drop_empty_rows: "删空行", fill_missing: "填充缺失", drop_column: "删列" };
@@ -389,37 +390,156 @@
     }).catch(function () { toast("网络错误", "err"); });
   });
 
+  // ---------------- 报告（2026-10-11 ECharts 化：JSON 数据 → 交互图；SVG 端点保留作下载）
+  var CHARTS = {};
+  function getChart(id) {
+    if (!window.echarts) return null;
+    if (!CHARTS[id]) CHARTS[id] = echarts.init($(id));
+    return CHARTS[id];
+  }
+  window.addEventListener("resize", function () {
+    Object.keys(CHARTS).forEach(function (id) { CHARTS[id].resize(); });
+  });
+
+  function renderStepsChart(report) {
+    var c = getChart("chart-steps");
+    if (!c) { $("report-note").textContent = "ECharts 未加载（assets 缺失）"; return; }
+    var labels = ["清洗前"], values = [report.rows_before];
+    (report.steps || []).forEach(function (s) {
+      labels.push("第" + s.step + "步 " + (OP_LABEL[s.op] || s.op));
+      values.push(s.rows_after);
+    });
+    labels.push("清洗后"); values.push(report.rows_after);
+    c.setOption({
+      grid: { left: 60, right: 24, top: 36, bottom: 56 },
+      tooltip: { trigger: "axis" },
+      xAxis: { type: "category", data: labels,
+               axisLabel: { interval: 0, rotate: 24, fontSize: 11 } },
+      yAxis: { type: "value", name: "行数" },
+      series: [{ type: "bar", data: values, barMaxWidth: 42,
+                 itemStyle: { color: "#2563eb", borderRadius: [4, 4, 0, 0] },
+                 label: { show: true, position: "top", fontSize: 11 } }]
+    });
+  }
+
+  function renderProfileChart(report) {
+    var c = getChart("chart-profile");
+    if (!c) return;
+    var profile = report.profile_after || {};
+    var cols = Object.keys(profile);
+    c.setOption({
+      grid: { left: 60, right: 24, top: 40, bottom: 48 },
+      tooltip: { trigger: "axis" },
+      legend: { top: 4 },
+      xAxis: { type: "category", data: cols,
+               axisLabel: { interval: 0, rotate: cols.length > 6 ? 20 : 0, fontSize: 11 } },
+      yAxis: { type: "value", minInterval: 1 },
+      series: [
+        { name: "缺失", type: "bar", data: cols.map(function (k) { return profile[k].missing; }),
+          itemStyle: { color: "#f43f5e", borderRadius: [4, 4, 0, 0] }, barMaxWidth: 30 },
+        { name: "去重数", type: "bar", data: cols.map(function (k) { return profile[k].distinct; }),
+          itemStyle: { color: "#0ea5e9", borderRadius: [4, 4, 0, 0] }, barMaxWidth: 30 }
+      ]
+    });
+  }
+
+  function renderMiningChart(mining) {
+    var c = getChart("chart-mining");
+    var title = $("chart-mine-title");
+    if (!mining) {
+      title.textContent = "挖掘结果（本次未运行挖掘——可选步骤）";
+      c && c.clear();
+      return;
+    }
+    if (!c) return;
+    if (mining.task === "apriori") {
+      title.textContent = "关联规则（支持度 / 置信度 / 提升度）";
+      var rules = (mining.rules || []).slice(0, 10);
+      c.setOption({
+        grid: { left: 60, right: 24, top: 40, bottom: 72 },
+        tooltip: { trigger: "axis",
+          formatter: function (ps) {
+            return ps[0].name + "<br/>" + ps.map(function (p) {
+              return p.marker + p.seriesName + "：" + p.value;
+            }).join("<br/>");
+          } },
+        legend: { top: 4 },
+        xAxis: { type: "category",
+                 data: rules.map(function (r) {
+                   return r.ante.join("+") + " → " + r.cons.join("+"); }),
+                 axisLabel: { interval: 0, rotate: 28, fontSize: 10.5 } },
+        yAxis: { type: "value" },
+        series: [
+          { name: "支持度", type: "bar",
+            data: rules.map(function (r) { return r.support; }),
+            itemStyle: { color: "#2563eb", borderRadius: [4, 4, 0, 0] }, barMaxWidth: 26 },
+          { name: "置信度", type: "bar",
+            data: rules.map(function (r) { return r.confidence; }),
+            itemStyle: { color: "#f59e0b", borderRadius: [4, 4, 0, 0] }, barMaxWidth: 26 },
+          { name: "提升度", type: "bar",
+            data: rules.map(function (r) { return r.lift; }),
+            itemStyle: { color: "#10b981", borderRadius: [4, 4, 0, 0] }, barMaxWidth: 26 }
+        ]
+      });
+    } else {
+      title.textContent = "K-means 聚类（各簇样本数）";
+      var sizes = {};
+      (mining.labels || []).forEach(function (l) { sizes[l] = (sizes[l] || 0) + 1; });
+      var ks = (mining.centroids || []).map(function (_, i) { return "簇 " + i; });
+      c.setOption({
+        grid: { left: 60, right: 24, top: 40, bottom: 40 },
+        tooltip: { trigger: "axis" },
+        xAxis: { type: "category", data: ks },
+        yAxis: { type: "value", minInterval: 1, name: "样本数" },
+        series: [{ type: "bar", data: ks.map(function (_, i) { return sizes[i] || 0; }),
+                   barMaxWidth: 46, itemStyle: { color: "#8b5cf6", borderRadius: [4, 4, 0, 0] },
+                   label: { show: true, position: "top" } }]
+      });
+    }
+  }
+
   on("btn-report", function () {
     if (!STATE.cleanedCsv) { toast("先执行清洗", "err"); return; }
     var spec = miningParams();
     var btn = $("btn-report");
     btn.disabled = true;
-    fetch("/api/report", {
+    var payload = { csv: STATE.csv, recipe: STATE.recipe,
+                    mining: spec ? { task: spec.task, params: spec.params } : null };
+    fetch("/api/report_data", {
       method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ csv: STATE.csv, recipe: STATE.recipe,
-                             mining: spec ? { task: spec.task, params: spec.params } : null })
+      body: JSON.stringify(payload)
     }).then(function (r) {
-      return r.text().then(function (t) { return { status: r.status, t: t }; });
+      return r.json().then(function (d) { return { status: r.status, d: d }; });
     }).then(function (r) {
       btn.disabled = false;
-      if (r.status !== 200) { toast("报告生成失败（" + r.status + "）", "err"); return; }
-      if (STATE.reportUrl) URL.revokeObjectURL(STATE.reportUrl);
-      STATE.reportUrl = URL.createObjectURL(new Blob([r.t], { type: "image/svg+xml" }));
-      var box = $("mine-out");
-      box.textContent = "";
-      var img = el("img");
-      img.src = STATE.reportUrl;
-      img.alt = "清洗与挖掘 SVG 报告";
-      img.style.cssText = "width:100%;border:1px solid var(--line);border-radius:12px";
-      box.appendChild(img);
+      if (r.status !== 200) { toast((r.d && r.d.error) || "报告生成失败", "err"); return; }
+      STATE.reportPayload = payload;                 // SVG 下载按需重取
       $("btn-download-svg").disabled = false;
-      toast("SVG 报告已生成");
+      $("report-charts").hidden = false;
+      $("report-note").textContent = "账本口径与 /api/report SVG 版同源：" +
+        r.d.report.rows_before + " → " + r.d.report.rows_after + " 行 · " +
+        (r.d.report.steps || []).length + " 步全部生效 · 悬浮柱子看数值。";
+      renderStepsChart(r.d.report);
+      renderProfileChart(r.d.report);
+      renderMiningChart(r.d.mining);
+      toast("报告已生成");
     }).catch(function () { btn.disabled = false; toast("网络错误", "err"); });
   });
   on("btn-download-svg", function () {
-    if (!STATE.reportUrl) return;
-    var a = el("a"); a.href = STATE.reportUrl; a.download = "datascope-report.svg";
-    a.click();
-    toast("报告已下载");
+    if (!STATE.reportPayload) return;
+    fetch("/api/report", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(STATE.reportPayload)
+    }).then(function (r) {
+      if (r.status !== 200) { toast("SVG 报告生成失败（" + r.status + "）", "err"); return null; }
+      return r.text();
+    }).then(function (t) {
+      if (!t) return;
+      var blob = new Blob([t], { type: "image/svg+xml" });
+      var a = el("a"); a.href = URL.createObjectURL(blob);
+      a.download = "datascope-report.svg";
+      a.click(); URL.revokeObjectURL(a.href);
+      toast("SVG 报告已下载");
+    }).catch(function () { toast("网络错误", "err"); });
   });
 })();
