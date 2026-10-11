@@ -48,8 +48,11 @@ def _norm(text: str) -> str:
     text = re.sub(r"127\.0\.0\.1:\d+", "127.0.0.1:<临时端口>", text)
     text = re.sub(r"Date: [A-Z][a-z]{2}, \d{2} [A-Z][a-z]{2} \d{4} \d{2}:\d{2}:\d{2} GMT",
                   "Date: <当场时间>", text)
-    text = re.sub(r"'open_now': \d+", "'open_now': <当场>", text)
-    text = re.sub(r"'peak_open': \d+", "'peak_open': <当场>", text)
+    # open_now/peak_open 的引号要两种都吃：demo 直出的 /stats 行是单引号，
+    # 而页面里还有 HTML 转义后的双引号 JSON 体——只匹配一种就漏（第六轮 CI
+    # 诊断钉死：&quot;peak_open&quot;: 2 漏网，且该值随连接异步回收时点 1/2 漂）。
+    text = re.sub(r"(['\"])open_now\1: \d+", r"\1open_now\1: <当场>", text)
+    text = re.sub(r"(['\"])peak_open\1: \d+", r"\1peak_open\1: <当场>", text)
     text = re.sub(r"耗时=[\d.]+s", "耗时=<当场>s", text)
     return text
 
