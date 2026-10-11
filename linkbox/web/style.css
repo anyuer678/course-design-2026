@@ -16,3 +16,9 @@ table.grid th,table.grid td{padding:.48rem .75rem;border-bottom:1px solid var(--
 text-align:left}
 table.grid th{background:var(--bg);color:var(--faint);font-weight:650;font-size:.7rem;
 letter-spacing:.08em;text-transform:uppercase}
+
+/* 统计页 ECharts 化（2026-10-11）：两图并排，窄屏摞叠 */
+.grid.two-col{display:grid;grid-template-columns:1.5fr 1fr;gap:.9rem}
+.statchart{background:var(--card);border:1px solid var(--line);border-radius:12px;
+padding:.5rem;height:300px}
+@media (max-width:900px){.grid.two-col{grid-template-columns:1fr}}

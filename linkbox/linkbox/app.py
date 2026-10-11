@@ -227,6 +227,18 @@ class LinkBoxApp(ShortUrlApp):
         return 204, [JSON_TYPE], b""
 
     # ------------------------------------------------ L3：短链删除 / 暂存查看页删除
+    def overview(self, request: Request):
+        """2026-10-11 ECharts 化：在 B31 overview（stats+top5）上增量补
+        inventory（暂存/文件在存数），旧键原样保留。"""
+        status, headers, body = super().overview(request)
+        if status != 200:
+            return status, headers, body
+        import json as _json
+        payload = _json.loads(body.decode("utf-8"))
+        payload["inventory"] = {"stashes": self.stash.count(),
+                                "files": self.files.count() if self.files else 0}
+        return status, headers, self._json(payload)
+
     def delete_link(self, request):
         """DELETE /api/links/<码>：删除短链（管理能力，B31 引擎新增 Store.delete）。
         404 不存在 / 204 已删；删掉后再访问 /l/<码> 自然 404。"""

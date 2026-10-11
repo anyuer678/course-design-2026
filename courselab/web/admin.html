@@ -14,8 +14,9 @@
 <h1>管理端</h1>
 <div id="box"><p class="note">加载中…</p></div>
 </main>
-<footer>看板数据现算自平台库（users / lab_runs / task_records）；图表为手写 SVG，零图表库。</footer>
+<footer>看板数据现算自平台库（users / lab_runs / task_records）；图表为 ECharts 交互渲染，本地资产零外链。</footer>
 <script src="/assets/app.js"></script>
+<script src="/assets/echarts.min.js"></script>
 <script>
 "use strict";
 var box = document.getElementById("box");
@@ -88,42 +89,60 @@ function loadOverview() {
     board.appendChild(stats);
     var c = card([CL.el("h3", null, "最近 7 天实验运行")]);
     var chartBox = CL.el("div");
-    drawChart(chartBox, d.daily_labs);
+    chartBox.id = "board-labs";
+    chartBox.style.height = "240px";
     c.appendChild(chartBox);
     board.appendChild(c);
+    var c2 = card([CL.el("h3", null, "任务完成情况")]);
+    var taskBox = CL.el("div");
+    taskBox.id = "board-tasks";
+    taskBox.style.height = "220px";
+    c2.appendChild(taskBox);
+    board.appendChild(c2);
+    drawChart(d.daily_labs);
+    drawTasks(d.tasks_done, d.tasks_doing);
   });
 }
 
-function drawChart(host, daily) {
-  var NS = "http://www.w3.org/2000/svg";
-  var W = 640, H = 180, pad = 30;
-  var max = 1;
-  daily.forEach(function (d) { if (d.n > max) max = d.n; });
-  var svg = document.createElementNS(NS, "svg");
-  svg.setAttribute("viewBox", "0 0 " + W + " " + H);
-  svg.setAttribute("class", "chart");
-  var step = (W - pad * 2) / daily.length;
-  daily.forEach(function (d, i) {
-    var h = Math.round((H - 56) * d.n / max);
-    var x = pad + i * step + step * 0.15;
-    var w = step * 0.7;
-    var rect = document.createElementNS(NS, "rect");
-    rect.setAttribute("x", x); rect.setAttribute("y", H - 30 - h);
-    rect.setAttribute("width", w); rect.setAttribute("height", Math.max(2, h));
-    rect.setAttribute("rx", 4); rect.setAttribute("fill", "#3b82f6");
-    svg.appendChild(rect);
-    var v = document.createElementNS(NS, "text");
-    v.setAttribute("x", x + w / 2); v.setAttribute("y", H - 36 - h);
-    v.setAttribute("text-anchor", "middle"); v.setAttribute("font-size", "11");
-    v.setAttribute("fill", "#475569"); v.textContent = String(d.n);
-    svg.appendChild(v);
-    var t = document.createElementNS(NS, "text");
-    t.setAttribute("x", x + w / 2); t.setAttribute("y", H - 10);
-    t.setAttribute("text-anchor", "middle"); t.setAttribute("font-size", "11");
-    t.setAttribute("fill", "#94a3b8"); t.textContent = d.label;
-    svg.appendChild(t);
+// ---------------- 看板图表（2026-10-11 ECharts 化：手绘 SVG 柱 → 交互柱状 + 完成度环图）
+var BOARD_CHARTS = {};
+function boardChart(id) {
+  if (!window.echarts) return null;
+  if (!BOARD_CHARTS[id]) BOARD_CHARTS[id] = echarts.init(document.getElementById(id));
+  return BOARD_CHARTS[id];
+}
+function drawChart(daily) {
+  var c = boardChart("board-labs");
+  if (!c) return;
+  c.setOption({
+    grid: { left: 40, right: 20, top: 30, bottom: 28 },
+    tooltip: { trigger: "axis", formatter: "{b}<br>实验运行 <b>{c}</b> 次" },
+    xAxis: { type: "category", data: daily.map(function (d) { return d.label; }) },
+    yAxis: { type: "value", minInterval: 1 },
+    series: [{
+      type: "bar", barMaxWidth: 34,
+      itemStyle: { color: "#3b82f6", borderRadius: [6, 6, 0, 0] },
+      label: { show: true, position: "top", fontSize: 11 },
+      data: daily.map(function (d) { return d.n; })
+    }]
   });
-  host.appendChild(svg);
+}
+function drawTasks(done, doing) {
+  var c = boardChart("board-tasks");
+  if (!c) return;
+  c.setOption({
+    tooltip: { trigger: "item", formatter: "{b}：{c} 条（{d}%）" },
+    legend: { bottom: 0, icon: "circle" },
+    series: [{
+      type: "pie", radius: ["42%", "68%"], center: ["50%", "46%"],
+      label: { show: true, formatter: "{b} {c}", color: "#334155" },
+      itemStyle: { borderRadius: 6, borderColor: "#fff", borderWidth: 2 },
+      data: [
+        { name: "已完成", value: done, itemStyle: { color: "#16a34a" } },
+        { name: "进行中", value: doing, itemStyle: { color: "#f59e0b" } }
+      ].filter(function (d) { return d.value > 0; })   // 0 值切片只剩图例，标签不悬空
+    }]
+  });
 }
 
 // ---------------- 用户管理

@@ -698,6 +698,18 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   无残留才提交。验证：studio 30 + simlab 28 + datascope 37 = 95 全绿；无头 Edge 双产品
   走查（含播放 3 帧验证逐帧重建）零意外 console 错误、截图目检
   （p-验收/echarts-轮十六走查-2026-10-11.md）。
+- ✅ **轮十七：ECharts 收官——LinkBox 统计 + CourseLab 看板（10-11）**：
+  **LinkBox**：统计页双图（短链命中排行横向条形，悬浮看目标地址 + 在存库存环图
+  短链/暂存/文件）；`LinkBoxApp.overview` 增量补 `inventory`（B31 stats+top5 原样）。
+  **CourseLab**：admin.html 七日实验 SVG 柱→ECharts 柱状 + 新增任务完成环图，
+  同源 /api/admin/overview。抓三缺陷：条形 series data 未映射 `value`（柱全空、
+  console 零错误纯靠截图目检）、环图 0 值标签悬空（两产品统一 filter）、
+  走查种子幂等化（别名带时间戳，重跑零噪音）。验证：linkbox 104 通过 +
+  courselab 自检 PASS；无头 Edge 四 canvas 真渲染、双产品零 console 错误、
+  截图目检（p-验收/echarts-轮十七走查-2026-10-11.md）。
+  **ECharts 第一梯队 7/7 产品完成**（SensorHub/CacheKV/DataScope/SimLab/
+  Studio/LinkBox/CourseLab）。下一梯队候选：WebSocket 实时推送、LLM 接入
+  （AI 问数/AI 助教）、README+截图+Docker 作品集三件套。
 - 决策提醒：已闭环（.gitignore 已收录 linkbox/data/、studio/data/、simlab/runs/、
   cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 

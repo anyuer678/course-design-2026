@@ -148,20 +148,90 @@
       .catch(function () { showErr(box, "网络错误，请重试。"); });
   });
 
-  // ------------------------------------------------ 统计
+  // ------------------------------------------------ 统计（2026-10-11 ECharts 化）
+  // 左：Top 短链命中横向条形；右：暂存/文件在存库存环图。数字与排行同源
+  // /api/stats（stats + top + inventory），B31 引擎现算，本文件只做渲染。
+  var STAT_CHARTS = {};
+  function statChart(id) {
+    if (!window.echarts) return null;
+    if (!STAT_CHARTS[id]) STAT_CHARTS[id] = echarts.init($(id));
+    return STAT_CHARTS[id];
+  }
   function refreshStats() {
     getJSON("/api/stats").then(function (r) {
       var box = $("stats");
       box.textContent = "";
       var s = r.data.stats || {};
-      var table = el("table", "grid");
-      [["链接总数", s.links], ["命中总数", s.total_hits]].forEach(function (row) {
-        var tr = el("tr");
-        tr.appendChild(el("td", "", row[0]));
-        tr.appendChild(el("td", "", String(row[1])));
-        table.appendChild(tr);
-      });
-      box.appendChild(table);
+      var top = r.data.top || [];
+      var inv = r.data.inventory || {};
+
+      var barCard = el("div", "statchart");
+      barCard.id = "stats-top";
+      box.appendChild(barCard);
+
+      var pieCard = el("div", "statchart");
+      pieCard.id = "stats-inv";
+      box.appendChild(pieCard);
+
+      var bar = statChart("stats-top");
+      if (bar) {
+        var rows = top.map(function (item) {
+          return { name: "/" + item.code, target: item.target, hits: item.hits };
+        });
+        bar.setOption({
+          title: { text: "短链命中排行 Top " + rows.length,
+                   left: 10, top: 6, textStyle: { fontSize: 13 } },
+          grid: { left: 76, right: 40, top: 40, bottom: 24 },
+          tooltip: {
+            trigger: "item",
+            formatter: function (p) {
+              return p.name + " → " + p.data.target + "<br>命中 <b>" +
+                p.value + "</b> 次";
+            }
+          },
+          xAxis: { type: "value", minInterval: 1 },
+          yAxis: {
+            type: "category", inverse: true,
+            data: rows.map(function (x) { return x.name; }),
+            axisLabel: { fontSize: 11 }
+          },
+          series: [{
+            type: "bar", barMaxWidth: 18,
+            itemStyle: { color: "#2563eb", borderRadius: [0, 6, 6, 0] },
+            label: { show: true, position: "right", fontSize: 11 },
+            data: rows.map(function (x) {
+              return { name: x.name, value: x.hits, target: x.target };
+            })
+          }]
+        });
+        if (!rows.length) {
+          bar.setOption({ title: { text: "还没有短链——先去「短链」页创建一个。",
+                                   left: 10, top: 6, textStyle: { fontSize: 13 } } });
+        }
+      }
+
+      var pie = statChart("stats-inv");
+      if (pie) {
+        pie.setOption({
+          title: { text: "在存库存", left: 10, top: 6, textStyle: { fontSize: 13 } },
+          tooltip: { trigger: "item", formatter: "{b}：{c} 条（{d}%）" },
+          legend: { bottom: 6, icon: "circle" },
+          series: [{
+            type: "pie", radius: ["42%", "68%"], center: ["50%", "52%"],
+            label: { show: true, formatter: "{b} {c}", color: "#334155" },
+            itemStyle: { borderRadius: 6, borderColor: "#fff", borderWidth: 2 },
+            data: [
+              { name: "短链", value: s.links || 0, itemStyle: { color: "#2563eb" } },
+              { name: "文本暂存", value: inv.stashes || 0, itemStyle: { color: "#0d9488" } },
+              { name: "文件", value: inv.files || 0, itemStyle: { color: "#f59e0b" } }
+            ].filter(function (d) { return d.value > 0; })   // 0 值切片只剩图例，标签不悬空
+          }]
+        });
+      }
+
+      var note = el("p", "note", "短链 " + (s.links || 0) + " 条 · 命中累计 " +
+        (s.total_hits || 0) + " 次 · 单链最高 " + (s.best_hits || 0) + " 次。");
+      box.appendChild(note);
     });
   }
 
