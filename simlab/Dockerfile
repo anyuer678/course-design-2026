@@ -6,5 +6,6 @@ WORKDIR /app
 COPY simlab/ simlab/
 COPY projects/B12-algo-arena/ projects/B12-algo-arena/
 COPY projects/B34-path-planner/ projects/B34-path-planner/
+COPY webframe/ webframe/
 EXPOSE 8019
 CMD ["python", "simlab/server.py", "--host", "0.0.0.0"]

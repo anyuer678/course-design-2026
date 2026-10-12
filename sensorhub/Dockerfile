@@ -5,5 +5,6 @@ ENV PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 COPY sensorhub/ sensorhub/
 COPY projects/B35-iot-mqtt/ projects/B35-iot-mqtt/
+COPY webframe/ webframe/
 EXPOSE 8022
 CMD ["python", "sensorhub/server.py", "--host", "0.0.0.0"]

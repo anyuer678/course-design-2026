@@ -5,5 +5,6 @@ ENV PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 COPY datascope/ datascope/
 COPY projects/B26-datamining/ projects/B26-datamining/
+COPY webframe/ webframe/
 EXPOSE 8020
 CMD ["python", "datascope/server.py", "--host", "0.0.0.0"]

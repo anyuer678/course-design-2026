@@ -5,5 +5,6 @@ ENV PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 COPY cachekv/ cachekv/
 COPY projects/B38-mini-redis/ projects/B38-mini-redis/
+COPY webframe/ webframe/
 EXPOSE 8021
 CMD ["python", "cachekv/server.py", "--host", "0.0.0.0"]

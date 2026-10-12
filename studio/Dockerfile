@@ -7,5 +7,6 @@ FROM python:3.12-slim
 ENV PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 COPY studio/ studio/
+COPY webframe/ webframe/
 EXPOSE 8017
 CMD ["python", "studio/server.py", "--host", "0.0.0.0"]

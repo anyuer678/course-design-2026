@@ -3,5 +3,6 @@ FROM python:3.12-slim
 ENV PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1
 WORKDIR /app
 COPY boardweb/ boardweb/
+COPY webframe/ webframe/
 EXPOSE 8025
 CMD ["python", "boardweb/server.py", "--host", "0.0.0.0"]
