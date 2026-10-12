@@ -126,10 +126,34 @@
   $("file").addEventListener("change", function () {
     var f = this.files[0];
     if (!f) return;
+    if (/\.xlsx$/i.test(f.name)) { importXlsx(f); return; }
     var reader = new FileReader();
     reader.onload = function () { loadCsv(String(reader.result), f.name); };
     reader.readAsText(f, "utf-8");
   });
+  function importXlsx(f) {
+    // Excel 走服务端零依赖解析（datascope/xlsx.py），返回 CSV 文本——
+    // 转换结果填回编辑框（用户可继续改），再走与 CSV 完全相同的载入链路
+    var state = $("source-state");
+    state.textContent = "正在转换 " + f.name + " …";
+    fetch("/api/import/xlsx", {
+      method: "POST",
+      headers: { "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+      body: f
+    }).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+    }).then(function (r) {
+      if (!r.ok) {
+        state.textContent = "转换失败";
+        return Promise.reject(new Error(r.d.error || "转换失败"));
+      }
+      $("csv-text").value = r.d.csv;
+      state.textContent = "已转换：" + r.d.rows + " 行 × " + r.d.columns.length + " 列（来自 " + f.name + "）";
+      loadCsv(r.d.csv, f.name + "（xlsx 转出）");
+    }).catch(function (e) {
+      if (e && e.message) state.textContent = "转换失败：" + e.message;
+    });
+  }
   on("btn-load", function () { loadCsv($("csv-text").value, "粘贴内容"); });
   function loadSample() {
     fetch("/api/sample").then(function (r) { return r.text(); })

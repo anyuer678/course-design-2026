@@ -19,6 +19,7 @@ if str(_B26) not in sys.path:
 
 from .dataset import Table, parse_csv, parse_csv_text, profile  # noqa: E402,F401
 from .clean import RecipeError, apply_recipe         # noqa: E402,F401
+from .xlsx import parse_xlsx_bytes                   # noqa: E402,F401
 
 __all__ = ["Table", "parse_csv", "parse_csv_text", "profile",
-           "apply_recipe", "RecipeError"]
+           "apply_recipe", "RecipeError", "parse_xlsx_bytes"]

@@ -1014,3 +1014,23 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   no-store）、零 console 错误；数字级联 run.bat/README/check_all 对齐；check_all
   21/21 全绿。踩坑记录：LinkBox app.js 没有 DataScope 那套 on()/toast() helper——
   跨产品抄渲染代码前先对 helper 清单。
+- ✅ **轮三十五：DataScope Excel 导入——零依赖手写 xlsx 解析器（10-12 深夜，GAP P4/旗舰 A 组件②）**：
+  GAP 建议引 openpyxl，但破零依赖纪律——xlsx 本相是 zip+XML，stdlib 的
+  zipfile+ElementTree 足以读全，反而更有"自研"含金量。新模块 datascope/xlsx.py
+  parse_xlsx_bytes：workbook.xml 按序取第一张表（r:id→rels→part 路径映射）、
+  sharedStrings 字符串池（富文本 runs 取后代 <t> 拼接）、inlineStr/公式缓存串/
+  布尔 TRUE-FALSE/数字（整数值去 .0，其余保留 Excel 原文不引 float 噪声）、
+  列字母双射 26 进制（A=0…AA=26）、首非空行表头、右侧多格截弃（与
+  csv.DictReader 同口径）、右侧缺格补空、全空行跳过。**安全口径（zip 炸弹）**：
+  zip 解压后大小无界，42KB 恶意文件能声明上亿行——行 10 万/列 256/单元格总数
+  200 万三重上限，超限 ValueError。故意不做并写进文档：多表（取第一张）、
+  日期（Excel 存序列号+样式，解出人类日期要解析 styles.xml numFmt 体系——
+  如实给序列号）、公式（读缓存值不重算）。服务层 POST /api/import/xlsx：
+  字节 → Table → 转 CSV 文本回流——profile/clean/mine/report 全链路零改动。
+  前端 file-input 收 .xlsx：选中即上传转换，CSV 回填编辑框（用户可继续改）
+  再走与 CSV 完全相同的载入链路，状态行显示行列数。测试 +8（内存手写
+  fixture 不落二进制：类型 roundtrip/多表取一/inlineStr/坏输入四类/炸弹三道闸/
+  API 200-400-415 + 转出 CSV 直接过 /api/profile 闭环）→ 45 双入口全绿；
+  端到端真跑：真服务 + 无头 Edge setInputFiles 上传 → 转换提示/CSV 回填/
+  画像渲染（数量 int、金额 float）/toast 全对、零 console 错误；数字级联
+  run.bat/README/check_all 37→45；check_all 21/21 全绿。

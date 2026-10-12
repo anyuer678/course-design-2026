@@ -67,7 +67,7 @@ python run.py mine 数据.csv --task apriori --params '{"group_col": "order", "i
 python server.py --port 8020              # 工作台服务（Studio 门户亦可一键启停）
 ```
 
-## 测试策略（34 项 = 17 清洗管线 + 14 挖掘/报告/服务）
+## 测试策略（45 项 = 17 清洗管线 + 14 挖掘/报告/服务 + 8 xlsx 导入 + 6 API/ECharts）
 
 解析（BOM/空值/空行跳过/空文件拒绝）、画像类型推断（**一个坏值整列退化为 text**）、
 六个步骤各自的账本计数（缺陷数量构造时已知，报告逐笔对上）、
@@ -77,6 +77,8 @@ python server.py --port 8020              # 工作台服务（Studio 门户亦�
 工作台 API（画像 415/清洗 400/挖掘坏任务坏列 400）、
 **SVG 报告**（账本计数与挖掘规则进图、文本转义、坏配方 400）、
 **报告 JSON 端点**（/api/report_data 与 SVG 同源、mining 显式 null 合法、坏配方 400）、
+**xlsx 导入**（内存手写 fixture：字符串池/富文本/inlineStr/布尔/数字取整、多表取第一、
+稀疏单元格、全空行跳过、坏输入四类、zip 炸弹三道闸、API 全链路 200/400/415）、
 真套接字全链路。
 
 ## 已知边界（如实声明）

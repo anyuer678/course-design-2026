@@ -16,7 +16,7 @@
   7.7 run.bat 测试数声明对账：check_runbat_claims.py（活文档里的 "N tests"
       × pytest 实况收集，轮二十五新增——boardweb 加测试后 run.bat 还写 8 的漂移固化）
   8. 产品层：webframe（36，含静态路径安全专项）/ studio（24，八产品真启停+审计+探活历史）/ linkbox（76）/ simlab（37）
-     / datascope（37）/ cachekv（19）/ sensorhub（28）/ board（12）
+     / datascope（45）/ cachekv（19）/ sensorhub（28）/ board（12）
      / courselab（154 项端到端自检）/ boardweb（13）
 --deep 追加：33 个项目的展示页测试套件（各项目 tests/test_showcase.py）。
 
@@ -57,7 +57,7 @@ def steps(deep: bool) -> list:
         ("产品层：Studio 门户（24 项：认证+矩阵+探活历史+八产品真启停+操作审计）", [PY, "-m", "pytest", "studio/tests", "-q"]),
         ("产品层：LinkBox（76 项双入口）", [PY, "-m", "pytest", "linkbox/tests", "-q"]),
         ("产品层：SimLab 仿真馆（37 项：记录+引擎+播放器+实时重算）", [PY, "-m", "pytest", "simlab/tests", "-q"]),
-        ("产品层：DataScope 工作台（37 项：清洗+挖掘+报告+配方+服务）", [PY, "-m", "pytest", "datascope/tests", "-q"]),
+        ("产品层：DataScope 工作台（45 项：清洗+挖掘+报告+配方+xlsx 导入+服务）", [PY, "-m", "pytest", "datascope/tests", "-q"]),
         ("产品层：CacheKV 缓存（19 项：TTL+快照+HTTP+概览演示+导入导出）", [PY, "-m", "pytest", "cachekv/tests", "-q"]),
         ("产品层：SensorHub 物联网监测（28 项：MQTT 链路+对账+告警确认+阈值页面化+曲线限流+WS 实时）", [PY, "-m", "pytest", "sensorhub/tests", "-q"]),
         ("产品层：board 画板（12 项：B14 自检 7106+备份+守护+启动器契约+画笔微调）", [PY, "-m", "pytest", "board/tests", "-q"]),

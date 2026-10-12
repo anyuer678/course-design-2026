@@ -11,7 +11,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] pytest entry (37 tests: parse + profile + cleaning + mining + report + server)...
+echo [1/2] pytest entry (45 tests: parse + profile + cleaning + mining + report + xlsx + server)...
 python -m pytest tests -q
 if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.

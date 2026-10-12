@@ -37,7 +37,7 @@
       <h1 id="source">数据源</h1>
       <div class="card">
         <div class="toolbar">
-          <input type="file" id="file" accept=".csv,text/csv,text/plain" style="flex:none">
+          <input type="file" id="file" accept=".csv,.xlsx,text/csv,text/plain,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" style="flex:none">
           <button id="btn-sample-card" class="btn btn-sm">加载示例数据</button>
         </div>
         <div class="field">
@@ -48,6 +48,8 @@
           <button id="btn-load" class="btn btn-sm">解析并载入</button>
           <span class="meta" id="source-state">未加载</span>
         </div>
+        <p class="note">支持 .csv 与 .xlsx——Excel 文件由服务端零依赖解析器读第一张表
+          并转成 CSV（日期列会显示为 Excel 序列号；公式取缓存值）。</p>
       </div>
 
       <div class="overline">Step 2</div>

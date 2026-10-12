@@ -5,6 +5,7 @@ API：
     POST /api/clean     {csv, recipe}            → 清洗后 CSV + 账本报告
     POST /api/mine      {csv, task, params}      → B26 真引擎挖掘（Apriori/K-means）
     GET  /                                       → 简单工作台页（轮四（三）再做精致报告）
+    POST /api/import/xlsx（原始字节）            → xlsx 第一张表转 CSV 文本 + 画像（2026-10-12）
 只绑回环。CSV 以文本进出——保持"CSV 只有文本"的本相，类型转换显式做。
 """
 from __future__ import annotations
@@ -220,6 +221,31 @@ def build_app(recipes_dir: Path | None = None) -> MicroApp:
             except (ValueError, TypeError) as exc:
                 raise HttpFail(400, str(exc)) from None
         return ctx.json({"report": clean_report, "mining": mining})
+
+    @app.post("/api/import/xlsx")
+    def import_xlsx(ctx):
+        """2026-10-12 Excel 导入（GAP P4 升级动作②）：xlsx 原始字节 → CSV 文本。
+        引擎层 datascope/xlsx.py 零依赖手写解析（zipfile+ElementTree，zip 炸弹
+        三重上限）；转成 CSV 文本回流——profile/clean/mine/report 全链路零改动。"""
+        ctype = ctx.request.header("content-type") or ""
+        ok = (ctype.startswith("application/vnd.openxmlformats-officedocument"
+                              ".spreadsheetml.sheet")
+              or ctype.startswith("application/octet-stream")
+              or ctype == "")
+        if not ok:
+            raise HttpFail(415, "体要用 xlsx 原始字节"
+                                "（application/vnd.openxmlformats-...spreadsheetml.sheet）")
+        if not ctx.request.body:
+            raise HttpFail(400, "体是空的（没有上传文件）")
+        try:
+            table = datascope.parse_xlsx_bytes(ctx.request.body)
+        except ValueError as exc:
+            raise HttpFail(400, str(exc)) from None
+        import io
+        buffer = io.StringIO()
+        table.to_csv_stream(buffer)
+        return ctx.json({"rows": len(table), "columns": table.columns,
+                         "csv": buffer.getvalue()})
 
     @app.get("/api/sample")
     def sample(ctx):
