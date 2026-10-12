@@ -1,9 +1,12 @@
-/* webkit/kb.css 2.2 —— 产品矩阵共享设计系统（唯一源；改动后跑 scripts/sync_assets.py 同步）。
+/* webkit/kb.css 3.0 —— 产品矩阵共享设计系统（唯一源；改动后跑 scripts/sync_assets.py 同步）。
    设计依据：courselab/docs/DESIGN-SPEC.md v2.1（Geist/Linear 克制工程风）——
    #fafafa 纸白打底、单一强调色 #2563eb、细边框 + 双层阴影（环境+直射）、
-   密排排版 + tabular-nums、仅浅色单主题、只动画 transform/opacity。
+   密排排版 + tabular-nums、只动画 transform/opacity。
+   v3.0：新增暗色主题（跟随系统 + data-theme 三态，见 theme.js）；
+   瓦片恢复语义彩色强调条（c-blue/green/amber/violet/rose/cyan）。
    组件：shell 侧边栏 / pagebar / tiles / badge-dot / searchbox / toast / drawer /
-   empty / logbox。新鲜度由 scan_refs 第三遍核验（字节级一致），过期即红。 */
+   empty / logbox / theme-toggle。新鲜度由 sync_assets --check 核验（字节级一致），
+   已接入 check_all 第 21 项——改这里必须重跑同步，否则体检红。 */
 :root{
   --bg:#fafafa;--card:#ffffff;
   --ink:#171717;--muted:#525252;--faint:#a3a3a3;
@@ -12,9 +15,48 @@
   --ok:#16a34a;--okbg:#f0fdf4;--okline:#bbf7d0;
   --warn:#d97706;--warnbg:#fffbeb;--warnline:#fde68a;
   --err:#dc2626;--errbg:#fef2f2;--errline:#fecaca;
+  --bar-bg:rgba(250,250,250,.88);
+  --mask:rgba(23,23,23,.32);
+  --toast-bg:#18181b;--toast-ink:#fafafa;
   --shadow-card:0 1px 2px rgb(0 0 0/.04),0 0 0 1px rgb(0 0 0/.03);
   --shadow-lift:0 4px 8px rgb(0 0 0/.06),0 0 0 1px rgb(0 0 0/.04);
   --shadow-pop:0 12px 40px rgba(23,23,23,.16);
+}
+/* ---------- 暗色主题：跟随系统 ---------- */
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#101013;--card:#1a1a1f;
+    --ink:#ededed;--muted:#a1a1aa;--faint:#6b6b76;
+    --line:#27272c;--line-strong:#3f3f46;--line-soft:#202024;
+    --accent:#3b82f6;--accent-hover:#60a5fa;--accent-soft:rgba(59,130,246,.16);
+    --ok:#4ade80;--okbg:rgba(74,222,128,.08);--okline:rgba(74,222,128,.25);
+    --warn:#fbbf24;--warnbg:rgba(251,191,36,.08);--warnline:rgba(251,191,36,.25);
+    --err:#f87171;--errbg:rgba(248,113,113,.08);--errline:rgba(248,113,113,.25);
+    --bar-bg:rgba(16,16,19,.86);
+    --mask:rgba(0,0,0,.55);
+    --toast-bg:#2b2b31;--toast-ink:#ededed;
+    --shadow-card:0 1px 2px rgb(0 0 0/.4),0 0 0 1px rgb(255 255 255/.05);
+    --shadow-lift:0 4px 10px rgb(0 0 0/.5),0 0 0 1px rgb(255 255 255/.06);
+    --shadow-pop:0 12px 40px rgba(0,0,0,.6);
+  }
+}
+/* ---------- 暗色主题：手动锁定（theme.js 三态切换的 dark 档） ---------- */
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#101013;--card:#1a1a1f;
+  --ink:#ededed;--muted:#a1a1aa;--faint:#6b6b76;
+  --line:#27272c;--line-strong:#3f3f46;--line-soft:#202024;
+  --accent:#3b82f6;--accent-hover:#60a5fa;--accent-soft:rgba(59,130,246,.16);
+  --ok:#4ade80;--okbg:rgba(74,222,128,.08);--okline:rgba(74,222,128,.25);
+  --warn:#fbbf24;--warnbg:rgba(251,191,36,.08);--warnline:rgba(251,191,36,.25);
+  --err:#f87171;--errbg:rgba(248,113,113,.08);--errline:rgba(248,113,113,.25);
+  --bar-bg:rgba(16,16,19,.86);
+  --mask:rgba(0,0,0,.55);
+  --toast-bg:#2b2b31;--toast-ink:#ededed;
+  --shadow-card:0 1px 2px rgb(0 0 0/.4),0 0 0 1px rgb(255 255 255/.05);
+  --shadow-lift:0 4px 10px rgb(0 0 0/.5),0 0 0 1px rgb(255 255 255/.06);
+  --shadow-pop:0 12px 40px rgba(0,0,0,.6);
 }
 *{box-sizing:border-box}
 html{scroll-behavior:smooth;color-scheme:light}
@@ -59,7 +101,7 @@ font-size:.76rem;color:var(--faint);line-height:1.5}
 
 /* ---------- 页头工具条 ---------- */
 .pagebar{position:sticky;top:0;z-index:40;display:flex;align-items:center;gap:.8rem;
-padding:.65rem 1.6rem;background:rgba(250,250,250,.88);backdrop-filter:blur(10px);
+padding:.65rem 1.6rem;background:var(--bar-bg);backdrop-filter:blur(10px);
 border-bottom:1px solid var(--line)}
 .pagebar .crumb{margin:0;font-size:.86rem;display:flex;gap:.45rem;align-items:center}
 .pagebar .spacer{margin-left:auto}
@@ -84,10 +126,31 @@ color:var(--faint)}
 .tile .t-value{font-size:1.5rem;font-weight:650;letter-spacing:-.01em;line-height:1.3;
 font-variant-numeric:tabular-nums}
 .tile .t-sub{font-size:.74rem;color:var(--muted)}
-/* 兼容旧类名：c-* 不再做彩色装饰（克制=单一强调色），语义状态交给 .pill */
-.tile.c-blue,.tile.c-green,.tile.c-amber,.tile.c-violet,
-.tile.c-rose,.tile.c-cyan{--tile-accent:var(--line)}
-.tile::before{content:none}
+/* 语义色瓦片：左缘 3px 强调条 + 数字随色（克制但有温度；暗色下自动换亮色变体） */
+.tile{position:relative}
+.tile.c-blue{--tile-accent:#2563eb}
+.tile.c-green{--tile-accent:#16a34a}
+.tile.c-amber{--tile-accent:#d97706}
+.tile.c-violet{--tile-accent:#7c3aed}
+.tile.c-rose{--tile-accent:#e11d48}
+.tile.c-cyan{--tile-accent:#0891b2}
+.tile[class*="c-"]::before{content:"";position:absolute;left:-1px;top:.75rem;bottom:.75rem;
+width:3px;border-radius:999px;background:var(--tile-accent);opacity:.85}
+.tile[class*="c-"] .t-value{color:var(--tile-accent)}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .tile.c-blue{--tile-accent:#60a5fa}
+  :root:not([data-theme="light"]) .tile.c-green{--tile-accent:#4ade80}
+  :root:not([data-theme="light"]) .tile.c-amber{--tile-accent:#fbbf24}
+  :root:not([data-theme="light"]) .tile.c-violet{--tile-accent:#a78bfa}
+  :root:not([data-theme="light"]) .tile.c-rose{--tile-accent:#fb7185}
+  :root:not([data-theme="light"]) .tile.c-cyan{--tile-accent:#22d3ee}
+}
+:root[data-theme="dark"] .tile.c-blue{--tile-accent:#60a5fa}
+:root[data-theme="dark"] .tile.c-green{--tile-accent:#4ade80}
+:root[data-theme="dark"] .tile.c-amber{--tile-accent:#fbbf24}
+:root[data-theme="dark"] .tile.c-violet{--tile-accent:#a78bfa}
+:root[data-theme="dark"] .tile.c-rose{--tile-accent:#fb7185}
+:root[data-theme="dark"] .tile.c-cyan{--tile-accent:#22d3ee}
 /* 旧式内联统计（label 文本 + <b>数值）兼容态 */
 .stats{display:flex;gap:.6rem;flex-wrap:wrap;margin:.8rem 0}
 .stat{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:.45rem .85rem;
@@ -184,7 +247,7 @@ table.kb tbody tr:hover{background:var(--bg)}
 table.kb td.num,table.kb th.num{text-align:right;font-variant-numeric:tabular-nums}
 
 /* ---------- 抽屉 / Toast ---------- */
-.drawer-mask{position:fixed;inset:0;background:rgba(23,23,23,.32);z-index:90;
+.drawer-mask{position:fixed;inset:0;background:var(--mask);z-index:90;
 opacity:0;pointer-events:none;transition:opacity .2s ease}
 .drawer{position:fixed;top:0;right:0;bottom:0;width:26rem;max-width:92vw;z-index:95;
 background:var(--card);border-left:1px solid var(--line);box-shadow:var(--shadow-pop);
@@ -199,7 +262,7 @@ text-overflow:ellipsis;white-space:nowrap}
 .drawer-body{padding:1rem 1.1rem;overflow-y:auto;flex:1;overscroll-behavior:contain}
 .toast-wrap{position:fixed;right:1.1rem;bottom:1.1rem;z-index:120;display:flex;
 flex-direction:column;gap:.5rem;align-items:flex-end}
-.toast{background:var(--ink);color:#fafafa;border-radius:8px;padding:.55rem .95rem;
+.toast{background:var(--toast-bg);color:var(--toast-ink);border-radius:8px;padding:.55rem .95rem;
 font-size:.86rem;box-shadow:var(--shadow-pop);display:flex;align-items:center;gap:.5rem;
 animation:toast-in .2s ease;max-width:24rem}
 .toast.ok::before{content:"";width:.5rem;height:.5rem;border-radius:999px;background:#4ade80;flex:none}
@@ -222,6 +285,14 @@ word-break:break-word;margin:.6rem 0 0}
 border-radius:10px;margin:.5rem 0;box-shadow:var(--shadow-card)}
 .donut-wrap{display:flex;align-items:center;gap:1.2rem;flex-wrap:wrap}
 .donut-wrap svg{flex:none}
+
+/* ---------- 主题切换（theme.js 注入；三态：跟随系统/亮/暗） ---------- */
+.theme-toggle{position:fixed;left:1.1rem;bottom:1.1rem;z-index:120;width:2.3rem;height:2.3rem;
+border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--muted);
+font-size:1rem;line-height:1;cursor:pointer;display:inline-flex;align-items:center;
+justify-content:center;box-shadow:var(--shadow-card);
+transition:box-shadow .15s ease,color .15s ease,border-color .15s ease}
+.theme-toggle:hover{box-shadow:var(--shadow-lift);color:var(--accent);border-color:var(--line-strong)}
 
 footer{color:var(--faint);font-size:.8rem;padding:1.2rem 1.7rem 0;border-top:1px solid var(--line);
 margin-top:2rem}

@@ -19,7 +19,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 ASSETS = [("webkit/kb.css", "{product}/web/assets/kb.css"),
-          ("webkit/echarts.min.js", "{product}/web/assets/echarts.min.js")]
+          ("webkit/echarts.min.js", "{product}/web/assets/echarts.min.js"),
+          ("webkit/theme.js", "{product}/web/assets/theme.js")]
 PRODUCTS = ["linkbox", "simlab", "datascope", "cachekv",
             "sensorhub", "courselab", "studio", "boardweb"]
 
