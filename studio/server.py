@@ -92,7 +92,8 @@ def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
                 command=[sys.executable, "launch.py", "--port", str(board_port),
                          "--managed-window"],
                 cwd=str(REPO / "board"),
-                kind="desktop"),  # 8023 是探活行协议口（BOARD 8023 OK），不是 HTTP——门户不给"打开产品"
+                kind="desktop",             # 8023 是探活行协议口（BOARD 8023 OK），不是 HTTP——门户不给"打开产品"
+                boot_timeout=25.0),         # JVM 冷启动：慢 runner 上 10s 不够（2026-10-12 CI 实测）
         Product("boardweb", "画板 Web 版",
                 "浏览器画板：图形工具 / 选择微调 / 贴图粘贴 / 撤销重做 / 自动备份"
                 "（桌面 Swing 版并存，:8023）",

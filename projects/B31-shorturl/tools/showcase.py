@@ -150,10 +150,14 @@ def _run(args) -> str:
 
 
 def _norm(text: str) -> str:
-    """三条规则（见模块 docstring）：监听端口、Date 头、创建响应长度。"""
+    """五条规则：监听端口、Date 头、创建响应长度、peak_open/open_now。"""
     text = re.sub(r"(127\.0\.0\.1:)\d+", r"\1<端口>", text)
     text = re.sub(r"(Date: )[^\r\n]*? GMT", r"\1<当场> GMT", text)
     text = re.sub(r"(\| Content-Length: )1[34]\d", r"\1<随 created_at 位数>", text)
+    # peak_open/open_now 随连接异步回收时点 1/2 漂——本地稳、runner 上必翻
+    # （同 B11 的 2026-10-07 收口；单双引号两种都吃，页面还有 HTML 转义体）
+    text = re.sub(r"(['\"])peak_open\1: \d+", r"\1peak_open\1: <当场>", text)
+    text = re.sub(r"(['\"])open_now\1: \d+", r"\1open_now\1: <当场>", text)
     return text
 
 

@@ -15,7 +15,8 @@ import time
 class Product:
     def __init__(self, pid: str, name: str, tagline: str, *,
                  port: int | None = None, command: list | None = None,
-                 cwd: str | None = None, kind: str = "web"):
+                 cwd: str | None = None, kind: str = "web",
+                 boot_timeout: float | None = None):
         self.id = pid
         self.name = name
         self.tagline = tagline
@@ -24,6 +25,7 @@ class Product:
         self.cwd = cwd
         self.kind = kind                    # web = 浏览器可开；desktop = 桌面窗口应用
                                             # （端口只是探活口/行协议，不是 HTTP，门户不给"打开产品"）
+        self.boot_timeout = boot_timeout    # None = 用管理器的默认；JVM 类冷启动单独放宽
 
     @property
     def managed(self) -> bool:
@@ -94,7 +96,9 @@ class ProductManager:
             creationflags=getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0),
             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         self.procs[pid] = proc
-        deadline = time.monotonic() + self.boot_timeout
+        # 启动预算：产品可单独放宽（board 要拉起 JVM——CI 慢 runner 冷启动实测
+        # 能超管理器默认 10s，2026-10-12 runner 上 start 如实报 offline 打红测试）
+        deadline = time.monotonic() + (p.boot_timeout or self.boot_timeout)
         while time.monotonic() < deadline:
             if proc.poll() is not None:
                 self.procs.pop(pid, None)
@@ -105,8 +109,9 @@ class ProductManager:
                 self._audit("start", pid, "ok", f"端口 {p.port}")
                 return self.status(pid)
             time.sleep(0.15)
+        budget = p.boot_timeout or self.boot_timeout
         self._audit("start", pid, "timeout",
-                    f"{self.boot_timeout:.0f}s 未探活（如实报 offline）")
+                    f"{budget:.0f}s 未探活（如实报 offline）")
         return self.status(pid)             # 超时仍未探活：如实报 offline
 
     def stop(self, pid: str) -> dict:
