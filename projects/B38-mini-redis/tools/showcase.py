@@ -27,7 +27,11 @@ def _test_count() -> int:
 
 
 def collect() -> dict:
-    store = Store()
+    # 固定时钟：TTL 现算是"剩余秒数向下取整"，真实时钟下 EXPIRE→TTL 的
+    # 剩余值在 60.0 与 59.99…之间随两次 time.time() 是否跨整秒漂移
+    # （CI runner 上曾把页面对拍打红，同 B37/B41 的环境敏感家族）。
+    # store.py 文档自己就写着"时钟可注入"——演示走确定性口径。
+    store = Store(clock=lambda: 1_000_000.0)
 
     def handler(body):
         args = [a.encode() if isinstance(a, str) else a for a in body["args"]]
@@ -294,6 +298,20 @@ def main(argv) -> int:
         print("展示页与现算一致（新鲜）")
         return 0
     print("展示页与现算不一致（页面过期或手改过）：跑 python tools/showcase.py --write")
+    cur_lines = current.splitlines()
+    new_lines = page.splitlines()
+    for i, (a, b) in enumerate(zip(cur_lines, new_lines)):
+        if a != b:
+            print(f"  首个差异行 #{i + 1}：")
+            # 行可能上千字符（DATA 是单行 JSON）：打印差异字符附近的窗口
+            k = next((j for j, (x, y) in enumerate(zip(a, b)) if x != y),
+                     min(len(a), len(b)))
+            lo, hi = max(0, k - 60), k + 100
+            print(f"    页面@{k}: …{a[lo:hi]}…")
+            print(f"    现算@{k}: …{b[lo:hi]}…")
+            break
+    else:
+        print(f"  行数不同：页面 {len(cur_lines)} 行 / 现算 {len(new_lines)} 行")
     return 1
 
 
