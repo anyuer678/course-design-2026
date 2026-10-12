@@ -10,6 +10,7 @@
   2. 代码实际要什么 = REPO 级路径字面量（REPO / "g2" / "cards.json" 这类）
      + 非 stdlib 顶层 import + CMD 启动脚本；
   3. 对拍：每一条"要什么"都必须在"有什么"里解析得到。
+  4. 端口对拍：compose 容器侧端口 = server.py 默认端口（CMD 显式 --port 的以 CMD 为准）。
 只对拍、不构建：本机 Docker 引擎不可用也能跑（真构建/起容器归 compose 实测）。
 
 已知边界（如实声明）：
@@ -159,8 +160,34 @@ def resolve_mod(mod: str, image: set[str]) -> bool:
 
 
 # ---------------------------------------------------------------- 主流程
+def server_default_port(product: str) -> int | None:
+    """从 server.py 现取默认端口：DEFAULT_PORT = N 或 argparse default=N。"""
+    text = (ROOT / product / "server.py").read_text(encoding="utf-8", errors="replace")
+    m = re.search(r"^DEFAULT_PORT\s*=\s*(\d+)", text, re.M)
+    if m:
+        return int(m.group(1))
+    m = re.search(r'add_argument\("--port"[^)]*default=(\d+)', text)
+    return int(m.group(1)) if m else None
+
+
+def compose_ports() -> dict[str, int]:
+    """从 docker-compose.yml 取 service → 容器侧端口（"8017:8017" 冒号后段）。"""
+    out: dict[str, int] = {}
+    svc = None
+    for raw in (ROOT / "docker-compose.yml").read_text(encoding="utf-8").splitlines():
+        m = re.match(r"^  ([a-z]+):\s*$", raw)
+        if m:
+            svc = m.group(1)
+            continue
+        m = re.search(r'"(\d+):(\d+)"', raw)
+        if m and svc and svc != "services":
+            out[svc] = int(m.group(2))
+    return out
+
+
 def main() -> int:
     rules = parse_ignore((ROOT / ".dockerignore").read_text(encoding="utf-8"))
+    ports = compose_ports()
     violations: list[str] = []
     for product in PRODUCTS:
         df = ROOT / product / "Dockerfile"
@@ -181,13 +208,24 @@ def main() -> int:
         for mod in mods:
             if not resolve_mod(mod, image):
                 violations.append(f"{product}: 顶层 import {mod} 在镜像里解析不到（既非 stdlib 也无对应包目录）")
+        # 端口对拍：compose 容器侧端口 = server.py 默认端口（CMD 显式 --port 的以 CMD 为准）
+        if product in ports:
+            want = ports[product]
+            got = want
+            m = re.search(r'^CMD\s+\["python",\s*"[^"]+".*?"--port",\s*"(\d+)"',
+                          df.read_text(encoding="utf-8"), re.M)
+            declared = int(m.group(1)) if m else server_default_port(product)
+            if declared is None:
+                violations.append(f"{product}: compose 期望端口 {want}，但 server.py/CMD 里找不到默认端口声明")
+            elif declared != want:
+                violations.append(f"{product}: compose 期望端口 {want}，server 实际默认 {declared}——容器会起在错门上")
     if violations:
         print(f"容器布局对拍：{len(violations)} 处违例")
         for v in violations:
             print("  -", v)
         return 1
     n = len(PRODUCTS)
-    print(f"容器布局对拍：{n} 个产品 × （COPY×dockerignore 镜像集 × 代码路径/imports/CMD）全对拍通过")
+    print(f"容器布局对拍：{n} 个产品 × （COPY×dockerignore 镜像集 × 代码路径/imports/CMD × compose 端口）全对拍通过")
     return 0
 
 
