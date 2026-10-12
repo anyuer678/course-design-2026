@@ -148,14 +148,49 @@
       .catch(function () { showErr(box, "网络错误，请重试。"); });
   });
 
-  // ------------------------------------------------ 统计（2026-10-11 ECharts 化）
-  // 左：Top 短链命中横向条形；右：暂存/文件在存库存环图。数字与排行同源
+  // ------------------------------------------------ 统计（2026-10-11 ECharts 化；2026-10-12 加访问趋势）
+  // 上：近 14 天访问趋势三条线（/api/stats/clicks，引擎层点击流水现算）；
+  // 下左：Top 短链命中横向条形；下右：暂存/文件在存库存环图。数字与排行同源
   // /api/stats（stats + top + inventory），B31 引擎现算，本文件只做渲染。
   var STAT_CHARTS = {};
   function statChart(id) {
     if (!window.echarts) return null;
     if (!STAT_CHARTS[id]) STAT_CHARTS[id] = echarts.init($(id));
     return STAT_CHARTS[id];
+  }
+  function refreshTrend() {
+    getJSON("/api/stats/clicks?days=14").then(function (r) {
+      var chart = statChart("stats-trend");
+      if (!chart) return;
+      var series = r.data.series || [];
+      var dates = series.map(function (x) { return x.date.slice(5); });  // MM-DD
+      var byKind = r.data.series_by_kind || {};
+      var lines = [
+        { name: "短链跳转", key: "link", color: "#2563eb" },
+        { name: "文本查看", key: "stash", color: "#0d9488" },
+        { name: "文件下载", key: "file", color: "#f59e0b" }
+      ].map(function (cfg) {
+        var rows = byKind[cfg.key] || [];
+        return {
+          name: cfg.name, type: "line", smooth: true, symbolSize: 4,
+          lineStyle: { width: 2, color: cfg.color },
+          itemStyle: { color: cfg.color },
+          data: rows.map(function (x) { return x.count; })
+        };
+      });
+      chart.setOption({
+        title: { text: "访问趋势 · 近 14 天共 " + (r.data.total || 0) + " 次",
+                 left: 10, top: 6, textStyle: { fontSize: 13 } },
+        grid: { left: 40, right: 20, top: 40, bottom: 26 },
+        tooltip: { trigger: "axis" },
+        legend: { top: 8, right: 14, icon: "circle", itemWidth: 8,
+                  textStyle: { fontSize: 11 } },
+        xAxis: { type: "category", boundaryGap: false, data: dates,
+                 axisLabel: { fontSize: 11 } },
+        yAxis: { type: "value", minInterval: 1 },
+        series: lines
+      });
+    });
   }
   function refreshStats() {
     getJSON("/api/stats").then(function (r) {
@@ -247,7 +282,7 @@
     var crumb = document.getElementById("crumb-page");
     if (crumb) crumb.textContent = tab.textContent.trim();
     if (name === "links") refreshLinks();
-    if (name === "stats") refreshStats();
+    if (name === "stats") { refreshTrend(); refreshStats(); }
     return true;
   }
   document.querySelectorAll(".tab").forEach(function (tab) {

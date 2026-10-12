@@ -105,8 +105,11 @@
       <section id="tab-stats" class="tabpage" hidden>
         <div class="overline">Stats</div>
         <h1>统计</h1>
+        <div class="statchart trend" id="stats-trend"></div>
+        <p class="note">上：近 14 天访问趋势（短链跳转 / 文本查看 / 文件下载三条线）。
+          每次打开都入账流水，保留 90 天，服务端分日现算。</p>
         <div class="grid two-col" id="stats"></div>
-        <p class="note">左：命中最多的短链排行（悬浮看目标地址）；右：暂存与文件的在存库存。
+        <p class="note">下左：命中最多的短链排行（悬浮看目标地址）；下右：暂存与文件的在存库存。
           数据现算自本机 SQLite。</p>
       </section>
     </div>

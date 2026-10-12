@@ -10,6 +10,7 @@ import json
 import sqlite3
 import sys
 import tempfile
+import time
 import unittest
 import urllib.parse
 from pathlib import Path
@@ -95,6 +96,8 @@ class AppCase(unittest.TestCase):
             return self.app.file_api(req)
         if clean.startswith("/api/links/") and method == "DELETE":
             return self.app.delete_link(req)
+        if clean == "/api/stats/clicks" and method == "GET":
+            return self.app.clicks_api(req)
         if clean == "/api/links" and method == "GET":
             return self.app.list_links(req)
         if clean.endswith("/qr.svg") and clean.startswith("/f/") and method == "GET":
@@ -116,6 +119,26 @@ class AppCase(unittest.TestCase):
         status, _, body = self.request("POST", "/api/stash", payload)
         assert status == 201, body
         return json.loads(body)
+
+    def make_file(self, data=b"hello file", name="note.txt", **kw):
+        """上传一个文件，返回创建响应 JSON。raw 字节走 ?name=&ttl=&passcode=。"""
+        qs = "?name=" + urllib.parse.quote(name)
+        if "ttl_hours" in kw:
+            qs += "&ttl_hours=" + urllib.parse.quote(str(kw.pop("ttl_hours")))
+        if "passcode" in kw:
+            qs += "&passcode=" + urllib.parse.quote(kw.pop("passcode"))
+        assert not kw, f"未消化的参数：{kw}"
+        status, _, body = self.request("POST", "/api/files" + qs,
+                                       raw=data, headers=[])
+        assert status == 201, body
+        return json.loads(body)
+
+
+class TestAppFlows(AppCase):
+    """AppCase 只装 fixture（注入时钟 + 请求驱动），用例集中在这里。
+    不这样拆的话，每个继承 AppCase 的子类都会把基类用例重复收集/重跑一遍
+    ——pytest 与 unittest 双入口都中招（147 口径里近半是重复，2026-10-12
+    访问统计轮顺手治本，语义零变化：每个用例仍只跑一次）。"""
 
     # ------------------------------------------------ 暂存闭环
     def test_stash_roundtrip(self):
@@ -446,19 +469,6 @@ class AppCase(unittest.TestCase):
         self.assertIn(b"LinkBox", body)
 
     # ------------------------------------------------ 文件暂存（轮八）
-    def make_file(self, data=b"hello file", name="note.txt", **kw):
-        """上传一个文件，返回创建响应 JSON。raw 字节走 ?name=&ttl=&passcode=。"""
-        qs = "?name=" + urllib.parse.quote(name)
-        if "ttl_hours" in kw:
-            qs += "&ttl_hours=" + urllib.parse.quote(str(kw.pop("ttl_hours")))
-        if "passcode" in kw:
-            qs += "&passcode=" + urllib.parse.quote(kw.pop("passcode"))
-        assert not kw, f"未消化的参数：{kw}"
-        status, _, body = self.request("POST", "/api/files" + qs,
-                                       raw=data, headers=[])
-        assert status == 201, body
-        return json.loads(body)
-
     def test_file_roundtrip_bytes_identical(self):
         """上传即下载：字节逐位一致、文件名与大小如实、头是 attachment。"""
         payload = bytes(range(256)) * 5
@@ -798,6 +808,91 @@ class TestHardening20261007(AppCase):
         hd = {h[0]: h[1] for h in headers}
         self.assertIn("attachment", hd.get("Content-Disposition", ""))
         self.assertIn("qr-stash-", hd.get("Content-Disposition", ""))
+
+
+class TestClickStats(AppCase):
+    """访问趋势统计（2026-10-12）：流水记账口径 + /api/stats/clicks 契约。
+    断言避开具体分日（跨午夜抽签），只锚定守恒与形状。"""
+
+    def setUp(self):
+        super().setUp()
+        self.now = time.time()          # 流水分日统计按真实日期窗口，时钟贴住现在
+
+    def api(self, query=""):
+        status, headers, body = self.request("GET", "/api/stats/clicks" + query)
+        return status, (json.loads(body) if body else None)
+
+    def test_api_shape_and_validation(self):
+        status, data = self.api("?days=14")
+        self.assertEqual(status, 200)
+        self.assertEqual(data["days"], 14)
+        self.assertIsNone(data["kind"])
+        self.assertEqual(len(data["series"]), 14)
+        self.assertEqual(sorted(data["series_by_kind"]), ["file", "link", "stash"])
+        self.assertEqual(sum(p["count"] for p in data["series"]), data["total"])
+        self.assertEqual(
+            sum(p["count"] for k in data["series_by_kind"].values() for p in k),
+            data["total"])                                  # 三条分线之和守恒
+        self.assertEqual(data["top"], [])
+        # 参数闸：days 非整数 400；kind 白名单外 400；days 越界夹紧不 500
+        self.assertEqual(self.api("?days=abc")[0], 400)
+        self.assertEqual(self.api("?kind=visitor")[0], 400)
+        status, data = self.api("?days=5000")
+        self.assertEqual((status, data["days"]), (200, 90))
+        status, data = self.api("?kind=stash")
+        self.assertEqual((status, data["kind"]), (200, "stash"))
+        self.assertIsNone(data["series_by_kind"])           # 指定 kind 就不带分线
+
+    def test_link_visits_are_logged(self):
+        self.request("POST", "/api/links", {"url": "https://example.com/x"})
+        for _ in range(3):
+            status, _, _ = self.request("GET", "/l/1")
+            self.assertEqual(status, 302)
+        status, data = self.api("?kind=link")
+        self.assertEqual(data["total"], 3)
+        self.assertEqual(data["top"],
+                         [{"kind": "link", "code": "1", "count": 3}])
+
+    def test_stash_and_file_opens_are_logged(self):
+        stash = self.make_stash()
+        self.assertEqual(self.request("GET", f"/s/{stash['code']}")[0], 200)
+        fresp = self.request("POST", "/api/files?name=a.txt", raw=b"hello")
+        self.assertEqual(fresp[0], 201)
+        fcode = json.loads(fresp[2])["code"]
+        self.assertEqual(self.request("GET", f"/f/{fcode}")[0], 200)
+        status, data = self.api()
+        self.assertEqual(data["total"], 2)
+        kinds = {t["kind"]: t["count"] for t in data["top"]}
+        self.assertEqual(kinds, {"stash": 1, "file": 1})
+
+    def test_head_does_not_count_as_visit(self):
+        stash = self.make_stash()
+        fresp = self.request("POST", "/api/files?name=a.txt", raw=b"hello")
+        self.assertEqual(fresp[0], 201)
+        fcode = json.loads(fresp[2])["code"]
+        self.assertEqual(self.request("GET", f"/s/{stash['code']}")[0], 200)
+        self.assertEqual(self.request("HEAD", f"/f/{fcode}")[0], 200)
+        status, data = self.api("?kind=file")
+        self.assertEqual(data["total"], 0)                  # HEAD 探活不算访问
+
+    def test_passcode_unlock_counts_once(self):
+        stash = self.make_stash({"passcode": "pw1234"})
+        # 错口令不渲染内容不入账
+        self.assertEqual(self.request("POST", f"/s/{stash['code']}",
+                                      raw=b"passcode=nope",
+                                      headers=[("Content-Type",
+                                                "application/x-www-form-urlencoded")])[0], 200)
+        self.assertEqual(self.api("?kind=stash")[1]["total"], 0)
+        # 口令表单成功算一次
+        self.assertEqual(self.request("POST", f"/s/{stash['code']}",
+                                      raw=b"passcode=pw1234",
+                                      headers=[("Content-Type",
+                                                "application/x-www-form-urlencoded")])[0], 200)
+        self.assertEqual(self.api("?kind=stash")[1]["total"], 1)
+        # 查询串口令成功也算一次
+        self.assertEqual(self.request(
+            "GET", f"/s/{stash['code']}?passcode=pw1234")[0], 200)
+        self.assertEqual(self.api("?kind=stash")[1]["total"], 2)
 
 
 if __name__ == "__main__":

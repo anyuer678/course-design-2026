@@ -790,6 +790,23 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   3px + 数字随色）。sync_assets 同步 8 份副本 + check_all 21/21 全绿。
   教训：主题类"我以为的增强"必须先问用户偏好——此功能存活一个提交即被否。
 
+- ✅ **轮三十二：LinkBox 访问趋势统计（10-12，用户"继续提升功能"，GAP P2 升级动作①）**：
+  ①**引擎层**（B31 store）：新 clicks 流水表（kind/code/ts，link·stash·file 三类）
+  + visit 自动入账 + log_click 产品层入口 + click_series/click_top/clicks_total
+  统计（缺日补零、kind 过滤）+ 治理两条（90 天保留窗 + 5 万行硬上限）；
+  ②**产品层**（LinkBoxApp）：GET /api/stats/clicks（days 1..90 夹紧 + kind 白名单
+  + series_by_kind 三分线一次拉齐）；暂存渲染与文件下发成功即入账（HEAD 探活
+  不算、错口令不算，与 B31"HEAD 不计命中"同口径）；③**前端**：统计页新增全宽
+  ECharts 趋势图（近 14 天三线：短链跳转/文本查看/文件下载）；
+  ④**测试治本**：linkbox AppCase 基类 43 个用例被每个子类重复收集（pytest/unittest
+  双入口都中招，104 口径里近半是重复）——用例集中搬进 TestAppFlows，基类只留
+  fixture，104→71 如实降；⑤**两个真 bug 当场抓**：裁剪阈值误用注入 now（注入
+  过去时间戳时老流水永远清不掉 → 治理参照改真实墙钟）、days=1 窗口下界=此刻
+  （今天早些时候的访问全漏 → 锚定今天 00:00，与分日同锚）。数字级联：B31
+  81→84、linkbox 104→71、B40 证据锚点/展示页重生成、run.bat/README/check_all
+  对齐；无头 Edge 走查三线图渲染正确零 console 错误；check_all 21/21 全绿。
+
+
 
 - ✅ **轮二十二~二十六：compose 交付面哨兵化 + 共享地基安全回归 + 活文档对账（10-11~10-12）**。
   五轮全在"写了没测/漂了没查"的盲区推进，CI 每轮绿（b17cf6e/af20aad/79e2d70/693797e/

@@ -74,6 +74,10 @@ class LinkBoxApp(ShortUrlApp):
             (("GET", "/f/*"), self.file_download),
             (("HEAD", "/f/*"), self.file_download),
             (("POST", "/f/*"), self.file_download_post),
+            # 访问趋势统计（2026-10-12）：流水由引擎层 Store 记账（visit/log_click），
+            # 本路由只做参数校验与组装。注意必须排在 /api/stash/* 之前——
+            # fnmatch 首中分发，/api/stats/clicks 不与 /api/stash/* 冲突但保持习惯一致。
+            (("GET", "/api/stats/clicks"), self.clicks_api),
             # 共享资产：sync_assets 把 webkit/kb.css 落到 web/assets/，
             # 而 B31 的静态白名单只有根级三个名字——没有这条路由，
             # 产品页的 <link assets/kb.css> 永远 404（整页裸样式，2026-10-07 实测）。
@@ -249,6 +253,36 @@ class LinkBoxApp(ShortUrlApp):
             return 404, [JSON_TYPE], self._error(f"短码 {code} 不存在")
         return 204, [JSON_TYPE], b""
 
+    # ------------------------------------------------ 访问趋势统计（GET /api/stats/clicks）
+    def clicks_api(self, request):
+        """近 N 天逐日访问曲线 + 对象排行。days/kind 都做白名单校验——
+        流水表的治理在引擎层（保留窗口 + 行数上限），这里只管别让脏参数进 SQL。"""
+        values = dict(request.query)
+        raw_days = values.get("days", "14")
+        try:
+            days = int(raw_days)
+        except ValueError:
+            return 400, [JSON_TYPE], self._error(f"days 要写成整数，收到 {raw_days!r}")
+        kind = values.get("kind")
+        if kind == "":
+            kind = None
+        if kind is not None and kind not in ("link", "stash", "file"):
+            return 400, [JSON_TYPE], \
+                self._error(f"kind 只接受 link/stash/file，收到 {kind!r}")
+        try:
+            series = self.store.click_series(days, kind)
+            top = self.store.click_top(days, limit=8, kind=kind)
+            total = self.store.clicks_total(days, kind)
+        except ValueError as exc:
+            return 400, [JSON_TYPE], self._error(str(exc))
+        # 未指定 kind 时附带三条分线数据（前端趋势图一次拉齐，不用发三个请求）
+        by_kind = None if kind is not None else {
+            k: self.store.click_series(days, k) for k in ("link", "stash", "file")}
+        body = self._json({"days": max(1, min(days, 90)), "kind": kind,
+                           "total": total, "series": series,
+                           "series_by_kind": by_kind, "top": top})
+        return 200, [JSON_TYPE, NO_STORE], body
+
     def _form_fields(self, request) -> tuple[dict | None, tuple | None]:
         """口令/删除表单共用的表单体解析（与 stash_page_post 同口径）。"""
         ctype = request.header("content-type")
@@ -368,8 +402,10 @@ class LinkBoxApp(ShortUrlApp):
         return 200, [JSON_TYPE, NO_STORE], body
 
     # ------------------------------------------------ 文件暂存：下载（/f/<code>）
-    def _file_response(self, code: str, candidate: str | None):
-        """GET/HEAD/口令表单共用：404 -> 410 -> 口令门 -> 字节下发。"""
+    def _file_response(self, code: str, candidate: str | None,
+                       method: str = "GET"):
+        """GET/HEAD/口令表单共用：404 -> 410 -> 口令门 -> 字节下发。
+        method 用于访问流水口径：HEAD 探活不算，GET/口令表单 POST 都算一次。"""
         try:
             rec = self.files.get(code, now=self.clock())
         except FileGone:
@@ -388,6 +424,8 @@ class LinkBoxApp(ShortUrlApp):
                 return 200, [HTML_TYPE, NO_STORE], \
                     self._pass_form(code, hint, noun="文件")
         data = self.files.read(code)
+        if method != "HEAD":
+            self.store.log_click("file", code, now=self.clock())
         return 200, [DOWNLOAD_TYPE,
                      ("Content-Disposition", content_disposition(rec.name)),
                      NO_STORE], data
@@ -399,7 +437,8 @@ class LinkBoxApp(ShortUrlApp):
         if not is_code_shape(code):
             return 404, [HTML_TYPE], \
                 self._page("文件不存在", f"没有找到 {code!r}。")
-        return self._file_response(code, self._passcode_of(request))
+        return self._file_response(code, self._passcode_of(request),
+                                   method=request.method)
 
     def file_download_post(self, request):
         """口令表单的 POST 提交——口令走请求体，成功即下载（不进 URL/历史）。"""
@@ -420,7 +459,7 @@ class LinkBoxApp(ShortUrlApp):
         except UnicodeDecodeError:
             return 400, [TEXT_TYPE], "表单体不是 UTF-8\n".encode("utf-8")
         candidate = (fields.get("passcode") or [None])[0]
-        return self._file_response(code, candidate)
+        return self._file_response(code, candidate, method="POST")
 
     def file_qr(self, request):
         """下载页 URL 的独立 SVG——只编码 /f/<码>，不编码口令。"""
@@ -495,6 +534,10 @@ class LinkBoxApp(ShortUrlApp):
                 page = self._pass_form(code, hint)
                 return 200, [HTML_TYPE, NO_STORE], page
         qr = qr_svg(self._stash_view_url(code, request))
+        # 访问流水：口令解锁后的渲染也只算一次（GET 查询串与 POST 表单共用本出口）；
+        # HEAD 是探活不算访问，与 B31 短链同口径。
+        if request.method != "HEAD":
+            self.store.log_click("stash", code, now=self.clock())
         body = self._page(f"暂存 {rec.code}", html.escape(rec.content),
                           note=f"创建于 {rec.created_at:.0f}，"
                                f"过期于 {rec.expires_at:.0f}（Unix 时间）"

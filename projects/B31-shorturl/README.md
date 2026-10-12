@@ -104,7 +104,7 @@ B31 只用 B11 已实现的子集：`GET/HEAD/POST`、只认 `Content-Length`、
 
 ## 验证：自动化做了什么，没做什么
 
-**81 项测试 + 129 个 subTest 全通过**（73 核心 + 8 展示页；`unittest` 与 `pytest` 两种入口都实跑），
+**84 项测试 + 132 个 subTest 全通过**（76 核心 + 8 展示页；`unittest` 与 `pytest` 两种入口都实跑），
 `ruff --select F,E9` 干净，`run.bat no-server` 退出码 0 且运行前后目录快照无新增文件。
 
 | 层 | 内容 |

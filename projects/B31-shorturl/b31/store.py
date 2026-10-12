@@ -24,6 +24,10 @@ from .codec import MAX_CODE_LEN, encode_id, is_code_shape
 MAX_LINKS = 5000                       # 单表容量上限：到了就拒绝新建，而不是悄悄淘汰旧数据
 MAX_CODE_PROBES = 64                   # 取号最多试这么多次（别名占满了名字空间就该报错了）
 MAX_LIST = 200
+CLICK_KINDS = ("link", "stash", "file")   # 访问流水的三类对象（LinkBox 产品层语义）
+CLICK_RETAIN_DAYS = 90                 # 流水保留窗口：统计只用近期，老流水无价值还占库
+CLICK_MAX_ROWS = 50000                 # 流水行数硬上限：防高频访问把库撑爆
+CLICK_MAX_DAYS = 90                    # 统计查询最多回看天数
 
 
 class ConflictError(Exception):
@@ -70,6 +74,12 @@ CREATE TABLE IF NOT EXISTS links (
     last_visit REAL
 );
 CREATE INDEX IF NOT EXISTS links_created ON links(created_at DESC);
+CREATE TABLE IF NOT EXISTS clicks (
+    kind TEXT NOT NULL,                -- 'link' / 'stash' / 'file'（LinkBox 三类对象）
+    code TEXT NOT NULL,
+    ts   REAL NOT NULL
+);
+CREATE INDEX IF NOT EXISTS clicks_ts ON clicks(ts);
 """
 
 
@@ -147,15 +157,107 @@ class Store:
         raise CapacityError(f"连续 {MAX_CODE_PROBES} 次取号都撞上别名，先清理别名再建")
 
     def visit(self, code: str, *, now: float | None = None) -> Link:
-        """命中一次：计数与时间戳一条语句更新。找不到就抛 KeyError（由路由层翻译成 404）。"""
+        """命中一次：计数与时间戳一条语句更新，并落一条点击流水（趋势统计的数据源）。
+        找不到就抛 KeyError（由路由层翻译成 404）。"""
         now = time.time() if now is None else now
         with self._lock:
             row = self.db.execute(
                 "UPDATE links SET hits = hits + 1, last_visit = ? WHERE code = ? "
                 "RETURNING target, created_at, hits, last_visit", (now, code)).fetchone()
-        if row is None:
-            raise KeyError(code)
+            if row is None:
+                raise KeyError(code)
+            self._log_click("link", code, now)
         return Link(code=code, target=row[0], created_at=row[1], hits=row[2], last_visit=row[3])
+
+    # ------------------------------------------------------------- 点击流水（LinkBox 趋势统计）
+    @staticmethod
+    def _window_since(days: int) -> float:
+        """统计窗口下界：今天 00:00 往回推 (days-1) 天——与 click_series 的
+        localtime 分日同一锚点。不能用 time.time()-(days-1)*86400：days=1 时
+        下界=此刻，今天早些时候的访问会全部漏掉（实测抓过）。"""
+        import datetime as _dt
+        midnight = _dt.datetime.combine(_dt.date.today(),
+                                        _dt.time.min).timestamp()
+        return midnight - (days - 1) * 86400.0
+    def _log_click(self, kind: str, code: str, now: float) -> None:
+        """入账一条访问流水 + 低频治理（过期裁剪 + 行数上限）。
+        调用方必须已持有 _lock。治理的两条 DELETE 都走 ts 索引/主键，本地库无压力。"""
+        self.db.execute("INSERT INTO clicks(kind, code, ts) VALUES(?, ?, ?)",
+                        (kind, code, now))
+        # 裁剪参照必须是真实墙钟而不是调用方注入的 now：注入时钟是给"数据时间戳"
+        # 用的（测试不必 sleep），而"保留最近 90 天"是相对真实现在的治理规则——
+        # 若拿注入 now 当参照，测试注入过去时间戳时阈值跟着回到过去，老流水永远清不掉。
+        self.db.execute("DELETE FROM clicks WHERE ts < ?",
+                        (time.time() - CLICK_RETAIN_DAYS * 86400.0,))
+        self.db.execute(
+            "DELETE FROM clicks WHERE rowid IN "
+            "(SELECT rowid FROM clicks ORDER BY ts DESC LIMIT -1 OFFSET ?)",
+            (CLICK_MAX_ROWS,))
+
+    def log_click(self, kind: str, code: str, *, now: float | None = None) -> None:
+        """产品层入账入口：暂存/文件的"打开"不走 Store.visit，从这里补一条流水。
+        kind 不在三类对象里就拒绝——流水表列没有约束，脏数据只能靠入口挡。"""
+        if kind not in CLICK_KINDS:
+            raise ValueError(f"未知流水类型 {kind!r}，只接受 {CLICK_KINDS}")
+        now = time.time() if now is None else now
+        with self._lock:
+            self._log_click(kind, code, now)
+
+    def click_series(self, days: int = 14, kind: str | None = None) -> list:
+        """近 N 天逐日访问数（本地时区分日），缺的日子补零——前端画折线不用再算。"""
+        days = max(1, min(int(days), CLICK_MAX_DAYS))
+        since = self._window_since(days)
+        where, params = "ts >= ?", [since]
+        if kind is not None:
+            if kind not in CLICK_KINDS:
+                raise ValueError(f"未知流水类型 {kind!r}，只接受 {CLICK_KINDS}")
+            where += " AND kind = ?"
+            params.append(kind)
+        with self._lock:
+            rows = self.db.execute(
+                f"SELECT date(ts, 'unixepoch', 'localtime') AS d, COUNT(*) "
+                f"FROM clicks WHERE {where} GROUP BY d", params).fetchall()
+        by_date = {r["d"]: r[1] for r in rows}
+        # 分日锚点取"今天 00:00 往回推"——与 SQL 的 localtime 分日同一套时区口径
+        import datetime as _dt
+        today = _dt.date.today()
+        out = []
+        for i in range(days - 1, -1, -1):
+            key = (today - _dt.timedelta(days=i)).isoformat()
+            out.append({"date": key, "count": by_date.get(key, 0)})
+        return out
+
+    def click_top(self, days: int = 14, limit: int = 8, kind: str | None = None) -> list:
+        """近 N 天访问最多的对象排行（kind+code 维度，暂存/文件与短链同台）。"""
+        days = max(1, min(int(days), CLICK_MAX_DAYS))
+        limit = max(1, min(int(limit), MAX_LIST))
+        since = self._window_since(days)
+        where, params = "ts >= ?", [since]
+        if kind is not None:
+            if kind not in CLICK_KINDS:
+                raise ValueError(f"未知流水类型 {kind!r}，只接受 {CLICK_KINDS}")
+            where += " AND kind = ?"
+            params.append(kind)
+        with self._lock:
+            rows = self.db.execute(
+                f"SELECT kind, code, COUNT(*) AS n FROM clicks WHERE {where} "
+                f"GROUP BY kind, code ORDER BY n DESC, code ASC LIMIT ?",
+                params + [limit]).fetchall()
+        return [{"kind": r["kind"], "code": r["code"], "count": r["n"]} for r in rows]
+
+    def clicks_total(self, days: int = 14, kind: str | None = None) -> int:
+        """近 N 天访问总数（流水口径；与 links.hits 累计口径不同，别混用）。"""
+        days = max(1, min(int(days), CLICK_MAX_DAYS))
+        since = self._window_since(days)
+        where, params = "ts >= ?", [since]
+        if kind is not None:
+            if kind not in CLICK_KINDS:
+                raise ValueError(f"未知流水类型 {kind!r}，只接受 {CLICK_KINDS}")
+            where += " AND kind = ?"
+            params.append(kind)
+        with self._lock:
+            row = self.db.execute(f"SELECT COUNT(*) FROM clicks WHERE {where}", params).fetchone()
+        return row[0]
 
     # ------------------------------------------------------------------ 读取
 

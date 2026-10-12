@@ -332,6 +332,70 @@ class TestStore(unittest.TestCase):
             t.join()
         self.assertEqual(self.store.lookup("race").hits, 8 * 25)
 
+    # ------------------------------------------------- 点击流水（LinkBox 趋势统计的数据源）
+    def test_click_series_and_top_from_log(self):
+        """visit 自动落 'link' 流水；log_click 补暂存/文件两类。
+        断言避开具体分日（跨午夜会抽签）：只锚定总数一致、序列长度、排行序。"""
+        self.store.create("http://hot/", alias="hot", now=1.0)
+        self.store.create("http://cold/", alias="cold", now=1.0)
+        base = time.time()
+        for _ in range(3):
+            self.store.visit("hot", now=base)          # 自动入 'link' 流水
+        self.store.visit("cold", now=base)
+        self.store.log_click("stash", "s1", now=base)
+        self.store.log_click("file", "f1", now=base)
+        self.store.log_click("file", "f1", now=base)
+
+        self.assertEqual(self.store.clicks_total(14), 7)
+        self.assertEqual(self.store.clicks_total(14, "link"), 4)
+        self.assertEqual(self.store.clicks_total(14, "file"), 2)
+        series = self.store.click_series(14)
+        self.assertEqual(len(series), 14)              # 缺的日子补零，长度是窗口本身
+        self.assertEqual([p["date"] for p in series],
+                         sorted(p["date"] for p in series))
+        self.assertEqual(sum(p["count"] for p in series), 7)   # 分日不管边界，总和必须守恒
+        top = self.store.click_top(14, limit=8)
+        self.assertEqual(top[0], {"kind": "link", "code": "hot", "count": 3})
+        self.assertEqual([t["count"] for t in top],
+                         sorted((t["count"] for t in top), reverse=True))
+        self.assertEqual(self.store.click_top(14, kind="stash"),
+                         [{"kind": "stash", "code": "s1", "count": 1}])
+        for bad in ("", "visitor", "LINK"):
+            with self.subTest(kind=bad):
+                with self.assertRaises(ValueError):
+                    self.store.log_click(bad, "x", now=base)
+                with self.assertRaises(ValueError):
+                    self.store.click_series(7, bad)
+
+    def test_click_window_anchors_at_today_midnight(self):
+        """days=1 的窗口是"今天 00:00 起"而不是"此刻起"——曾实测：
+        下界取 time.time() 时今天早些时候的访问全部漏掉（days=1 才暴露）。"""
+        import datetime as _dt
+        midnight = _dt.datetime.combine(_dt.date.today(), _dt.time.min).timestamp()
+        self.store.log_click("link", "early", now=midnight + 60.0)   # 今天 00:01
+        self.store.log_click("link", "now", now=time.time())         # 现在
+        self.store.log_click("link", "yesterday", now=midnight - 60.0)  # 昨天尾
+        self.assertEqual(self.store.clicks_total(1), 2)              # 昨天尾不算
+        self.assertEqual(self.store.clicks_total(2), 3)
+        self.assertEqual(sum(p["count"] for p in self.store.click_series(1)), 2)
+
+    def test_click_log_retention_and_row_cap(self):
+        """治理两条：保留窗口外的老流水清掉；行数超上限留最新的。
+        上限/窗口是模块常量，用 mock 改小——造状态不靠插五万条。"""
+        now = time.time()
+        with mock.patch.object(store_module, "CLICK_RETAIN_DAYS", 1):
+            self.store.log_click("link", "fresh", now=now)
+            self.store.log_click("link", "stale", now=now - 3 * 86400.0)
+            codes = {r["code"] for r in self.store.db.execute(
+                "SELECT code FROM clicks")}
+            self.assertEqual(codes, {"fresh"})
+        with mock.patch.object(store_module, "CLICK_MAX_ROWS", 5):
+            for i in range(8):
+                self.store.log_click("stash", f"c{i}", now=now + i)
+            kept = [r["code"] for r in self.store.db.execute(
+                "SELECT code FROM clicks ORDER BY ts")]
+            self.assertEqual(kept, ["c3", "c4", "c5", "c6", "c7"])
+
 
 class TestAppUnit(AppCase):
     def test_create_returns_201_with_location_and_absolute_short_url(self):

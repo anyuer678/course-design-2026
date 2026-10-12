@@ -21,4 +21,6 @@ letter-spacing:.08em;text-transform:uppercase}
 .grid.two-col{display:grid;grid-template-columns:1.5fr 1fr;gap:.9rem}
 .statchart{background:var(--card);border:1px solid var(--line);border-radius:12px;
 padding:.5rem;height:300px}
+/* 访问趋势图（2026-10-12）：全宽折线，比并排图高一点 */
+.statchart.trend{height:280px;margin:.9rem 0 .2rem}
 @media (max-width:900px){.grid.two-col{grid-template-columns:1fr}}

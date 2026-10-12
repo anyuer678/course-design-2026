@@ -153,7 +153,7 @@ footer,.sw-footer{color:var(--kb-text-3);border-top:1px solid var(--kb-border)}
 - `b9-os-sim`：CPU 模拟 + 五级流水线：183 项断言 0 失败，教科书数字逐个吻合（指针：projects/B9-os-sim/README.md，提交 `16d125f`）
 - `b7-mini-make`：手写 make（依赖图/环检测/增量/-j 对拍/失败传播）：24 项通过（15 核心 + 9 展示页），双入口同数（指针：projects/B7-mini-make/README.md，提交 `b67654f`）
 - `b11-net`：HTTP/1.1 子集 + UDP 可靠传输（GBN）与可复现丢包实验：101 项（75 + 16 + 10 展示页）；展示页（第⑤批）旅程/边界/GBN 现算（指针：projects/B11-net-lab/README.md，提交 `0f30423`）
-- `b31-shorturl`：短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：81 项测试（73 核心 + 8 展示页）+ 129 subTest 全通过（指针：projects/B31-shorturl/README.md，提交 `4ccc788`）
+- `b31-shorturl`：短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：84 项测试（76 核心 + 8 展示页）+ 132 subTest 全通过，另含点击流水与趋势统计 API（LinkBox 消费）（指针：projects/B31-shorturl/README.md，提交 `4ccc788`）
 - `b35-mqtt`：手写 MQTT 子集（字节级报文/selectors broker/断线重连/账本）：32 项全过（23 核心 + 9 展示页）；展示页（第⑧批）协议表 + SVG 内联（指针：projects/B35-iot-mqtt/README.md，提交 `5821891`）
 - `b38-redis`：手写 Redis 子集（RESP2/单线程事件循环/双策略过期/快照）+ 主从复制扩展（B41 候选④）：58 项测试（36 核心 + 13 复制 + 9 展示页）（指针：projects/B38-mini-redis/README.md，提交 `f0bb729`）
 - `b10-minidb`：手写 SQL 子集 + WAL/页式快照/事务（B41 候选①：提交即 fsync + 崩溃对账）：62 项自测（36 核心 + 17 持久性 + 9 展示页）（指针：projects/B10-minidb/README.md，提交 `4ccc788`）

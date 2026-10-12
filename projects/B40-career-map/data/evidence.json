@@ -201,11 +201,11 @@
   },
   {
    "id": "b31-shorturl",
-   "claim": "短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：81 项测试（73 核心 + 8 展示页）+ 129 subTest 全通过",
+   "claim": "短链服务（复用 B11 HTTP 子集 + base62 + SQLite）：84 项测试（76 核心 + 8 展示页）+ 132 subTest 全通过，另含点击流水与趋势统计 API（LinkBox 消费）",
    "pointers": [
     "projects/B31-shorturl/README.md"
    ],
-   "anchor": "81 项测试 + 129 个 subTest 全通过",
+   "anchor": "84 项测试 + 132 个 subTest 全通过",
    "commit": "4ccc788"
   },
   {
