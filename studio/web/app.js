@@ -150,12 +150,94 @@
       .catch(function () { delete busy[id]; refresh(); });
   }
 
+  // ------------------------------------------------ 探活历史（2026-10-12 监控大盘时序维度）
+  // /api/history 返回位掩码压缩采样（按 products 顺序），前端解位画状态页式
+  // 色条：每产品一行，绿=在线红=掉线。采样在服务端后台线程，本文件只渲染。
+  var UPTIME = null;
+  function renderUptime() {
+    var UP_COLOR = "#10b981", DOWN_COLOR = "#f43f5e";
+    fetch("/api/history").then(function (r) { return r.json(); }).then(function (h) {
+      var box = $("uptime-strip");
+      if (!box) return;
+      if (!window.echarts || !h.samples || h.samples.length < 2) {
+        if (UPTIME) { UPTIME.clear(); }
+        return;                                        // 采样不足两条画不出段，等下轮
+      }
+      var names = {};
+      (last || []).forEach(function (p) { names[p.id] = p.name; });
+      var pids = h.products || [];
+      var rows = pids.map(function (pid) { return names[pid] || pid; });
+      if (!UPTIME) UPTIME = echarts.init(box);
+      var segments = [];
+      var samples = h.samples;
+      // 相邻同状态合并：6h×10 产品最多 2 万采样点，不合并每 3s 重画 2 万矩形；
+      // 合并后每行只有状态翻转那么几段，这也是状态页条的真实画法。
+      function mk(t0, t1, row, up) {
+        return { value: [t0 * 1000, t1 * 1000, row, up ? 1 : 0],
+                 itemStyle: { color: up ? UP_COLOR : DOWN_COLOR,
+                              opacity: up ? 0.9 : 1 } };
+      }
+      for (var j = 0; j < pids.length; j++) {
+        var segStart = samples[0][0], prevUp = ((samples[0][1] >> j) & 1) === 1;
+        for (var i = 1; i < samples.length; i++) {
+          var up = ((samples[i][1] >> j) & 1) === 1;
+          if (up !== prevUp) {
+            segments.push(mk(segStart, samples[i][0], j, prevUp));
+            segStart = samples[i][0]; prevUp = up;
+          }
+        }
+        segments.push(mk(segStart, samples[samples.length - 1][0], j, prevUp));
+      }
+      var spanMin = (samples[samples.length - 1][0] - samples[0][0]) / 60;
+      UPTIME.setOption({
+        animation: false,
+        grid: { left: 130, right: 20, top: 14, bottom: 26 },
+        tooltip: {
+          formatter: function (p) {
+            var v = p.value;
+            var st = new Date(v[0]).toLocaleTimeString("zh-CN", { hour12: false });
+            var en = new Date(v[1]).toLocaleTimeString("zh-CN", { hour12: false });
+            return rows[v[2]] + "<br>" + st + " – " + en +
+              "<br>" + (v[3] ? "在线" : "<b>掉线</b>");
+          }
+        },
+        xAxis: { type: "time", axisLabel: { fontSize: 10, hideOverlap: true } },
+        yAxis: { type: "category", data: rows, inverse: true,
+                 axisLabel: { fontSize: 11 } },
+        series: [{
+          type: "custom",
+          renderItem: function (params, api) {
+            var row = api.value(2);
+            var start = api.coord([api.value(0), row]);
+            var end = api.coord([api.value(1), row]);
+            var barH = api.size([0, 1])[1] * 0.62;
+            var clipY = Math.max(start[1], end[1]);
+            return {
+              type: "rect",
+              shape: { x: start[0], y: clipY - barH / 2,
+                       width: Math.max(end[0] - start[0], 1), height: barH },
+              style: api.style()
+            };
+          },
+          encode: { x: [0, 1], y: [2] },
+          data: segments
+        }]
+      });
+      var downs = segments.filter(function (s) { return !s.value[3]; }).length;
+      $("uptime-note").textContent =
+        "近 " + Math.max(1, Math.round(spanMin)) + " 分钟 · " + pids.length +
+        " 个产品 · " + samples.length + " 次采样" +
+        (downs ? " · 其中 " + downs + " 段掉线（红色）" : " · 全程在线");
+    }).catch(function () { /* 服务失联时下一轮 refresh 一并重试 */ });
+  }
+
   function refresh() {
     fetch("/api/products").then(function (r) { return r.json(); }).then(function (data) {
       last = data.products || [];
       user = (data.portal && data.portal.user) || null;
       renderAuth();
       render(last);
+      renderUptime();
       refreshAudit();
     });
   }

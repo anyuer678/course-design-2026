@@ -25,10 +25,12 @@ try:                                                          # noqa: E402
     from .audit import AuditLog
     from .auth import USERNAME, Auth
     from .manager import AlreadyOnline, NotOurs, Product, ProductManager
+    from .monitor import UptimeMonitor
 except ImportError:                     # 作为脚本直接跑（python server.py）
     from audit import AuditLog
     from auth import USERNAME, Auth
     from manager import AlreadyOnline, NotOurs, Product, ProductManager
+    from monitor import UptimeMonitor
 
 WEB_ROOT = ROOT / "web"
 DATA_DIR = ROOT / "data"
@@ -166,6 +168,17 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
         pid = get_pid(ctx)
         return ctx.json(manager.status(pid))
 
+    # ------------------------------------------------ 探活历史（只读公开）
+    @app.get("/api/history")
+    def uptime_history(ctx):
+        """探活历史（监控大盘时序维度）：后台采样器每 10s 一轮 TCP 探活，
+        环形缓冲约 6 小时。位掩码按 products 顺序编码在线状态——10 产品
+        2160 采样也只有几十 KB，前端解位画状态条。"""
+        monitor = getattr(manager, "uptime", None)
+        if monitor is None:
+            return ctx.json({"interval": None, "products": [], "samples": []})
+        return ctx.json(monitor.history())
+
     # ------------------------------------------------ 管理动作（要求登录）
     @app.post("/api/products/<pid>/start")
     def product_start(ctx):
@@ -215,8 +228,9 @@ def build_server(*, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
                  cachekv_port: int = 8021, sensorhub_port: int = 8022,
                  board_port: int = 8023, courselab_port: int = 8024,
                  linkbox_memory: bool = False,
+                 uptime_interval: float = 10.0,
                  data_dir: str | Path | None = None
-                 ) -> tuple[MicroServer, ProductManager, Auth]:
+                 ) -> tuple["StudioServer", ProductManager, Auth]:
     auth = Auth(data_dir or DATA_DIR)
     manager = build_manager(linkbox_port, lab_port, simlab_port=simlab_port,
                             datascope_port=datascope_port,
@@ -226,8 +240,22 @@ def build_server(*, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
                             courselab_port=courselab_port,
                             linkbox_memory=linkbox_memory,
                             audit_path=Path(data_dir or DATA_DIR) / "audit.sqlite3")
-    server = MicroServer(build_app(manager, auth), host=host, port=port)
+    monitor = UptimeMonitor(manager, interval=uptime_interval)
+    manager.uptime = monitor            # 探活历史挂在管理器上，/api/history 可取
+    server = StudioServer(build_app(manager, auth), host=host, port=port)
+    server.monitor = monitor
     return server, manager, auth
+
+
+class StudioServer(MicroServer):
+    """停机时收采样线程：探活线程是 daemon，不收也不会卡进程，
+    但测试里先 stop 再重建 server 的路径必须保证旧线程真退出。"""
+
+    def stop(self) -> None:
+        monitor = getattr(self, "monitor", None)
+        if monitor is not None:
+            monitor.stop()
+        super().stop()
 
 
 def main(argv=None) -> int:
@@ -243,7 +271,10 @@ def main(argv=None) -> int:
                                    linkbox_port=args.linkbox_port,
                                    lab_port=args.lab_port)
     port = server.start()
+    server.monitor.start()
     print(f"Studio 门户已启动： http://127.0.0.1:{port}/   （Ctrl+C 退出）")
+    print(f"探活历史： 每 {server.monitor.interval:.0f}s 采样一轮，"
+          f"保留最近 {server.monitor.max_samples} 条（/api/history）")
     print(f"登录： 用户 {USERNAME}，初始口令在 {auth.dir / 'password.txt'}"
           "（首次启动自动生成，登录后请改）")
     print("管理动作（启停）需登录；目录与状态只读公开。跑在自研 webframe 上。")
@@ -251,6 +282,7 @@ def main(argv=None) -> int:
         threading.Event().wait()
     except KeyboardInterrupt:
         print("\n再见")
+        server.monitor.stop()
         server.stop()
     return 0
 

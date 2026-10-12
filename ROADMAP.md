@@ -984,3 +984,17 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   表单 value 属性不进 innerHTML、引擎规模上限沿用轮十二）；⑤B14 画笔解析（点数 2..10000、
   坐标 ±100000、宽 1..32 全夹紧，文本格式无反序列化面）。全框架无 CORS 头（preflight
   必败）为既有基线；lab.py 的 ACAO:* 为预存在且本轮未触碰，出界不计入。
+- ✅ **轮三十三：Studio 探活历史——监控大盘的时间维度（10-12，GAP P0 升级动作）**：
+  GAP 指出门户只有瞬时状态、缺"大盘观感"。新增 studio/monitor.py UptimeMonitor：
+  后台 daemon 线程每 10s 复用 manager.probe 做 TCP 探活一轮，环形缓冲 2160 条
+  （约 6 小时），位掩码按产品序压缩（9 产品×2160 采样仅几十 KB）；studio 本体
+  （port=None）不采样——"门户在线"是同义反复，没有信息量。server.py：build_server
+  挂采样器 + StudioServer.stop() 收线程（daemon 虽不卡进程，但测试先 stop 再重建
+  的路径必须保证旧线程真退出）+ GET /api/history 只读公开。前端：产品矩阵下方
+  新增"探活历史"卡——ECharts custom series 状态页式色条（每产品一行，绿=在线
+  红=掉线），相邻同状态采样合并成段（不合并 6h 会画 2 万矩形），悬浮显示时段与
+  在线/掉线。测试 +3：注入时钟的位掩码编解码（真 socket 探活 lab 在线/离线翻转）、
+  环形缓冲裁剪、/api/history 未登录可读（PortalCase 补挂空采样器与生产同构）。
+  studio 21→24 双入口全绿；端到端真跑：起门户+启 linkbox/cachekv→停 linkbox 造
+  翻转，无头 Edge 走查色条渲染正确（绿→红过渡清晰）零 console 错误；数字级联
+  run.bat/README/check_all 对齐；check_all 21/21 全绿。

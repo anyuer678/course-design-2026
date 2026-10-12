@@ -63,6 +63,10 @@ class PortalCase(unittest.TestCase):
                                     courselab_port=COURSELAB_PORT,
                                     linkbox_memory=True)
         cls.app = build_app(cls.manager, cls.auth)
+        # 生产里 build_server 会挂探活采样器；app 级测试挂一个不起线程的
+        # 空采样器，让 /api/history 与生产同构（products 有内容、samples 可为空）
+        from studio.monitor import UptimeMonitor
+        cls.manager.uptime = UptimeMonitor(cls.manager)
 
     @classmethod
     def tearDownClass(cls):
@@ -197,6 +201,13 @@ class PortalCase(unittest.TestCase):
         self.assertEqual(json.loads(body)["port"], LINKBOX_PORT)
         status, _, _ = self.handle("GET", "/api/products/nope/status")
         self.assertEqual(status, 404)
+
+    def test_history_api_over_app(self):
+        status, _, body = self.handle("GET", "/api/history")
+        self.assertEqual(status, 200)
+        data = json.loads(body)
+        self.assertIn("linkbox", data["products"])
+        self.assertIsInstance(data["samples"], list)   # 未登录也可读（只读公开）
 
     def test_courselab_lifecycle(self):
         """CourseLab 并入：第八个 managed 产品（并行会话交付 M0-M11 后的收官接入）。
@@ -419,6 +430,59 @@ class TestAudit(unittest.TestCase):
         self.assertEqual(box["rows"][0]["outcome"], "ok")
         self.assertEqual(log.count(), 1)           # 同一连接再从构造线程读（惰性后单归属）
         log.close()
+
+
+class TestUptimeMonitor(unittest.TestCase):
+    """探活历史采样器：可注入时钟 + 公开 sample_once（测试不 sleep）。"""
+
+    def _manager(self):
+        m = build_manager(linkbox_port=LINKBOX_PORT, lab_port=LAB_PORT,
+                          simlab_port=SIMLAB_PORT, datascope_port=DATASCOPE_PORT,
+                          cachekv_port=CACHEKV_PORT, sensorhub_port=SENSORHUB_PORT,
+                          board_port=BOARD_PORT, courselab_port=COURSELAB_PORT,
+                          linkbox_memory=True)
+        return m
+
+    def test_samples_probe_and_encode_bitmask(self):
+        from studio.monitor import UptimeMonitor
+        t = [1000.0]
+        m = self._manager()
+        mon = UptimeMonitor(m, clock=lambda: t[0])
+        # lab 端口起一个真 HTTP 监听 → 在线；linkbox 端口空着 → 离线
+        srv = socket.socket()
+        srv.bind(("127.0.0.1", LAB_PORT))
+        srv.listen(1)
+        try:
+            mon.sample_once()
+            t[0] += 10.0
+            srv.close()                       # 第二轮 lab 掉线
+            mon.sample_once()
+        finally:
+            srv.close()
+        h = mon.history()
+        self.assertEqual(h["interval"], 10.0)
+        self.assertEqual(len(h["samples"]), 2)
+        self.assertNotIn("studio", h["products"])      # 本体不采样
+        lab_i = h["products"].index("lab")
+        link_i = h["products"].index("linkbox")
+        s1, s2 = h["samples"]
+        self.assertEqual((s1[1] >> lab_i) & 1, 1)      # 第一轮 lab 在线
+        self.assertEqual((s1[1] >> link_i) & 1, 0)     # linkbox 空端口离线
+        self.assertEqual((s2[1] >> lab_i) & 1, 0)      # 第二轮 lab 掉线
+        self.assertEqual(s1[0], 1000.0)                # 注入时钟生效
+
+    def test_ring_buffer_trims_to_capacity(self):
+        from studio.monitor import UptimeMonitor
+        t = [0.0]
+        m = self._manager()
+        mon = UptimeMonitor(m, max_samples=5, clock=lambda: t[0])
+        for _ in range(8):
+            mon.sample_once()
+            t[0] += 10.0
+        h = mon.history()
+        self.assertEqual(len(h["samples"]), 5)         # 只留最近 5 条
+        self.assertEqual(h["samples"][0][0], 30.0)     # 0/10/20 被裁掉
+        self.assertEqual(h["samples"][-1][0], 70.0)
 
 
 class TestOverRealSocket(unittest.TestCase):

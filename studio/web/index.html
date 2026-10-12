@@ -49,6 +49,17 @@
         "在线 = 端口连得上"，不撒谎。</p>
       <section id="cards" class="grid" style="margin-top:1rem"></section>
 
+      <div class="overline">Uptime</div>
+      <h2 id="uptime">探活历史
+        <span class="note">（后台每 10s 一轮 TCP 探活，保留最近约 6 小时；绿=在线，红=掉线）</span>
+      </h2>
+      <div class="card">
+        <div id="uptime-strip" style="width:100%;height:260px" role="img"
+             aria-label="各产品探活时间线"></div>
+        <p class="note" id="uptime-note">采样进行中——每个产品一行，时间轴向左滚动。
+          服务刚启动时这里还是空的，等几分钟就有形状了。</p>
+      </div>
+
       <div class="overline">Audit</div>
       <h2 id="audit">操作审计 <span class="note">（启停动作的账，含拒绝与失败；需登录查看）</span></h2>
       <div id="dash" class="dash" hidden>
