@@ -80,10 +80,10 @@
       <section id="tab-files" class="tabpage" hidden>
         <div class="overline">Files</div>
         <h1>文件互传</h1>
-        <div class="card">
+        <div class="card dropzone" id="dropzone">
           <form id="file-form">
             <div class="toolbar">
-              <input id="file-input" type="file" required style="flex:none">
+              <input id="file-input" type="file" multiple required style="flex:none">
               <select id="file-ttl" style="flex:none;width:auto">
                 <option value="1">1 小时后过期</option>
                 <option value="24" selected>1 天后过期</option>
@@ -95,10 +95,21 @@
               <button type="submit" class="btn">上传</button>
             </div>
           </form>
+          <p class="note" style="margin:.4rem 0 0">支持多选与整包拖拽——把文件拖进这张卡片即可，
+            逐个显示上传进度。</p>
+          <div id="upload-queue" class="upload-queue" hidden></div>
           <div id="file-result" class="result" hidden></div>
+          <div id="file-preview" class="preview-panel" hidden>
+            <div class="preview-head">
+              <b id="preview-name">—</b>
+              <button class="btn btn-ghost btn-xs" id="preview-close">收起预览</button>
+            </div>
+            <div id="preview-body" class="preview-body"></div>
+          </div>
           <p class="note">单个文件上限 32 MiB，到期连文件带记录一起清除。上传后得到
             <span class="kbd">/f/短码</span> 下载链接，页面自带二维码——手机扫码直接下载；
-            设了口令的文件，扫码后先输口令再下载。</p>
+            设了口令的文件，扫码后先输口令再下载。图片 / PDF / 文本可点「预览」在线看
+            （预览不记取件流水，下载才记）。</p>
         </div>
       </section>
 

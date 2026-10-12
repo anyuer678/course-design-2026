@@ -29,7 +29,9 @@ from pathlib import Path
 from b31.app import HTML_TYPE, JSON_TYPE, STATIC_TYPES, TEXT_TYPE, ShortUrlApp
 from b31.codec import is_code_shape
 
-from .files import MAX_FILE_BYTES, FileError, FileGone, content_disposition
+from .files import (MAX_FILE_BYTES, FileError, FileGone,     # noqa: E402
+                    content_disposition, content_disposition_inline,
+                    preview_content_type)
 from .qr import qr_svg
 from .stash import MAX_CONTENT, StashError, StashGone, StashStore
 
@@ -38,6 +40,7 @@ SVG_TYPE = ("Content-Type", "image/svg+xml")
 DOWNLOAD_TYPE = ("Content-Type", "application/octet-stream")
 QR_SUFFIX = "/qr.svg"
 DELETE_SUFFIX = "/delete"              # L3：查看页删除表单的提交地址后缀
+VIEW_SUFFIX = "/view"                  # 升级动作②：文件内联预览（/f/<码>/view）
 
 
 class LinkBoxApp(ShortUrlApp):
@@ -71,6 +74,8 @@ class LinkBoxApp(ShortUrlApp):
             (("GET", "/api/files/*"), self.file_api),
             (("DELETE", "/api/files/*"), self.file_api),
             (("GET", f"/f/*{QR_SUFFIX}"), self.file_qr),
+            # 升级动作②（2026-10-12）：内联预览——必须在 /f/* 之前注册（fnmatch 首中）
+            (("GET", f"/f/*{VIEW_SUFFIX}"), self.file_view),
             (("GET", "/f/*"), self.file_download),
             (("HEAD", "/f/*"), self.file_download),
             (("POST", "/f/*"), self.file_download_post),
@@ -403,9 +408,10 @@ class LinkBoxApp(ShortUrlApp):
 
     # ------------------------------------------------ 文件暂存：下载（/f/<code>）
     def _file_response(self, code: str, candidate: str | None,
-                       method: str = "GET"):
-        """GET/HEAD/口令表单共用：404 -> 410 -> 口令门 -> 字节下发。
-        method 用于访问流水口径：HEAD 探活不算，GET/口令表单 POST 都算一次。"""
+                       method: str = "GET", inline: bool = False):
+        """GET/HEAD/口令表单/预览共用：404 -> 410 -> 口令门 -> 字节下发。
+        method 用于访问流水口径：HEAD 探活不算，GET/口令表单 POST 都算一次；
+        inline（/view 预览）也不算——预览是衍生查看，下载才算一次取件。"""
         try:
             rec = self.files.get(code, now=self.clock())
         except FileGone:
@@ -423,12 +429,41 @@ class LinkBoxApp(ShortUrlApp):
                 hint = "口令不正确，再试一次。" if candidate is not None else ""
                 return 200, [HTML_TYPE, NO_STORE], \
                     self._pass_form(code, hint, noun="文件")
+        if inline:
+            ctype = preview_content_type(rec.name)
+            if ctype is None:
+                return 415, [HTML_TYPE, NO_STORE], \
+                    self._page("不支持在线预览",
+                               f"「{rec.name}」不是可预览类型（图片 / PDF / 文本），"
+                               "请回到下载链接直接取件。")
         data = self.files.read(code)
-        if method != "HEAD":
+        if method != "HEAD" and not inline:
             self.store.log_click("file", code, now=self.clock())
+        if inline:
+            # CSP sandbox：SVG 可携带 <script>，该头让浏览器把响应当沙箱文档
+            # 渲染——脚本/表单/同源访问一律禁止（XSS 的最后一道闸，口径同
+            # files.py 头注释：attachment 是默认闸，预览是白名单 + 沙箱）。
+            return 200, [("Content-Type", ctype),
+                         ("Content-Disposition", content_disposition_inline(rec.name)),
+                         ("Content-Security-Policy", "sandbox"),
+                         NO_STORE], data
         return 200, [DOWNLOAD_TYPE,
                      ("Content-Disposition", content_disposition(rec.name)),
                      NO_STORE], data
+
+    def file_view(self, request):
+        """GET /f/<code>/view：内联预览（升级动作②）。白名单类型才渲染，
+        口令门与下载同门（?passcode= 或已过表单）。不记取件流水。"""
+        stem = request.path[:-len(VIEW_SUFFIX)] if \
+            request.path.endswith(VIEW_SUFFIX) else request.path
+        code, problem = self._code_from(stem, "/f/")
+        if problem:
+            return 400, [TEXT_TYPE], problem.encode("utf-8")
+        if not is_code_shape(code):
+            return 404, [HTML_TYPE], \
+                self._page("文件不存在", f"没有找到 {code!r}。")
+        return self._file_response(code, self._passcode_of(request),
+                                   method=request.method, inline=True)
 
     def file_download(self, request):
         code, problem = self._code_from(request.path, "/f/")

@@ -24,3 +24,30 @@ padding:.5rem;height:300px}
 /* 访问趋势图（2026-10-12）：全宽折线，比并排图高一点 */
 .statchart.trend{height:280px;margin:.9rem 0 .2rem}
 @media (max-width:900px){.grid.two-col{grid-template-columns:1fr}}
+
+/* 升级动作③（2026-10-12）：拖拽多文件上传 + 进度条 + 内联预览 */
+.dropzone.dragover{border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.15)}
+.upload-queue{margin:.6rem 0 0;display:flex;flex-direction:column;gap:.45rem}
+.upload-row{display:flex;align-items:center;gap:.6rem;font-size:.86rem;flex-wrap:wrap}
+.upload-row .uname{font-weight:650;max-width:16rem;overflow:hidden;
+text-overflow:ellipsis;white-space:nowrap}
+.upload-row .usize{color:var(--faint);flex:none}
+.upload-row .ustate{color:var(--faint);flex:none}
+.upload-row.done .ustate{color:var(--ok, #059669)}
+.upload-row.failed .ustate{color:var(--err, #b91c1c)}
+.progress{flex:1;min-width:9rem;height:8px;background:var(--bg);
+border:1px solid var(--line);border-radius:99px;overflow:hidden}
+.progress .bar{height:100%;width:0;background:var(--accent);border-radius:99px;
+transition:width .15s ease}
+.upload-row.done .progress .bar{background:var(--ok, #059669)}
+.upload-row.failed .progress .bar{background:var(--err, #b91c1c)}
+.preview-panel{margin:.6rem 0 0;border:1px solid var(--line);border-radius:10px;
+overflow:hidden;background:var(--card)}
+.preview-head{display:flex;justify-content:space-between;align-items:center;gap:.6rem;
+padding:.45rem .8rem;border-bottom:1px solid var(--line-soft);background:var(--bg)}
+.preview-body{max-height:30rem;overflow:auto;display:flex;justify-content:center;
+padding:.5rem;background:var(--bg)}
+.preview-body img{max-width:100%;max-height:28rem;border-radius:6px}
+.preview-body iframe{width:100%;height:28rem;border:0;border-radius:6px;background:#fff}
+.preview-body pre{margin:0;max-width:100%;text-align:left;white-space:pre-wrap;
+word-break:break-all}

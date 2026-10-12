@@ -109,44 +109,142 @@
     });
   });
 
-  // ------------------------------------------------ 文件互传（轮八）
+  // ------------------------------------------------ 文件互传（轮八；2026-10-12 升级③：多文件 + 拖拽 + 进度条 + 预览②）
+  // 预览白名单与 linkbox/files.py PREVIEW_CONTENT_TYPES 对齐（图片/PDF/文本）。
+  var PREVIEWABLE = /\.(png|jpe?g|gif|webp|bmp|svg|pdf|txt|md|csv|log)$/i;
+  function uploadOne(file, params, ui) {
+    return new Promise(function (resolve) {
+      var xhr = new XMLHttpRequest();               // fetch 无上传进度——XHR 才有
+      xhr.open("POST", "/api/files?" + params.toString());
+      xhr.upload.addEventListener("progress", function (ev) {
+        if (ev.lengthComputable) {
+          ui.bar.style.width = Math.round((ev.loaded / ev.total) * 100) + "%";
+        }
+      });
+      xhr.addEventListener("load", function () {
+        var data = {};
+        try { data = JSON.parse(xhr.responseText); } catch (e) { /* 保持空对象 */ }
+        resolve({ ok: xhr.status >= 200 && xhr.status < 300,
+                  status: xhr.status, data: data });
+      });
+      xhr.addEventListener("error", function () { resolve({ ok: false, status: 0, data: {} }); });
+      xhr.send(file);
+    });
+  }
+  function addPreview(rec) {
+    var panel = $("file-preview");
+    $("preview-name").textContent = rec.name;
+    var body = $("preview-body");
+    body.textContent = "";
+    var src = rec.url + "/view";
+    if (/\.pdf$/i.test(rec.name)) {
+      var fr = el("iframe");
+      fr.src = src; fr.title = "PDF 预览";
+      body.appendChild(fr);
+    } else if (/\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(rec.name)) {
+      var img = el("img");
+      img.src = src; img.alt = rec.name;
+      body.appendChild(img);
+    } else {
+      fetch(src).then(function (r) { return r.text(); }).then(function (t) {
+        var pre = el("pre", "mono", t.length > 20000 ? t.slice(0, 20000) + "\n…（前 2 万字符）" : t);
+        body.appendChild(pre);
+      });
+    }
+    panel.hidden = false;
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+  $("preview-close").addEventListener("click", function () {
+    $("file-preview").hidden = true;
+  });
+
+  function uploadFiles(files) {
+    if (!files.length) return;
+    var ttl = $("file-ttl").value;
+    var pass = $("file-pass").value;
+    var queue = $("upload-queue");
+    queue.hidden = false;
+    queue.textContent = "";
+    $("file-result").hidden = true;
+    var seq = Promise.resolve();
+    files.forEach(function (f) {
+      seq = seq.then(function () {
+        var row = el("div", "upload-row");
+        var bar = el("div", "bar");
+        var prog = el("div", "progress"); prog.appendChild(bar);
+        var state = el("span", "ustate", "排队中");
+        row.appendChild(el("span", "uname", f.name));
+        row.appendChild(el("span", "usize",
+          f.size > 1048576 ? (f.size / 1048576).toFixed(1) + " MB"
+                           : Math.max(1, Math.round(f.size / 1024)) + " KB"));
+        row.appendChild(prog);
+        row.appendChild(state);
+        queue.appendChild(row);
+        state.textContent = "上传中…";
+        var params = new URLSearchParams();
+        params.set("name", f.name);
+        params.set("ttl_hours", ttl);
+        if (pass) params.set("passcode", pass);
+        return uploadOne(f, params, { bar: bar }).then(function (r) {
+          if (!r.ok) {
+            row.classList.add("failed");
+            state.textContent = r.data.error || ("失败 " + r.status);
+            return null;
+          }
+          row.classList.add("done");
+          bar.style.width = "100%";
+          state.textContent = "完成";
+          var a = el("a", "", r.data.url);
+          a.href = r.data.url; a.target = "_blank";
+          row.appendChild(a);
+          if (PREVIEWABLE.test(r.data.name)) {
+            var pv = el("button", "btn btn-ghost btn-xs", "预览");
+            pv.addEventListener("click", function () { addPreview(r.data); });
+            row.appendChild(pv);
+          }
+          var qrDl = el("a", "btn btn-ghost btn-xs", "二维码");
+          qrDl.href = r.data.url + "/qr.svg?download=1";
+          qrDl.download = "qr-file-" + r.data.code + ".svg";
+          row.appendChild(qrDl);
+          return r.data;
+        });
+      });
+    });
+    seq.then(function () {
+      $("file-input").value = "";
+      $("file-pass").value = "";
+      showOk($("file-result"), [el("b", "", "上传队列处理完毕。"),
+        el("span", "note", "  链接与二维码在各行；图片/PDF/文本可点「预览」在线看。")]);
+    });
+  }
+
   $("file-form").addEventListener("submit", function (ev) {
     ev.preventDefault();
-    var box = $("file-result");
-    var file = $("file-input").files[0];
-    if (!file) { showErr(box, "先选一个文件。"); return; }
-    var params = new URLSearchParams();
-    params.set("name", file.name);
-    params.set("ttl_hours", $("file-ttl").value);
-    var pass = $("file-pass").value;
-    if (pass) params.set("passcode", pass);
-    box.textContent = "上传中…";
-    box.hidden = false;
-    fetch("/api/files?" + params.toString(), { method: "POST", body: file })
-      .then(function (resp) {
-        return resp.json().then(function (data) {
-          return { ok: resp.ok, status: resp.status, data: data };
-        });
-      })
-      .then(function (r) {
-        if (!r.ok) { showErr(box, r.data.error || ("失败 " + r.status)); return; }
-        var a = el("a", "", location.origin + r.data.url);
-        a.href = r.data.url;
-        var size = r.data.size > 1048576
-          ? (r.data.size / 1048576).toFixed(1) + " MB"
-          : Math.max(1, Math.round(r.data.size / 1024)) + " KB";
-        var note = (r.data.protected ? "已设口令，扫码后先输口令；" : "") +
-          size + " · 扫码即下载，到期自动清除";
-        var qrDl = el("a", "", "下载二维码");
-        qrDl.href = r.data.url + "/qr.svg?download=1";     // L1 二维码下载
-        qrDl.download = "qr-file-" + r.data.code + ".svg";
-        showOk(box, [el("b", "", "已上传：" + r.data.name + " — "), a,
-                     qrDl, el("span", "note", "  " + note)]);
-        $("file-input").value = "";
-        $("file-pass").value = "";
-      })
-      .catch(function () { showErr(box, "网络错误，请重试。"); });
+    var files = Array.prototype.slice.call($("file-input").files);
+    if (!files.length) { showErr($("file-result"), "先选一个文件（可多选）。"); return; }
+    uploadFiles(files);
   });
+
+  // 整包拖拽：卡片高亮 + 落下即排队上传（dragleave 用 relatedTarget 判真离开）
+  var zone = $("dropzone");
+  if (zone) {
+    ["dragenter", "dragover"].forEach(function (t) {
+      zone.addEventListener(t, function (ev) {
+        ev.preventDefault();
+        zone.classList.add("dragover");
+      });
+    });
+    zone.addEventListener("dragleave", function (ev) {
+      if (!zone.contains(ev.relatedTarget)) zone.classList.remove("dragover");
+    });
+    zone.addEventListener("drop", function (ev) {
+      ev.preventDefault();
+      zone.classList.remove("dragover");
+      var files = Array.prototype.slice.call(ev.dataTransfer.files);
+      if (files.length) uploadFiles(files);
+      else showErr($("file-result"), "拖进来的不是文件。");
+    });
+  }
 
   // ------------------------------------------------ 统计（2026-10-11 ECharts 化；2026-10-12 加访问趋势）
   // 上：近 14 天访问趋势三条线（/api/stats/clicks，引擎层点击流水现算）；

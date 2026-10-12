@@ -60,6 +60,32 @@ def content_disposition(name: str) -> str:
     return f"attachment; filename=\"{ascii_fb}\"; filename*=UTF-8''{quote(name)}"
 
 
+def content_disposition_inline(name: str) -> str:
+    """预览版 disposition：inline + 同样的双编码文件名。"""
+    ascii_fb = name.encode("ascii", "ignore").decode("ascii").strip() or "file"
+    return f"inline; filename=\"{ascii_fb}\"; filename*=UTF-8''{quote(name)}"
+
+
+# 在线预览白名单（2026-10-12 升级动作②）：只放"渲染成图/文档也不可能有脚本"
+# 的类型。HTML/HTM/XML **故意不在表里**——它们 inline 渲染就是存储型 XSS 的门；
+# SVG 虽可携带 <script>，但预览响应带 CSP sandbox 头（见 app.py），脚本必然不执行。
+PREVIEW_CONTENT_TYPES = {
+    ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
+    ".gif": "image/gif", ".webp": "image/webp", ".bmp": "image/bmp",
+    ".svg": "image/svg+xml", ".pdf": "application/pdf",
+    ".txt": "text/plain; charset=utf-8", ".md": "text/plain; charset=utf-8",
+    ".csv": "text/plain; charset=utf-8", ".log": "text/plain; charset=utf-8",
+}
+
+
+def preview_content_type(name: str) -> str | None:
+    """按文件名扩展查预览类型；不在白名单返回 None（映射 415）。"""
+    base = name.rsplit(".", 1)
+    if len(base) != 2:
+        return None
+    return PREVIEW_CONTENT_TYPES.get("." + base[1].lower())
+
+
 def _passcode_digest(passcode: bytes, salt: bytes) -> bytes:
     return hashlib.pbkdf2_hmac("sha256", passcode, salt, PBKDF2_ITERATIONS)
 

@@ -102,6 +102,8 @@ class AppCase(unittest.TestCase):
             return self.app.list_links(req)
         if clean.endswith("/qr.svg") and clean.startswith("/f/") and method == "GET":
             return self.app.file_qr(req)
+        if clean.endswith("/view") and clean.startswith("/f/") and method == "GET":
+            return self.app.file_view(req)              # 预览必须在泛化 GET /f/ 之前
         if clean.startswith("/f/") and method in ("GET", "HEAD"):
             return self.app.file_download(req)
         if clean.startswith("/f/") and method == "POST":
@@ -808,6 +810,69 @@ class TestHardening20261007(AppCase):
         hd = {h[0]: h[1] for h in headers}
         self.assertIn("attachment", hd.get("Content-Disposition", ""))
         self.assertIn("qr-stash-", hd.get("Content-Disposition", ""))
+
+
+class TestFilePreview(AppCase):
+    """内联预览（2026-10-12 升级动作②）：白名单类型 inline 下发 + CSP sandbox；
+    口令门与下载同门；预览不记取件流水（下载才记）。"""
+
+    def headers_of(self, headers):
+        return {h[0].lower(): h[1] for h in headers}
+
+    def test_png_inline_with_sandbox(self):
+        rec = self.make_file(b"\x89PNG\r\n\x1a\nfakepng", name="shot.png")
+        status, headers, body = self.request("GET", f"/f/{rec['code']}/view")
+        self.assertEqual(status, 200)
+        self.assertEqual(body, b"\x89PNG\r\n\x1a\nfakepng")     # 字节原样
+        hd = self.headers_of(headers)
+        self.assertEqual(hd.get("content-type"), "image/png")
+        self.assertTrue(hd.get("content-disposition", "").startswith("inline"))
+        self.assertEqual(hd.get("content-security-policy"), "sandbox")
+
+    def test_view_does_not_count_as_pickup(self):
+        rec = self.make_file(b"txt body", name="a.txt")
+        # 直接监视 log_click：AppCase 的注入时钟是过去时刻，流水会被
+        # "相对真实墙钟"的 90 天保留窗当场裁掉，查表数不到——记账与否看调用。
+        calls = []
+        orig = self.app.store.log_click
+        self.app.store.log_click = lambda kind, code, now=None: calls.append(kind)
+        try:
+            self.request("GET", f"/f/{rec['code']}/view")
+            self.request("GET", f"/f/{rec['code']}/view")
+            self.assertEqual(calls, [])                         # 预览不记账
+            status, _, _ = self.request("GET", f"/f/{rec['code']}")
+            self.assertEqual(status, 200)
+            self.assertEqual(calls, ["file"])                   # 下载才记账
+        finally:
+            self.app.store.log_click = orig
+
+    def test_html_is_refused_415(self):
+        rec = self.make_file(b"<script>alert(1)</script>", name="page.html")
+        status, headers, body = self.request("GET", f"/f/{rec['code']}/view")
+        self.assertEqual(status, 415)                           # HTML 永不 inline 渲染
+        self.assertNotIn(b"<script>", body)
+
+    def test_passcode_gate_same_as_download(self):
+        rec = self.make_file(b"secret png", name="s.png", passcode="open-sesame")
+        status, headers, body = self.request("GET", f"/f/{rec['code']}/view")
+        self.assertEqual(status, 200)
+        self.assertIn(b"passcode", body)                        # 先见表单页
+        status, headers, body = self.request(
+            "GET", f"/f/{rec['code']}/view?passcode=wrong")
+        self.assertEqual(status, 200)
+        self.assertIn("口令不正确".encode("utf-8"), body)
+        status, headers, body = self.request(
+            "GET", f"/f/{rec['code']}/view?passcode=open-sesame")
+        self.assertEqual(status, 200)
+        hd = self.headers_of(headers)
+        self.assertEqual(hd.get("content-type"), "image/png")
+        self.assertEqual(body, b"secret png")
+
+    def test_unknown_and_shape_guards(self):
+        status, _, _ = self.request("GET", "/f/zzzzzzzzzz/view")
+        self.assertEqual(status, 404)
+        status, _, _ = self.request("GET", "/f/!bad!/view")
+        self.assertEqual(status, 400)                           # 码形不合法（与 /f/ 同闸）
 
 
 class TestClickStats(AppCase):

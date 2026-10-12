@@ -998,3 +998,19 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   studio 21→24 双入口全绿；端到端真跑：起门户+启 linkbox/cachekv→停 linkbox 造
   翻转，无头 Edge 走查色条渲染正确（绿→红过渡清晰）零 console 错误；数字级联
   run.bat/README/check_all 对齐；check_all 21/21 全绿。
+- ✅ **轮三十四：LinkBox 拖拽多文件上传 + 图片/PDF 在线预览（10-12，GAP P2 升级动作②③）**：
+  LinkBox 三项升级动作收官（①统计上轮已落）。**③多文件+进度条**：file-input 加
+  multiple、整卡片变拖拽区（dragover 高亮 / relatedTarget 判真离开）、XHR upload.
+  onprogress 逐文件进度条（fetch 无上传进度）、顺序上传队列每行"名称/大小/进度/
+  状态 + 链接 + 预览 + 二维码"。**②内联预览**：新路由 GET /f/<码>/view（fnmatch
+  首中须排在 /f/* 前），files.py 白名单 PREVIEW_CONTENT_TYPES（图片/PDF/文本）+
+  content_disposition_inline；HTML/HTM/XML **故意不进白名单**——inline 渲染即存储
+  型 XSS 的门；SVG 可携带 <script>，响应统一加 CSP sandbox 头（脚本/表单/同源
+  访问全禁）；口令门与下载同门（?passcode= 同闸）；**预览不记取件流水**（下载才
+  记，口径与 HEAD 探活一致）。测试 +5（PNG inline+CSP、预览不记账——监视 log_click
+  调用而非查表，注入时钟的流水会被相对真实墙钟的保留窗当场裁掉、HTML 415、口令
+  同门、码形闸）→ 71→76 双入口全绿。无头 Edge 走查：三文件多选上传全完成、html
+  正确无预览按钮、PNG 预览面板出图、/view 响应头逐项核对（inline+CSP sandbox+
+  no-store）、零 console 错误；数字级联 run.bat/README/check_all 对齐；check_all
+  21/21 全绿。踩坑记录：LinkBox app.js 没有 DataScope 那套 on()/toast() helper——
+  跨产品抄渲染代码前先对 helper 清单。
