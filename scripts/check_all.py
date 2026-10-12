@@ -8,6 +8,7 @@
   5. dorm 事实台账：27 键现算（PLAN 改动的联动哨兵）
   6. dorm 管理文档核对：check_pm（台账引用/风险登记/复盘分类）
   7. 交付齐全性：scan_refs.py projects（README + run.bat 引用扫描）
+  7.4 共享资产新鲜度：sync_assets.py --check（webkit/kb.css+echarts → 8 产品 16 份副本）
   7.5 容器布局对拍：check_docker_layout.py（Dockerfile COPY × .dockerignore × 代码读取 × compose 端口，
       8 产品；compose 全家桶没实测过的替代哨兵，轮二十二 7 处容器 bug 的固化）
   7.6 新鲜空数据起服：check_fresh_boot.py（8 产品 staged 空卷真启动探活，
@@ -48,6 +49,7 @@ def steps(deep: bool) -> list:
         ("dorm 事实台账（27 键现算）", [PY, "projects/dorm-repair/tools/project_ledger.py", "--check"]),
         ("dorm 管理文档核对（check_pm）", [PY, "projects/dorm-repair/checks/check_pm.py"]),
         ("交付齐全性（README+run.bat 引用扫描）", [PY, "scripts/scan_refs.py", "projects"]),
+        ("共享资产新鲜度（webkit/ → 8 产品 16 份副本逐字节）", [PY, "scripts/sync_assets.py", "--check"]),
         ("容器布局对拍（Dockerfile×dockerignore×代码读取×compose 端口，8 产品）", [PY, "scripts/check_docker_layout.py"]),
         ("新鲜空数据起服（8 产品：容器空卷/新克隆等价冒烟）", [PY, "scripts/check_fresh_boot.py"]),
         ("产品层：webframe 微框架（36 项双入口，含静态路径安全专项）", [PY, "-m", "pytest", "webframe/tests", "-q"]),
