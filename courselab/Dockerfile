@@ -9,5 +9,6 @@ WORKDIR /app
 COPY courselab/ courselab/
 COPY projects/ projects/
 COPY showcase/ showcase/
+COPY g2/cards.json g2/cards.json
 EXPOSE 8024
 CMD ["python", "courselab/server.py", "--host", "0.0.0.0", "--port", "8024"]

@@ -18,10 +18,12 @@ node_modules/
 courselab/config.json
 
 # Big dirs / draft docs irrelevant to any container
+# （g2 只放行 cards.json：courselab 运行时读它当课程内容源，courses.py:15）
 p-验收/
 thesis/
+g2/*
+!g2/cards.json
 board/
-g2/
 webkit/
 screenshots/
 ACCIDENT-2026-10-02.md

@@ -8,6 +8,8 @@
   5. dorm 事实台账：27 键现算（PLAN 改动的联动哨兵）
   6. dorm 管理文档核对：check_pm（台账引用/风险登记/复盘分类）
   7. 交付齐全性：scan_refs.py projects（README + run.bat 引用扫描）
+  7.5 容器布局对拍：check_docker_layout.py（Dockerfile COPY × .dockerignore × 代码读取，
+      8 产品；compose 全家桶没实测过的替代哨兵，轮二十二 7 处容器 bug 的固化）
   8. 产品层：webframe（31）/ studio（21，八产品真启停+审计）/ linkbox（104）/ simlab（37）
      / datascope（34）/ cachekv（19）/ sensorhub（25）/ board（12）
      / courselab（154 项端到端自检）/ boardweb（8）
@@ -42,6 +44,7 @@ def steps(deep: bool) -> list:
         ("dorm 事实台账（27 键现算）", [PY, "projects/dorm-repair/tools/project_ledger.py", "--check"]),
         ("dorm 管理文档核对（check_pm）", [PY, "projects/dorm-repair/checks/check_pm.py"]),
         ("交付齐全性（README+run.bat 引用扫描）", [PY, "scripts/scan_refs.py", "projects"]),
+        ("容器布局对拍（Dockerfile×dockerignore×代码读取，8 产品）", [PY, "scripts/check_docker_layout.py"]),
         ("产品层：webframe 微框架（31 项双入口）", [PY, "-m", "pytest", "webframe/tests", "-q"]),
         ("产品层：Studio 门户（21 项：认证+矩阵+八产品真启停+操作审计）", [PY, "-m", "pytest", "studio/tests", "-q"]),
         ("产品层：LinkBox（104 项双入口）", [PY, "-m", "pytest", "linkbox/tests", "-q"]),
