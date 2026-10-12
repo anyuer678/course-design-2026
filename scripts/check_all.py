@@ -12,7 +12,7 @@
       8 产品；compose 全家桶没实测过的替代哨兵，轮二十二 7 处容器 bug 的固化）
   7.6 新鲜空数据起服：check_fresh_boot.py（8 产品 staged 空卷真启动探活，
       轮二十四新增——compose 命名卷首挂是空目录，此前从未验证过）
-  8. 产品层：webframe（31）/ studio（21，八产品真启停+审计）/ linkbox（104）/ simlab（37）
+  8. 产品层：webframe（36，含静态路径安全专项）/ studio（21，八产品真启停+审计）/ linkbox（104）/ simlab（37）
      / datascope（34）/ cachekv（19）/ sensorhub（25）/ board（12）
      / courselab（154 项端到端自检）/ boardweb（8）
 --deep 追加：33 个项目的展示页测试套件（各项目 tests/test_showcase.py）。
@@ -48,7 +48,7 @@ def steps(deep: bool) -> list:
         ("交付齐全性（README+run.bat 引用扫描）", [PY, "scripts/scan_refs.py", "projects"]),
         ("容器布局对拍（Dockerfile×dockerignore×代码读取×compose 端口，8 产品）", [PY, "scripts/check_docker_layout.py"]),
         ("新鲜空数据起服（8 产品：容器空卷/新克隆等价冒烟）", [PY, "scripts/check_fresh_boot.py"]),
-        ("产品层：webframe 微框架（31 项双入口）", [PY, "-m", "pytest", "webframe/tests", "-q"]),
+        ("产品层：webframe 微框架（36 项双入口，含静态路径安全专项）", [PY, "-m", "pytest", "webframe/tests", "-q"]),
         ("产品层：Studio 门户（21 项：认证+矩阵+八产品真启停+操作审计）", [PY, "-m", "pytest", "studio/tests", "-q"]),
         ("产品层：LinkBox（104 项双入口）", [PY, "-m", "pytest", "linkbox/tests", "-q"]),
         ("产品层：SimLab 仿真馆（37 项：记录+引擎+播放器+实时重算）", [PY, "-m", "pytest", "simlab/tests", "-q"]),

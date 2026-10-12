@@ -5,7 +5,10 @@
     - bool 冒充 int 一律拒收（bool 是 int 子类——B23/B31 的教训）；
     - 会话签名：改一个字节就验不过（compare_digest）；
     - 模板默认转义：<script> 必须逃逸；缺键/多余键报错；
-    - 静态守卫：resolve 后必须留在根里。
+    - 静态守卫：resolve 后必须留在根里——专项回归钉死六类向量：
+      裸 .. / 反斜杠遍历（Windows 分隔符）/ 绝对路径拼接替换 /
+      单次编码 %2e%2e 与 %00（netlab 解析层拒）/ %5C 编码反斜杠（套接字级）/
+      双重编码 %252e（保持字面量，不过度解码）。
 真套接字四条：GET/405/静态/会话走完整协议栈。
 """
 import http.client
@@ -20,7 +23,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from webframe import (HttpFail, MicroApp, MicroServer, Raw, ValidationError, esc, render, validate)
 from webframe.template import _PLACEHOLDER
 
-from netlab.http1 import HttpError, Request
+from netlab.http1 import HttpError, Request, parse_request
 
 
 def make_request(method, path, body=b"", headers=None, query=None):
@@ -241,6 +244,59 @@ class WebframeCase(unittest.TestCase):
         self.assertEqual(self.handle("GET", "/static/none.html")[0], 404)
         # ".." 上跳：解析层被 netlab 拒；框架层的 resolve 守卫是最后一道
         self.assertEqual(self.handle("GET", "/static/../secret.txt")[0], 404)
+
+    # ------------------------------------------------ 静态路径安全（专项回归）
+    def plant_secret(self) -> Path:
+        """根外诱饵：真有内容的机密文件，防"不泄露"断言空转。"""
+        secret = Path(self._tmp.name).parent / "wf_secret_probe.txt"
+        secret.write_text("机密", encoding="utf-8")
+        self.addCleanup(lambda: secret.unlink(missing_ok=True))
+        return secret
+
+    def test_backslash_traversal(self):
+        """Windows 把 \\ 当分隔符，netlab 只按 / 拦 `..`——反斜杠这条路
+        必须由框架层 resolve 守卫兜住（Linux 上是怪文件名，同样 404）。"""
+        self.plant_secret()
+        self.assertEqual(self.handle("GET", "/static/..\\secret.txt")[0], 404)
+        self.assertEqual(self.handle("GET", "/static/..\\..\\secret.txt")[0], 404)
+
+    def test_absolute_replacement(self):
+        """Path 拼接遇绝对路径会整体替换：root / "C:/..." 即 C:/...，
+        resolve 后不在根里 → 404。"""
+        self.assertEqual(self.handle("GET", "/static/C:/Windows/win.ini")[0], 404)
+
+    def test_inside_root_still_served(self):
+        """守卫只挡逃逸，不误伤根内相对引用。"""
+        self.assertEqual(self.handle("GET", "/static/./page.html")[0], 200)
+
+    def test_dotdot_and_nul_rejected_at_parse_layer(self):
+        """编码后的遍历（%2e%2e）与空字节必须在 netlab 解析层就死掉。"""
+        for target in (b"/static/%2e%2e/secret.txt",
+                       b"/static/%2E%2E/secret.txt",
+                       b"/static/x%00.html"):
+            with self.assertRaises(HttpError):
+                parse_request(b"GET " + target + b" HTTP/1.1\r\n"
+                              b"Host: t\r\nContent-Length: 0\r\n\r\n")
+
+    def test_encoded_over_socket(self):
+        """真套接字：单次百分号解码后残留的怪路径（%5C 反斜杠、%252e
+        双重编码）不许漏出根外字节。"""
+        self.plant_secret()
+        server = MicroServer(self.app, port=0)
+        port = server.start()
+        try:
+            for target in ("/static/..%5Csecret.txt",
+                           "/static/..%5C..%5Csecret.txt",
+                           "/static/%252e%252e%252fsecret.txt"):
+                conn = http.client.HTTPConnection("127.0.0.1", port)
+                conn.request("GET", target)
+                resp = conn.getresponse()
+                body = resp.read()
+                conn.close()
+                self.assertEqual(resp.status, 404, target)
+                self.assertNotIn("机密".encode("utf-8"), body, target)
+        finally:
+            server.stop()
 
     # ------------------------------------------------ 模板
     def test_template_escapes_by_default(self):
