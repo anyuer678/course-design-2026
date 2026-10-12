@@ -1,0 +1,6 @@
+# 行尾契约：run.bat 家族必须 CRLF——cmd.exe 对 LF-only 的批处理
+# （goto/label/块语句按字节偏移重读）有已知踩雷面；本机 autocrlf=true
+# 会在 checkout 时掩盖问题，任何 autocrlf=false 的环境（如 CI checkout
+# 默认）就会拿到 LF-only。这里按扩展名钉死，不依赖每台机器的配置。
+*.bat text eol=crlf
+*.cmd text eol=crlf
