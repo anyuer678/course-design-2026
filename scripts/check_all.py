@@ -15,8 +15,8 @@
   7.7 run.bat 测试数声明对账：check_runbat_claims.py（活文档里的 "N tests"
       × pytest 实况收集，轮二十五新增——boardweb 加测试后 run.bat 还写 8 的漂移固化）
   8. 产品层：webframe（36，含静态路径安全专项）/ studio（21，八产品真启停+审计）/ linkbox（104）/ simlab（37）
-     / datascope（34）/ cachekv（19）/ sensorhub（25）/ board（12）
-     / courselab（154 项端到端自检）/ boardweb（8）
+     / datascope（37）/ cachekv（19）/ sensorhub（28）/ board（12）
+     / courselab（154 项端到端自检）/ boardweb（13）
 --deep 追加：33 个项目的展示页测试套件（各项目 tests/test_showcase.py）。
 
 不覆盖（如实声明）：各项目核心测试套件（Python/C++/Java，见各项目 run.bat）、
