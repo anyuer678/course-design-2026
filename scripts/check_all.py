@@ -12,6 +12,8 @@
       8 产品；compose 全家桶没实测过的替代哨兵，轮二十二 7 处容器 bug 的固化）
   7.6 新鲜空数据起服：check_fresh_boot.py（8 产品 staged 空卷真启动探活，
       轮二十四新增——compose 命名卷首挂是空目录，此前从未验证过）
+  7.7 run.bat 测试数声明对账：check_runbat_claims.py（活文档里的 "N tests"
+      × pytest 实况收集，轮二十五新增——boardweb 加测试后 run.bat 还写 8 的漂移固化）
   8. 产品层：webframe（36，含静态路径安全专项）/ studio（21，八产品真启停+审计）/ linkbox（104）/ simlab（37）
      / datascope（34）/ cachekv（19）/ sensorhub（25）/ board（12）
      / courselab（154 项端到端自检）/ boardweb（8）
@@ -49,6 +51,7 @@ def steps(deep: bool) -> list:
         ("容器布局对拍（Dockerfile×dockerignore×代码读取×compose 端口，8 产品）", [PY, "scripts/check_docker_layout.py"]),
         ("新鲜空数据起服（8 产品：容器空卷/新克隆等价冒烟）", [PY, "scripts/check_fresh_boot.py"]),
         ("产品层：webframe 微框架（36 项双入口，含静态路径安全专项）", [PY, "-m", "pytest", "webframe/tests", "-q"]),
+        ("run.bat 测试数声明对账（声明 × pytest 收集，8 产品）", [PY, "scripts/check_runbat_claims.py"]),
         ("产品层：Studio 门户（21 项：认证+矩阵+八产品真启停+操作审计）", [PY, "-m", "pytest", "studio/tests", "-q"]),
         ("产品层：LinkBox（104 项双入口）", [PY, "-m", "pytest", "linkbox/tests", "-q"]),
         ("产品层：SimLab 仿真馆（37 项：记录+引擎+播放器+实时重算）", [PY, "-m", "pytest", "simlab/tests", "-q"]),

@@ -11,7 +11,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] Running test suite (59 tests: 43 product + 16 QR)...
+echo [1/2] Running test suite (104 tests: product + QR)...
 python -m unittest discover -s tests
 if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.

@@ -11,7 +11,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] pytest entry (18 tests: MQTT chain + ledger + alerts + HTTP)...
+echo [1/2] pytest entry (28 tests: MQTT chain + ledger + alerts + HTTP)...
 python -m pytest tests -q
 if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.
