@@ -781,6 +781,16 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 
 
+- ✅ **轮三十一：暗色主题整体回退，kb.css 3.1 定版纯亮色（10-12，用户"不要暗"）**：
+  fb673c8 引入的暗色主题（prefers-color-scheme 跟随 + data-theme 手动锁定）与
+  theme.js 三态切换**整套撤销**——kb.css 删暗色 token 双块 + 瓦片暗色变体 +
+  .theme-toggle 组件（升 3.1），7 个产品 index.html 移除 theme.js 引用，
+  sync_assets ASSETS 撤 theme.js 分发行，webkit/theme.js 与 8 份产品副本删除。
+  **保留** v3.0 的瓦片语义彩色强调条（c-blue/green/amber/violet/rose/cyan 左缘
+  3px + 数字随色）。sync_assets 同步 8 份副本 + check_all 21/21 全绿。
+  教训：主题类"我以为的增强"必须先问用户偏好——此功能存活一个提交即被否。
+
+
 - ✅ **轮二十二~二十六：compose 交付面哨兵化 + 共享地基安全回归 + 活文档对账（10-11~10-12）**。
   五轮全在"写了没测/漂了没查"的盲区推进，CI 每轮绿（b17cf6e/af20aad/79e2d70/693797e/
   4dc1b91/b62ed31/196fdb0/ecd036e/00f87e3）：
