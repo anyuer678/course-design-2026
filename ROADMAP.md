@@ -781,6 +781,31 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   cachekv/data/、sensorhub/data/、board/data/、.workbuddy/）。
 
 
+- ✅ **轮二十二~二十六：compose 交付面哨兵化 + 共享地基安全回归 + 活文档对账（10-11~10-12）**。
+  五轮全在"写了没测/漂了没查"的盲区推进，CI 每轮绿（b17cf6e/af20aad/79e2d70/693797e/
+  4dc1b91/b62ed31/196fdb0/ecd036e/00f87e3）：
+  ①**B38 TTL 取整竞态**（b17cf6e）：`EXPIRE` 后紧跟 `TTL`，`int(剩余)` 是否跨整秒边界
+  决定 60/59——showcase 注入固定时钟（store.py 自己写的"时钟可注入"教义），页面字节零
+  变化；环境敏感家族第四款（B37 ms 宽度/B41 对齐空格/B38 TTL 时钟/B31·B11 peak_open）。
+  ②**7 处容器必炸 bug + 布局对拍器**（af20aad→79e2d70/693797e）：8 个 Dockerfile 里
+  6 个漏 `COPY webframe/`（import 即崩）、courselab 漏 `g2/cards.json`（课程唯一源被
+  dockerignore 排除）；固化为 check_docker_layout.py 四层对拍（COPY×dockerignore 镜像集
+  × 代码路径字面量 × 顶层 import × compose 端口×server 默认端口），红绿自证全过。
+  ③**新鲜空数据起服冒烟**（b62ed31）：compose 命名卷首挂是空目录，此前 8 产品只在
+  "data 已有文件"状态测过——staged 空卷真启动探活 8/8 过，第 19 体检项。
+  ④**webframe 静态路径安全专项**（196fdb0）：六类攻击向量回归钉死（反斜杠遍历/
+  绝对路径拼接替换/%2e%2e·%00 解析层拒/%5C·%252e 套接字级/根内不误伤），结论守卫
+  成立非漏洞，测试 31→36。
+  ⑤**run.bat 纪律与声明对账**（196fdb0/ecd036e/00f87e3）：boardweb 纯 LF、B31 中文
+  echo 两处违例清零；`.gitattributes` 钉死 `*.bat/*.cmd eol=crlf`（此前 blob 全存 LF，
+  靠本机 autocrlf=true 掩盖，autocrlf=false 环境会拿到 LF-only 批处理）；run.bat
+  "N tests" 声明漂移 5 处修正（boardweb 8→13/datascope 31→37/linkbox 59→104/
+  sensorhub 18→28/studio 17→21）并固化为 check_runbat_claims.py（第 20 体检项，
+  README/PRODUCTS 历史叙事不对拍）。体检 17→**20** 项；矩阵 pytest 口径 291→**307**。
+  挂起：Docker Desktop 本机启动即退（GUI 层，需用户手启），引擎可用后
+  `docker compose up -d --build` 完成全家桶首次真跑。
+
+
 - ✅ **轮十：浏览器实测轮（10-07，用户"UI 崩坏/登录一塌糊涂/页面打不开/交互极差"）**：
   pytest/selftest 都绿但真实浏览器崩——机器体检覆盖不了浏览器渲染与前后端契约，
   本轮用无头 Edge 逐页截图 + HTTP 资产扫描 + API 直调补上这一层，抓出三个真缺陷并全修：
