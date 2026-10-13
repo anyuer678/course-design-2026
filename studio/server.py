@@ -94,11 +94,11 @@ def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
                 command=[sys.executable, "server.py", "--port", str(courselab_port)],
                 cwd=str(REPO / "courselab")),
         Product("board", "画板桌面应用",
-                "本地绘图 + PNG 导出 + 自动备份（引擎复用 B14）；门户启动即开画图窗口，"
-                "手动开窗 python board/launch.py --window",
+                "本地绘图 + PNG 导出 + 自动备份（引擎复用 B14）；门户启动为"
+                "后台服务（守护 + 看门狗），画图日常走 BoardWeb，桌面窗口手动开："
+                "python board/launch.py --window",
                 port=board_port,
-                command=[sys.executable, "launch.py", "--port", str(board_port),
-                         "--managed-window"],
+                command=[sys.executable, "launch.py", "--port", str(board_port)],
                 cwd=str(REPO / "board"),
                 kind="desktop",             # 8023 是探活行协议口（BOARD 8023 OK），不是 HTTP——门户不给"打开产品"
                 boot_timeout=25.0),         # JVM 冷启动：慢 runner 上 10s 不够（2026-10-12 CI 实测）

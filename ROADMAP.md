@@ -1127,3 +1127,15 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   recv 类断言的固定窗口会放大限流窗；类级共享 UserStore 跨测试污染成员册；
   tail() 的 SELECT 忘加新列 → zip(_KEYS, row) 字段静默错位（"端口 18138"
   跑进了 user 列）——schema 加列必须同步改全部 SELECT。
+- ✅ **轮四十一：画板桌面窗口合并——门户启动不再弹 Swing 窗（10-13，用户"画图窗口合并"）**：
+  用户决策（三选一取轻）：board 保留 Java 桌面叙事，但门户启动改**服务形态**——
+  command 去掉 `--managed-window`（守护+探活口+看门狗照旧挂，不弹窗），
+  画图日常走 BoardWeb，桌面窗口手动 `python board/launch.py --window`。
+  `--managed-window` 参数保留向后兼容（board/README 已注明）。改动面极小：
+  studio/server.py（command+描述）、web/app.js 卡片文案（"桌面应用 · 后台运行，
+  画图走 BoardWeb"）、board/README 三档形态说明——board 契约测试本就用
+  服务形态（`launch.py --port 0`），12 项零改动全绿。真启停验证：旧窗口 stop
+  优雅退出（看门狗一秒级收链），新形态 start 后 java 命令行逐字核对**无
+  --window**、探活在线。坑：门户进程不热加载——改 server.py 后必须重启门户
+  （首验仍带 --window 即此因）；start 紧跟 stop 撞 409（java 看门狗一秒级
+  退出未完成，sleep 3 重试即可）。整链 stop_all→start_all 九产品全绿收尾。
