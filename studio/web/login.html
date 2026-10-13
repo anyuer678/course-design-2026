@@ -7,80 +7,77 @@
 <meta name="theme-color" content="#fafafa">
 <title>登录 / 注册 · Studio 门户</title>
 <link rel="stylesheet" href="/static/assets/kb.css">
-<link rel="stylesheet" href="/static/style.css">
+<style>
+  /* 生产惯例的独立认证页：居中窄卡 + tab，脱离门户 shell */
+  body{margin:0;min-height:100vh;display:flex;flex-direction:column;align-items:center;
+    justify-content:center;background:linear-gradient(160deg,#eef4ff 0%,#fafafa 55%,#f0fdf4 100%);
+    font-family:var(--font,system-ui,'Segoe UI','Microsoft YaHei',sans-serif);color:var(--ink)}
+  .brand{display:flex;align-items:center;gap:.6rem;margin-bottom:1.2rem;user-select:none}
+  .brand .logo{background:var(--accent);color:#fff;border-radius:10px;padding:.3rem .6rem;
+    font-weight:700;font-size:1.15rem}
+  .brand b{font-size:1.25rem}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    box-shadow:0 8px 30px rgba(15,23,42,.08);width:min(400px,92vw);padding:1.4rem 1.6rem 1.2rem}
+  .tabs{display:flex;gap:.3rem;background:var(--bg);border-radius:10px;padding:.25rem;margin-bottom:1.1rem}
+  .tab{flex:1;text-align:center;padding:.5rem;border-radius:8px;cursor:pointer;font-size:.92rem;
+    color:var(--muted);border:none;background:transparent;font-family:inherit}
+  .tab.on{background:var(--card);color:var(--ink);font-weight:600;
+    box-shadow:0 1px 4px rgba(15,23,42,.12)}
+  .pane{display:flex;flex-direction:column;gap:.7rem}
+  .pane[hidden]{display:none}
+  .pane label{font-size:.82rem;color:var(--muted)}
+  .pane input{font:inherit;font-size:.95rem;padding:.55rem .8rem;border:1px solid var(--line);
+    border-radius:9px;background:var(--card);color:var(--ink);width:100%;box-sizing:border-box}
+  .pane input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(37,99,235,.12)}
+  .submit{font:inherit;font-size:.95rem;padding:.6rem;border:none;border-radius:9px;cursor:pointer;
+    background:var(--accent);color:#fff;font-weight:600}
+  .submit:disabled{opacity:.55;cursor:default}
+  .msg{font-size:.85rem;min-height:1.2em}
+  .msg.err{color:#dc2626}
+  .foot{margin-top:1rem;font-size:.85rem;color:var(--muted)}
+  .foot a{color:var(--accent);text-decoration:none}
+  .hint{font-size:.78rem;color:var(--muted);margin-top:.8rem;line-height:1.5}
+  .hint .kbd{background:var(--bg);border:1px solid var(--line);border-radius:5px;
+    padding:.04rem .35rem;font-size:.92em;font-family:ui-monospace,Consolas,monospace}
+  .back{margin-top:1.4rem;font-size:.88rem;color:var(--muted);text-decoration:none}
+  .back:hover{color:var(--accent)}
+</style>
 </head>
 <body data-page="login">
-<div id="toast-box"></div>
-<div class="shell">
-  <aside class="sidebar">
-    <div class="side-brand"><span class="logo">ST</span>Studio</div>
-    <div class="side-section">门户</div>
-    <a class="side-link" href="/">产品矩阵</a>
-    <a class="side-link" href="/audit.html">操作审计</a>
-    <a class="side-link" href="/team.html">成员与邀请</a>
-    <a class="side-link" href="/account.html">账户</a>
-    <div class="side-foot">
-      <div class="badge-dot" id="ws-state">○ 轮询模式（3s）</div>
-      <div class="badge-dot" id="foot-state">只绑 127.0.0.1</div>
-      <div>门户跑在自研 webframe 上</div>
-    </div>
-  </aside>
-
-  <div class="main">
-    <div class="pagebar">
-      <div class="crumb">Studio / <b>登录 / 注册</b></div>
-      <span class="spacer"></span>
-      <div id="authbox" class="authbox" style="display:flex;gap:.5rem;align-items:center">
-        <span class="note" id="auth-msg"></span>
-        <div id="auth-guest" style="display:flex;gap:.5rem;align-items:center">
-          <span class="note">未登录——<a href="/login.html">登录 / 注册</a></span>
-        </div>
-        <div id="auth-user" style="display:flex;gap:.5rem;align-items:center" hidden>
-          <span class="note" id="whoami"></span>
-          <button id="btn-logout" class="btn btn-ghost btn-sm">登出</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="page">
-      <div class="overline">Access</div>
-      <h1>登录 / 注册</h1>
-      <div class="card" style="margin-top:1rem">
-        <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
-          <div style="flex:1 1 260px;min-width:240px">
-            <h2 style="margin-top:0">登录</h2>
-            <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:.5rem">
-              <input id="login-user" value="" class="inp" placeholder="用户名（owner 或成员名）">
-              <input id="login-pass" type="password" placeholder="口令" class="inp"
-                     autocomplete="current-password">
-              <button id="btn-login" class="btn btn-sm" style="width:auto">登录</button>
-            </div>
-            <p class="note" id="login-msg"></p>
-            <p class="note" id="envelope-hint" hidden>首次部署：初始口令在
-              <span class="kbd">studio/data/password.txt</span>——登录后请立即在
-              「账户」页修改，修改后该文件自动作废。</p>
-          </div>
-          <div style="flex:1 1 260px;min-width:240px;border-left:1px solid var(--line);padding-left:1.5rem">
-            <h2 style="margin-top:0">注册</h2>
-            <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:.5rem">
-              <input id="reg-name" placeholder="用户名（2-20 位字母/数字/下划线/连字符）" class="inp">
-              <input id="reg-pass" type="password" placeholder="口令（至少 8 位）" class="inp">
-              <input id="reg-pass2" type="password" placeholder="再输一遍口令" class="inp">
-              <input id="reg-invite" placeholder="邀请码（选填，管理员提供）" class="inp">
-              <button id="btn-register" class="btn btn-ghost btn-sm" style="width:auto">注册并登录</button>
-            </div>
-            <p class="note" id="reg-msg"></p>
-            <p class="note">不填邀请码 = viewer 只读；管理员邀请码可给 operator 启停权限。</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <footer>Studio P0 · 数据只在本机 · 只绑 127.0.0.1 · UI 共享设计系统 kb.css 2.1</footer>
+<div class="brand"><span class="logo">ST</span><b>Studio 产品门户</b></div>
+<div class="card">
+  <div class="tabs">
+    <button type="button" class="tab on" id="tab-login">登录</button>
+    <button type="button" class="tab" id="tab-register">注册</button>
   </div>
-</div>
-<script src="/static/assets/echarts.min.js"></script>
-<script src="/static/app.js"></script>
 
+  <form class="pane" id="pane-login" onsubmit="return false">
+    <div><label for="login-user">用户名</label>
+      <input id="login-user" autocomplete="username" placeholder="owner 或成员名"></div>
+    <div><label for="login-pass">口令</label>
+      <input id="login-pass" type="password" autocomplete="current-password" placeholder="口令"></div>
+    <button class="submit" id="btn-login">登 录</button>
+    <div class="msg err" id="login-msg"></div>
+    <div class="hint" id="envelope-hint" hidden>首次部署：初始口令在
+      <span class="kbd">studio/data/password.txt</span>——登录后请在「账户」页修改，
+      修改后该文件自动作废。</div>
+  </form>
+
+  <form class="pane" id="pane-register" hidden onsubmit="return false">
+    <div><label for="reg-name">用户名</label>
+      <input id="reg-name" autocomplete="username" placeholder="2-20 位字母/数字/下划线/连字符"></div>
+    <div><label for="reg-pass">口令</label>
+      <input id="reg-pass" type="password" autocomplete="new-password" placeholder="至少 8 位"></div>
+    <div><label for="reg-pass2">确认口令</label>
+      <input id="reg-pass2" type="password" autocomplete="new-password" placeholder="再输一遍"></div>
+    <div><label for="reg-invite">邀请码（选填）</label>
+      <input id="reg-invite" autocomplete="off" placeholder="管理员提供；不填 = 只读成员"></div>
+    <button class="submit" id="btn-register">注册并登录</button>
+    <div class="msg err" id="reg-msg"></div>
+  </form>
+</div>
+<div class="foot">不填邀请码注册 = viewer 只读；管理员邀请码可授予启停权限。</div>
+<a class="back" href="/">← 先不登录，回产品矩阵看看</a>
+<script src="/static/app.js"></script>
 </body>
 </html>

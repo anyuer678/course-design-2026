@@ -418,6 +418,58 @@ def build_app(manager: ProductManager, auth: Auth,
         app.get("/" + _page)(_make_page(_page))
         app.get("/" + _page + ".html")(_make_page(_page))   # 直接敲 .html 也达
 
+    # ------------------------------------------------ 演示数据代理（轮四十七）
+    # 控制台页与产品跨端口（跨源），门户页 JS 直接 fetch 产品会被 CORS 拦——
+    # 由门户服务端同源转发。只白名单演示端点，不做成通用代理。
+    def _forward(port: int, method: str, path: str, payload=None):
+        import json as _json
+        import urllib.error
+        import urllib.request
+        opener = urllib.request.build_opener(
+            urllib.request.ProxyHandler({}))       # 项目坑：系统代理必须显式绕开
+        data = _json.dumps(payload).encode() if payload is not None else None
+        req = urllib.request.Request(
+            "http://127.0.0.1:%d%s" % (port, path), data=data, method=method,
+            headers={"Content-Type": "application/json"} if data else {})
+        try:
+            resp = opener.open(req, timeout=10)
+            return _json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError:
+            return None                            # 上游 4xx：调用方按失败计数
+        except urllib.error.URLError:
+            return None                            # 产品瞬断
+
+    @app.post("/api/demo/<pid>")
+    def demo_inject(ctx):
+        pid = get_pid(ctx)
+        p = manager.by_id[pid]
+        if pid == "cachekv":
+            _forward(p.port, "POST", "/api/demo")
+            return ctx.json({"ok": True,
+                             "note": "已注入 12 个演示键（混合 TTL），统计页现在有账可看"})
+        if pid == "sensorhub":
+            status = _forward(p.port, "GET", "/api/status")
+            devices = [d["device"] if isinstance(d, dict) else d
+                       for d in (status.get("devices") or [])]
+            if not devices:
+                raise HttpFail(409, "broker 里还没有设备，无法注入读数")
+            import math
+            ok = 0
+            for di, dev in enumerate(devices):
+                for i in range(8):
+                    # seq 省略（服务端 next_seq）；anomaly 不发——离群标记是引擎自己的语义
+                    payload = {"device": dev,
+                               "temp": round(40 + 12 * math.sin(i / 2 + di) + di * 3, 1),
+                               "vib": round(1.5 + 0.8 * math.cos(i / 3 + di), 2)}
+                    if _forward(p.port, "POST", "/api/inject", payload) is not None:
+                        ok += 1
+            if ok == 0:
+                raise HttpFail(502, "读数注入全部被上游拒绝")
+            return ctx.json({"ok": True,
+                             "note": "已注入 %d 台设备 × 8 拍演示读数（成功 %d）"
+                                     % (len(devices), ok)})
+        raise HttpFail(409, "%s 不需要演示数据" % p.name)
+
     app.static("/static", WEB_ROOT)
     return app
 

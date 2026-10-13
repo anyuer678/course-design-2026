@@ -78,6 +78,16 @@
 
   // ================================================================ login 页
   function initLogin() {
+    // tab 切换（生产惯例：登录/注册同页切换）
+    function showTab(which) {
+      var login = which === "login";
+      $("tab-login").classList.toggle("on", login);
+      $("tab-register").classList.toggle("on", !login);
+      $("pane-login").hidden = !login;
+      $("pane-register").hidden = login;
+    }
+    $("tab-login").addEventListener("click", function () { showTab("login"); });
+    $("tab-register").addEventListener("click", function () { showTab("register"); });
     function login() {
       var btn = $("btn-login"), msg = $("login-msg");
       btn.disabled = true; btn.textContent = "登录中…"; msg.textContent = "";
@@ -126,10 +136,12 @@
     });
     ["reg-name", "reg-pass", "reg-pass2", "reg-invite"].forEach(function (id) {
       $(id).addEventListener("keydown", function (e) {
-        if (e.key === "Enter") $("btn-register").click();
+        if (e.key === "Enter") register();
       });
     });
     $("btn-register").addEventListener("click", register);
+    // 已登录访问认证页 → 直接回矩阵
+    if (user) location.href = "/";
   }
 
   // ================================================================ products 页
@@ -633,6 +645,39 @@
       $("console-open").hidden = false;
       $("console-note").textContent = "内嵌自 127.0.0.1:" + p.port +
         "（产品在新窗口打开也一样可用）";
+      // 演示条（轮四十七）：有演示端点的产品给一键注入；其余给一句话引导
+      var DEMO_HINT = {
+        cachekv: "注入 12 个混合 TTL 演示键，统计页立即有账可看",
+        sensorhub: "为全部设备注入 8 拍演示读数（含 1 拍离群），曲线立刻有形状"
+      };
+      var GUIDE = {
+        datascope: "数据工作台自带内置演示 CSV（页内「样例数据」即可载入体验画像与清洗）",
+        linkbox: "创建一条短链或文本暂存即可开始体验",
+        courselab: "用右上角注册的账号登录，课程/实验/任务即刻可见",
+        boardweb: "直接在画布上绘制——开两个窗口还能看到多人协同",
+        simlab: "回放页自带演示帧，无需额外数据",
+        lab: "项目群控制台自带全部演示入口"
+      };
+      if (DEMO_HINT[pid]) {
+        $("demo-note").textContent = "空产品看不出效果？";
+        $("btn-demo").addEventListener("click", function () {
+          var btn = $("btn-demo");
+          btn.disabled = true; btn.textContent = "注入中…";
+          postJSON("/api/demo/" + pid).then(function (r) {
+            if (r.status === 200) {
+              $("demo-msg").textContent = r.data.note || "已注入";
+              toast(r.data.note || "演示数据已注入", "ok");
+              $("console-frame").src = $("console-frame").src;   // 重载 iframe 看到数据
+            } else {
+              $("demo-msg").textContent = r.data.error || "注入失败";
+            }
+          }).finally(function () { btn.disabled = false; btn.textContent = "一键注入演示数据"; });
+        });
+      } else {
+        $("demo-note").textContent = GUIDE[pid] || "";
+        $("btn-demo").hidden = true;
+      }
+      $("demo-bar").hidden = false;
     });
   }
 

@@ -1207,3 +1207,16 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   注册后跳矩阵、owner team 页正常，零 console 错误。**排障坑（两次都是它）**：
   TaskStop 门户会整树收掉它拉起的产品——走查产品全离线的"链接消失"是环境不是代码；
   多页验证前先 curl /api/products 探活产品在不在。门户保持运行交付用户试用。
+
+- ✅ **轮四十七：认证页生产化重设计 + 控制台一键演示数据（10-13，用户"登录注册与生产界面不符、页面演示不良"）**：
+  ① **认证页重做**——脱离门户 shell 的居中独立卡（渐变浅色背景、大品牌头、单列窄卡），
+  登录/注册**同页 tab 切换**（生产惯例），注册成功 toast+跳矩阵、已登录访问认证页自动跳回；
+  ② **控制台一键演示数据**——空产品看不出效果是演示硬伤，console 页加演示条：
+  cachekv（POST /api/demo 12 键）与 sensorhub（服务端代理循环 inject，3 设备 × 8 拍
+  正弦读数）一键注入后 iframe 重载立即有数据；server 加 `/api/demo/<pid>` **同源代理**
+  （跨端口 CORS 拦浏览器直连，白名单转发不做成通用代理；显式无代理 opener 绕系统代理；
+  HTTPError/URLError 捕获转失败计数）；datascope/linkbox/courselab/boardweb/simlab 给
+  一句话演示引导（产品自带样例或零数据即合理）。测试 36 项零改动全绿；走查：tab 切换/
+  注册跳转/已登录跳回/cachekv 12 键注入/sensorhub 24 拍注入（toast+演示条双反馈）
+  全对零错误。**坑**：代理转发 seq:""null 键会被 schema 拒——省略键而非发 null；
+  _forward 未捕 HTTPError 导致 500；产品演示前先确认在线（TaskStop 整树坑复发）。
