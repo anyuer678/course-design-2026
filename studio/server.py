@@ -27,13 +27,13 @@ try:                                                          # noqa: E402
     from .auth import USERNAME, Auth
     from .manager import AlreadyOnline, NotOurs, Product, ProductManager
     from .monitor import UptimeMonitor
-    from .users import UserStore
+    from .users import PERMISSIONS, UserStore
 except ImportError:                     # 作为脚本直接跑（python server.py）
     from audit import AuditLog
     from auth import USERNAME, Auth
     from manager import AlreadyOnline, NotOurs, Product, ProductManager
     from monitor import UptimeMonitor
-    from users import UserStore
+    from users import PERMISSIONS, UserStore
 
 WEB_ROOT = ROOT / "web"
 DATA_DIR = ROOT / "data"
@@ -128,11 +128,12 @@ def build_app(manager: ProductManager, auth: Auth,
         if ctx.session.get("gen") != auth.generation:
             raise HttpFail(401, "口令已更新，请重新登录")
 
-    def require_role(ctx, *roles) -> str:
-        """RBAC（轮四十）：require_user 之上再查角色。返回当前用户名。"""
+    def require_perm(ctx, perm: str) -> str:
+        """用户分层（轮四十四）：按 users.PERMISSIONS 权限点把门——
+        矩阵一处定义（users.py），前后端与测试三处同源。"""
         require_user(ctx)
         role = ctx.session.get("role")
-        if role not in roles:
+        if role not in PERMISSIONS[perm]:
             raise HttpFail(403, "当前角色无权执行此操作")
         return ctx.session["user"]
 
@@ -168,12 +169,14 @@ def build_app(manager: ProductManager, auth: Auth,
 
     @app.get("/api/me")
     def me(ctx):
-        return ctx.json({"user": ctx.session.get("user"),
-                         "role": ctx.session.get("role")})
+        role = ctx.session.get("role")
+        perms = [p for p, roles in PERMISSIONS.items() if role in roles]
+        return ctx.json({"user": ctx.session.get("user"), "role": role,
+                         "permissions": perms})
 
     @app.post("/api/password")
     def change_password(ctx):
-        require_role(ctx, "owner")            # 成员口令由 owner 重置，不自助改
+        require_perm(ctx, "portal.password")  # 成员口令由 owner 重置，不自助改
         body = ctx.json_body(_PASSWORD_SCHEMA)
         if not auth.verify(body["old"]):
             raise HttpFail(400, "旧口令不对")
@@ -205,12 +208,12 @@ def build_app(manager: ProductManager, auth: Auth,
     # ------------------------------------------------ 邀请码（owner 专属）
     @app.get("/api/invites")
     def invites_list(ctx):
-        require_role(ctx, "owner")
+        require_perm(ctx, "invites.manage")
         return ctx.json({"invites": users.invites_listing()})
 
     @app.post("/api/invites")
     def invites_create(ctx):
-        require_role(ctx, "owner")
+        require_perm(ctx, "invites.manage")
         body = ctx.json_body(_INVITE_SCHEMA)
         try:
             code = users.create_invite(body["role"])
@@ -221,7 +224,7 @@ def build_app(manager: ProductManager, auth: Auth,
 
     @app.delete("/api/invites/<code>")
     def invites_revoke(ctx):
-        require_role(ctx, "owner")
+        require_perm(ctx, "invites.manage")
         try:
             users.revoke_invite(ctx.params["code"])
         except KeyError as exc:
@@ -231,12 +234,12 @@ def build_app(manager: ProductManager, auth: Auth,
     # ------------------------------------------------ 成员管理（RBAC，owner 专属）
     @app.get("/api/users")
     def users_list(ctx):
-        require_role(ctx, "owner")
+        require_perm(ctx, "users.manage")
         return ctx.json({"users": users.listing()})
 
     @app.post("/api/users")
     def users_add(ctx):
-        require_role(ctx, "owner")
+        require_perm(ctx, "users.manage")
         body = ctx.json_body(_USER_SCHEMA)
         try:
             users.add(body["name"], body["password"], body["role"])
@@ -249,7 +252,7 @@ def build_app(manager: ProductManager, auth: Auth,
 
     @app.post("/api/users/<name>/role")
     def users_set_role(ctx):
-        require_role(ctx, "owner")
+        require_perm(ctx, "users.manage")
         body = ctx.json_body(_ROLE_SCHEMA)
         try:
             users.set_role(ctx.params["name"], body["role"])
@@ -262,7 +265,7 @@ def build_app(manager: ProductManager, auth: Auth,
 
     @app.post("/api/users/<name>/reset")
     def users_reset(ctx):
-        require_role(ctx, "owner")
+        require_perm(ctx, "users.manage")
         body = ctx.json_body(_RESET_SCHEMA)
         try:
             users.reset_password(ctx.params["name"], body["password"])
@@ -274,7 +277,7 @@ def build_app(manager: ProductManager, auth: Auth,
 
     @app.delete("/api/users/<name>")
     def users_remove(ctx):
-        require_role(ctx, "owner")
+        require_perm(ctx, "users.manage")
         try:
             users.remove(ctx.params["name"])
         except KeyError as exc:
@@ -365,7 +368,7 @@ def build_app(manager: ProductManager, auth: Auth,
 
     @app.post("/api/products/<pid>/start")
     def product_start(ctx):
-        user = require_role(ctx, "owner", "operator")   # viewer 只读（RBAC）
+        user = require_perm(ctx, "product.start")         # viewer 只读（RBAC）
         pid = get_pid(ctx)
         try:
             result = ctx.json(manager.start(pid, user=user))
@@ -378,7 +381,7 @@ def build_app(manager: ProductManager, auth: Auth,
 
     @app.post("/api/products/<pid>/stop")
     def product_stop(ctx):
-        user = require_role(ctx, "owner", "operator")
+        user = require_perm(ctx, "product.stop")
         pid = get_pid(ctx)
         try:
             result = ctx.json(manager.stop(pid, user=user))
@@ -390,7 +393,7 @@ def build_app(manager: ProductManager, auth: Auth,
     # ------------------------------------------------ 操作审计（M2，要求登录）
     @app.get("/api/audit")
     def audit_events(ctx):
-        require_user(ctx)
+        require_perm(ctx, "audit.read")
         raw = ctx.query.get("limit", "200")
         try:
             limit = int(raw)

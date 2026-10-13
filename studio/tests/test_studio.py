@@ -973,5 +973,106 @@ class TestAuthHashAndRegister(unittest.TestCase):
         self.assertEqual(status, 404)
 
 
+class TestPermissionMatrix(unittest.TestCase):
+    """轮四十四用户分层：权限矩阵全遍历——四身份 × 六权限点逐格钉住，
+    users.PERMISSIONS 一处定义、服务端把门、本测试仲裁，三处同源不漂移。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.addClassCleanup(lambda: cls._tmp.cleanup())
+        cls.auth = Auth(cls._tmp.name)
+        from studio.users import UserStore, PERMISSIONS
+        cls.PERMS = sorted(PERMISSIONS)
+        cls.users = UserStore(cls._tmp.name, iterations=1000)
+        cls.manager = build_manager(linkbox_port=18398, lab_port=LAB_PORT,
+                                    simlab_port=SIMLAB_PORT, datascope_port=DATASCOPE_PORT,
+                                    cachekv_port=18338, sensorhub_port=SENSORHUB_PORT,
+                                    board_port=BOARD_PORT, courselab_port=18369,
+                                    linkbox_memory=True)
+        cls.app = build_app(cls.manager, cls.auth, users=cls.users)
+
+    def _probe(self, method, path, cookie=None, body=None):
+        raw = json.dumps(body).encode() if body is not None else b""
+        headers = [("Content-Type", "application/json")] if body is not None else []
+        if cookie:
+            headers.append(("Cookie", cookie))
+        return self._handle(method, path, raw, headers)
+
+    def _handle(self, method, path, body=b"", headers=None):
+        from netlab.http1 import Request
+        req = Request(method=method, target=path, version="1.1",
+                      headers=[(k.lower(), v) for k, v in list(headers or [])],
+                      body=body, path=path, query=[], keep_alive=False,
+                      content_length=len(body))
+        return self.app.handle(req)
+
+    def test_matrix_all_cells(self):
+        # 备料：owner 登录 → 建三个成员 → 逐个登录
+        pw = {"owner": self.auth.password, "op": "pw-123456789",
+              "vw": "pw-123456789"}
+        self.users.add("op", pw["op"], "operator")
+        self.users.add("vw", pw["vw"], "viewer")
+        cookies = {}
+        for name in ("owner", "op", "vw"):
+            raw = json.dumps({"username": name,
+                              "password": pw.get(name, pw["op"])}).encode()
+            status, headers, _ = self._handle(
+                "POST", "/api/login", raw, [("Content-Type", "application/json")])
+            self.assertEqual(status, 200, name)
+            for k, v in headers:
+                if k == "Set-Cookie" and v.startswith("wf_session="):
+                    cookies[name] = v.split(";")[0]
+        cookies["guest"] = None
+        # 权限点 → 探测路由（POST/GET/DELETE 各按其法）
+        probes = {
+            "product.start":   ("POST", "/api/products/cachekv/start"),
+            "product.stop":    ("POST", "/api/products/cachekv/stop"),
+            "audit.read":      ("GET", "/api/audit"),
+            "users.manage":    ("GET", "/api/users"),
+            "invites.manage":  ("POST", "/api/invites", {"role": "viewer"}),
+            "portal.password": ("POST", "/api/password",
+                                {"old": "x", "new": "y"}),
+        }
+        # 期望矩阵：角色 → 允许的权限点集合（users.PERMISSIONS 的直接投影）
+        expect = {
+            "owner": set(self.PERMS),
+            "op": {"product.start", "product.stop", "audit.read"},
+            "vw": {"audit.read"},
+            "guest": set(),
+        }
+        started = False
+        for perm in self.PERMS:
+            method, path = probes[perm][:2]
+            body = probes[perm][2] if len(probes[perm]) > 2 else None
+            for who, cookie in cookies.items():
+                status, _, _ = self._handle(method, path,
+                                            json.dumps(body).encode() if body else b"",
+                                            ([("Cookie", cookie)] if cookie else []) +
+                                            ([("Content-Type", "application/json")] if body else []))
+                allowed = perm in expect[who]
+                if who == "guest":
+                    self.assertEqual(status, 401, (who, perm))
+                elif allowed:
+                    self.assertIn(status, (200, 201, 400, 404, 409),
+                                  (who, perm, status))     # 过了权限门进业务层
+                else:
+                    self.assertEqual(status, 403, (who, perm, status))
+        # me 的 permissions 下发与矩阵一致
+        for who in ("owner", "op", "vw"):
+            status, _, body = self._handle("GET", "/api/me",
+                                           headers=[("Cookie", cookies[who])])
+            perms = json.loads(body)["permissions"]
+            self.assertEqual(sorted(perms), sorted(expect[who] & set(self.PERMS)), who)
+
+    def test_role_levels_documented(self):
+        from studio.users import ROLE_LEVELS, PERMISSIONS
+        self.assertEqual(ROLE_LEVELS,
+                         {"owner": 3, "operator": 2, "viewer": 1})
+        # owner 是超集：任何权限点都允许 owner
+        for roles in PERMISSIONS.values():
+            self.assertIn("owner", roles)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

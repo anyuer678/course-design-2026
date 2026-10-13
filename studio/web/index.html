@@ -145,7 +145,13 @@
       </div>
 
       <div class="overline">Account</div>
-      <h2 id="account">改口令</h2>
+      <h2 id="account">我的分层与权限 <span class="note">（L3 管理员 &gt; L2 操作员 &gt; L1 观察者
+        &gt; L0 未登录公开只读）</span></h2>
+      <div class="card" id="perm-card">
+        <p class="note" id="perm-me">未登录（L0）：仅可浏览产品矩阵与状态。</p>
+        <div id="perm-list" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
+      </div>
+      <h2>改口令</h2>
       <div class="card">
         <div class="toolbar">
           <input id="old-pass" type="password" placeholder="旧口令" class="inp"

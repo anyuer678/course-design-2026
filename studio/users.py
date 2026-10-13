@@ -27,6 +27,21 @@ _NAME_RE = re.compile(r"^[a-zA-Z0-9_-]{2,20}$")
 _MIN_PW = 8
 _ITERATIONS = 100_000
 
+# ------------------------------------------------ 用户分层（轮四十四，权限矩阵）
+# L3 owner 管理员（机主）> L2 operator 操作员 > L1 viewer 观察者 > L0 未登录（公开只读）
+# 权限点 → 允许角色。一处定义：server 层 require_perm 按此把门，
+# /api/me 下发 permissions 供前端渲染，测试逐格钉住——三处同源不漂移。
+ROLE_LEVELS = {"owner": 3, "operator": 2, "viewer": 1}   # L0 未登录不在册
+
+PERMISSIONS = {
+    "product.start":   ("owner", "operator"),            # 启动产品
+    "product.stop":    ("owner", "operator"),            # 停止产品
+    "audit.read":      ("owner", "operator", "viewer"),  # 查看操作审计
+    "users.manage":    ("owner",),                       # 成员管理（增删/角色/重置口令）
+    "invites.manage":  ("owner",),                       # 邀请码（生成/作废）
+    "portal.password": ("owner",),                       # 修改门户 owner 口令
+}
+
 
 class UserStore:
     """成员账号簿。全部操作加锁（事件循环单线程，但测试与启停线程都会碰）。

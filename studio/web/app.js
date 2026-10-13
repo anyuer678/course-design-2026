@@ -244,6 +244,28 @@
   });
   _usersObserver.observe($("users-card"), { attributes: true, attributeFilter: ["hidden"] });
 
+  // ------------------------------------------------ 我的分层与权限（轮四十四）
+  var PERM_DESC = {
+    "product.start": "启动产品",
+    "product.stop": "停止产品",
+    "audit.read": "查看操作审计",
+    "users.manage": "成员管理",
+    "invites.manage": "邀请码管理",
+    "portal.password": "修改门户口令"
+  };
+  function renderPerms() {
+    fetch("/api/me").then(function (r) { return r.json(); }).then(function (d) {
+      var me = $("perm-me"), list = $("perm-list");
+      list.textContent = "";
+      if (!d.user) { me.textContent = "未登录（L0）：仅可浏览产品矩阵与状态。"; return; }
+      var labels = { owner: "L3 管理员", operator: "L2 操作员", viewer: "L1 观察者" };
+      me.textContent = d.user + "（" + (labels[d.role] || d.role) + "）拥有的权限：";
+      (d.permissions || []).forEach(function (p) {
+        if (PERM_DESC[p]) list.appendChild(el("span", "pill ok", PERM_DESC[p]));
+      });
+    }).catch(function () { /* 未登录 401：保持 L0 文案 */ });
+  }
+
   // ------------------------------------------------ 产品卡片
   function render(list) {
     var box = $("cards");
@@ -412,6 +434,7 @@
       user = (data.portal && data.portal.user) || null;
       role = (data.portal && data.portal.role) || null;
       renderAuth(!!(data.portal && data.portal.envelope_active));
+      renderPerms();
       render(last);
       renderUptime();
       refreshAudit();
