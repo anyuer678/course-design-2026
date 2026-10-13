@@ -45,6 +45,8 @@ _PASSWORD_SCHEMA = {"old": (str, True), "new": (str, True)}
 _USER_SCHEMA = {"name": (str, True), "password": (str, True), "role": (str, True)}
 _ROLE_SCHEMA = {"role": (str, True)}
 _RESET_SCHEMA = {"password": (str, True)}
+_REGISTER_SCHEMA = {"name": (str, True), "password": (str, True)}
+_INVITE_SCHEMA = {"role": (str, True)}
 
 
 def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
@@ -181,6 +183,50 @@ def build_app(manager: ProductManager, auth: Auth,
             raise HttpFail(400, str(exc)) from None
         auth.bump_generation()                # 旧世代会话（含本会话）全部失效
         return ctx.json({"changed": True})
+
+    # ------------------------------------------------ 自助注册（轮四十二，公开）
+    @app.post("/api/register")
+    def register_self(ctx):
+        body = ctx.json_body(_REGISTER_SCHEMA, allow_unknown=True)
+        try:
+            role = users.register_self(body["name"], body["password"],
+                                       body.get("invite"))
+        except ValueError as exc:
+            raise HttpFail(400, str(exc)) from None
+        except KeyError as exc:
+            raise HttpFail(409, str(exc)) from None
+        # 注册即登录（免二次输入）；viewer 只读无风险，operator 凭邀请码
+        ctx.session["user"] = body["name"]
+        ctx.session["role"] = role
+        ctx.session["gen"] = auth.generation
+        return ctx.json({"ok": True, "user": body["name"], "role": role},
+                        status=201)
+
+    # ------------------------------------------------ 邀请码（owner 专属）
+    @app.get("/api/invites")
+    def invites_list(ctx):
+        require_role(ctx, "owner")
+        return ctx.json({"invites": users.invites_listing()})
+
+    @app.post("/api/invites")
+    def invites_create(ctx):
+        require_role(ctx, "owner")
+        body = ctx.json_body(_INVITE_SCHEMA)
+        try:
+            code = users.create_invite(body["role"])
+        except ValueError as exc:
+            raise HttpFail(400, str(exc)) from None
+        return ctx.json({"ok": True, "code": code, "role": body["role"]},
+                        status=201)
+
+    @app.delete("/api/invites/<code>")
+    def invites_revoke(ctx):
+        require_role(ctx, "owner")
+        try:
+            users.revoke_invite(ctx.params["code"])
+        except KeyError as exc:
+            raise HttpFail(404, str(exc)) from None
+        return ctx.json({"ok": True})
 
     # ------------------------------------------------ 成员管理（RBAC，owner 专属）
     @app.get("/api/users")

@@ -20,7 +20,7 @@ docker run -p 8017:8017 kcsuite-studio
 ## 运行
 
 ```
-run.bat                    # 自测（31 项）+ 四段演示（不占常驻端口、凭据用临时目录）
+run.bat                    # 自测（34 项）+ 四段演示（不占常驻端口、凭据用临时目录）
 server.py --port 8017      # 启动门户（浏览器打开 http://127.0.0.1:8017/）
 ```
 
@@ -63,11 +63,14 @@ server.py --port 8017      # 启动门户（浏览器打开 http://127.0.0.1:801
 | POST | /api/products/<id>/stop | 停止（需登录；离线幂等 200；非门户启动 409） |
 | GET | /api/audit | 操作审计（M2；需登录；含 user 列记操作人） |
 | GET/POST | /api/users | 成员管理（RBAC，owner 专属；pbkdf2 哈希落盘） |
+| POST | /api/register | 自助注册（公开；无码 = viewer，凭一次性邀请码得对应角色，注册即登录） |
+| GET/POST/DELETE | /api/invites | 邀请码管理（owner 专属；一次性用后即焚） |
 | POST | /api/users/<n>/role、/reset、DELETE | 改角色 / 重置口令 / 删除成员 |
 | GET | / | 门户首页（webframe 静态管线 + `/static/*` 资产） |
 
-## 测试策略（31 项）
+## 测试策略（34 项）
 
+**认证哈希化 + 自助注册（2026-10-13，+3）**：owner 口令 pbkdf2 哈希入 owner.json（password.txt 降级一次性信封——改口令即拆封，磁盘无长期明文；忘口令删 owner.json 重启重新生成）；自助注册（无码 viewer / 凭码 operator、owner 保留名、重名 409、码一次性用后即焚、邀请码管理 owner 专属）。
 **RBAC 三角色（2026-10-13，+5）**：成员账号簿 pbkdf2 哈希落盘（明文不进
 users.json）+ 四道校验闸（坏名/短口令/坏角色/重名）；owner 建/列/改角色/
 重置/删成员（重删 404、重名 409）；start/stop 权限门——viewer 403（在业务

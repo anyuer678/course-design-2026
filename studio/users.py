@@ -16,37 +16,51 @@ import hmac
 import json
 import re
 import secrets
+import time
 from pathlib import Path
 
-ROLES = ("operator", "viewer")
+_ROLES = ("operator", "viewer")
+ROLES = _ROLES
+NAME_RE = re.compile(r"^[A-Za-z0-9_-]{2,20}$")
+USERNAME = "owner"                    # 机主保留名（自助注册不可占用）
 _NAME_RE = re.compile(r"^[a-zA-Z0-9_-]{2,20}$")
 _MIN_PW = 8
 _ITERATIONS = 100_000
 
 
 class UserStore:
-    """成员账号簿。全部操作加锁（事件循环单线程，但测试与启停线程都会碰）。"""
+    """成员账号簿。全部操作加锁（事件循环单线程，但测试与启停线程都会碰）。
+
+    轮四十二起支持自助注册：owner 生成一次性邀请码，注册者凭码获得对应
+    角色；无码注册一律 viewer（只读无风险）。邀请码随 users.json 落盘。
+    """
 
     def __init__(self, data_dir: str | Path, *, iterations: int = _ITERATIONS):
         self.path = Path(data_dir) / "users.json"
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.iterations = iterations
-        self.users: dict[str, dict] = self._load()
+        data = self._load()
+        self.users: dict[str, dict] = data.get("users", {})
+        self.invites: dict[str, dict] = data.get("invites", {})
 
     def _load(self) -> dict:
         if self.path.is_file():
             try:
                 data = json.loads(self.path.read_text(encoding="utf-8"))
                 if isinstance(data, dict):
+                    # 旧格式（轮四十：直接 {name: rec}）迁移为新结构
+                    if "users" not in data:
+                        return {"users": data, "invites": {}}
                     return data
             except (ValueError, OSError):
                 pass                      # 坏文件当空册（新号重建），不崩门户
-        return {}
+        return {"users": {}, "invites": {}}
 
     def _save(self) -> None:
         tmp = self.path.with_suffix(".tmp")
-        tmp.write_text(json.dumps(self.users, ensure_ascii=False, indent=1),
-                       encoding="utf-8")
+        tmp.write_text(json.dumps(
+            {"users": self.users, "invites": self.invites},
+            ensure_ascii=False, indent=1), encoding="utf-8")
         tmp.replace(self.path)            # 原子替换，半写不留账
 
     @staticmethod
@@ -108,3 +122,51 @@ class UserStore:
     def listing(self) -> list[dict]:
         return [{"name": n, "role": r["role"]}
                 for n, r in sorted(self.users.items())]
+
+    # ------------------------------------------------ 自助注册与邀请码（轮四十二）
+    def register_self(self, name: str, password: str,
+                      invite: str | None = None) -> str:
+        """自助注册：凭一次性邀请码得对应角色，无码一律 viewer。
+        "owner" 是机主保留名；码用后即焚。返回新成员角色。"""
+        if not isinstance(name, str) or not _NAME_RE.match(name):
+            raise ValueError("用户名须为 2-20 位字母/数字/下划线/连字符")
+        if name.lower() == USERNAME.lower():
+            raise ValueError("该用户名为机主保留名，请换一个")
+        if not isinstance(password, str) or len(password) < _MIN_PW:
+            raise ValueError(f"口令至少 {_MIN_PW} 个字符")
+        if name in self.users:
+            raise KeyError(f"成员 {name!r} 已存在")
+        if invite:
+            code = str(invite).strip()
+            info = self.invites.get(code)
+            if info is None:
+                raise ValueError("邀请码无效或已被使用")
+            role = info["role"]
+            del self.invites[code]            # 一次性，用后即焚
+        else:
+            role = "viewer"
+        salt = secrets.token_bytes(16)
+        self.users[name] = {"salt": salt.hex(),
+                            "hash": self._hash(password, salt, self.iterations),
+                            "role": role}
+        self._save()
+        return role
+
+    def create_invite(self, role: str = "operator") -> str:
+        """owner 生成一次性邀请码。"""
+        if role not in ROLES:
+            raise ValueError(f"角色只能是 {' / '.join(ROLES)}")
+        code = secrets.token_urlsafe(6)       # 8 字符，够抄写
+        self.invites[code] = {"role": role, "created": time.strftime("%Y-%m-%d")}
+        self._save()
+        return code
+
+    def invites_listing(self) -> list[dict]:
+        return [{"code": c, "role": i["role"], "created": i.get("created", "")}
+                for c, i in sorted(self.invites.items())]
+
+    def revoke_invite(self, code: str) -> None:
+        if code not in self.invites:
+            raise KeyError(f"没有邀请码 {code!r}")
+        del self.invites[code]
+        self._save()

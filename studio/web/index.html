@@ -17,6 +17,8 @@
     <a class="side-link active" href="#cards" data-nav="cards">产品矩阵</a>
     <a class="side-link" href="#audit" data-nav="audit">操作审计</a>
     <a class="side-link" href="#account" data-nav="account">账户</a>
+    <a class="side-link" href="#register" data-nav="register" id="nav-register"
+       hidden>注册</a>
     <div class="side-foot">
       <div class="badge-dot" id="ws-state">○ 轮询模式（3s）</div>
       <div class="badge-dot" id="foot-state">只绑 127.0.0.1</div>
@@ -100,6 +102,35 @@
           <button id="btn-add-user" class="btn btn-ghost btn-sm">添加成员</button>
         </div>
         <p class="note" id="users-msg"></p>
+        <div class="overline" style="margin-top:.8rem">Invites</div>
+        <p class="note">邀请码：注册页填入即可获得对应角色（一次性，用后即焚）。
+          不发码也没关系——不填码注册一律 viewer 只读。</p>
+        <div class="toolbar">
+          <select id="invite-role" style="flex:none">
+            <option value="operator">operator 邀请码</option>
+            <option value="viewer">viewer 邀请码</option>
+          </select>
+          <button id="btn-new-invite" class="btn btn-ghost btn-sm">生成邀请码</button>
+        </div>
+        <table class="kb" style="margin-top:.4rem">
+          <thead><tr><th>邀请码</th><th>角色</th><th>生成日期</th><th></th></tr></thead>
+          <tbody id="invite-rows"></tbody>
+        </table>
+        <p class="note" id="invite-msg"></p>
+      </div>
+
+      <div class="overline">Join</div>
+      <h2 id="register">注册 <span class="note">（自助开号：不填邀请码 = viewer 只读；
+        管理员的邀请码可给 operator 启停权限）</span></h2>
+      <div class="card" id="register-card" hidden>
+        <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:.5rem">
+          <input id="reg-name" placeholder="用户名（2-20 位字母/数字/下划线/连字符）" class="inp">
+          <input id="reg-pass" type="password" placeholder="口令（至少 8 位）" class="inp">
+          <input id="reg-pass2" type="password" placeholder="再输一遍口令" class="inp">
+          <input id="reg-invite" placeholder="邀请码（选填，管理员提供）" class="inp">
+          <button id="btn-register" class="btn btn-ghost btn-sm" style="width:auto">注册并登录</button>
+        </div>
+        <p class="note" id="reg-msg"></p>
       </div>
 
       <div class="overline">Account</div>

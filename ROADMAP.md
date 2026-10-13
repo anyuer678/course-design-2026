@@ -1139,3 +1139,22 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   --window**、探活在线。坑：门户进程不热加载——改 server.py 后必须重启门户
   （首验仍带 --window 即此因）；start 紧跟 stop 撞 409（java 看门狗一秒级
   退出未完成，sleep 3 重试即可）。整链 stop_all→start_all 九产品全绿收尾。
+
+- ✅ **轮四十二：Studio 认证翻新——owner 口令哈希化 + 自助注册/邀请码（10-13，用户"登录注册系统稀烂"）**：
+  审查结论先立此存照：CourseLab 的注册登录**不烂**（PBKDF2 120k+盐+参数随用户、
+  服务端会话表、限流、字段级错误提示、审批模式处理——对照组价值）；真正烂的是
+  Studio：owner 口令**明文落盘** password.txt（成员反而是哈希）、且登录要翻文件。
+  两项修复：① **owner 口令哈希化**——pbkdf2 存 data/owner.json（120k 迭代），
+  password.txt 降级"一次性开机信封"：仅首次启动出现明文，改口令即拆封（文件改写
+  为全注释失效说明，磁盘无长期明文）；忘口令删 owner.json 重启即重新生成（自托管
+  单机的如实找回口径）。auth.password 语义 = 内存缓存当前口令（磁盘只有哈希；
+  set_password 后更新而非置 None——lifecycle 测试依赖此隐式契约）。② **自助注册
+  + 邀请码**：POST /api/register 公开——无码注册 = viewer（只读无风险），凭
+  owner 生成的一次性邀请码得 operator；"owner"保留名、重名 409、码用后即焚；
+  /api/invites 三件套（owner 专属）；前端注册页签（未登录可见，注册即登录）+
+  成员面板邀请码区（生成/列表/作废）。users.json 结构升级 {users, invites}（旧
+  格式自动迁移）。测试 +3（信封拆封与跨 Auth 重启验证、注册角色矩阵、邀请码
+  一次性与权限门）→ studio 31→34 双入口绿。三段走查：无码注册"观察者"徽标、
+  owner 生成码、凭码注册"操作员"徽标，全对零错误。级联 31→34：run.bat/README/
+  check_all + 声明对账过。走查坑：贪婪正则把提示整句当邀请码提取（改字符类）；
+  注册页卡 hidden 要 renderAuth 控制显隐，别指望锚点点击能打开 hidden 卡。

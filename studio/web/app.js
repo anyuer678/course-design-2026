@@ -38,6 +38,8 @@
       $("btn-users").hidden = role !== "owner";
       $("users-card").hidden = role !== "owner" ? true : $("users-card").hidden;
     }
+    $("nav-register").hidden = !!user;         // 注册入口只给未登录的人
+    $("register-card").hidden = !!user;        // 注册表单同理（登录后收起）
   }
 
   function authMsg(text) { $("auth-msg").textContent = text || ""; }
@@ -172,6 +174,73 @@
       }
     });
   });
+
+  // ------------------------------------------------ 自助注册（轮四十二）
+  $("btn-register").addEventListener("click", function () {
+    var name = $("reg-name").value.trim();
+    var pw = $("reg-pass").value, pw2 = $("reg-pass2").value;
+    var invite = $("reg-invite").value.trim();
+    var msg = $("reg-msg");
+    if (!name || !pw) { msg.textContent = "用户名与口令必填。"; return; }
+    if (pw !== pw2) { msg.textContent = "两次输入的口令不一致。"; return; }
+    var btn = this;
+    btn.disabled = true; btn.textContent = "注册中…"; msg.textContent = "";
+    postJSON("/api/register", { name: name, password: pw, invite: invite || null })
+      .then(function (r) {
+        if (r.status === 201) {
+          user = r.data.user; role = r.data.role;
+          $("reg-pass").value = ""; $("reg-pass2").value = ""; $("reg-invite").value = "";
+          renderAuth();
+          msg.textContent = "注册成功，已登录为 " + (ROLE_LABEL[role] || role) + "。";
+          refresh();
+        } else {
+          msg.textContent = r.data.error || "注册失败";
+        }
+      })
+      .finally(function () { btn.disabled = false; btn.textContent = "注册并登录"; });
+  });
+
+  // ------------------------------------------------ 邀请码（owner 专属）
+  function loadInvites() {
+    fetch("/api/invites").then(function (r) { return r.json(); }).then(function (d) {
+      var rows = $("invite-rows");
+      rows.textContent = "";
+      (d.invites || []).forEach(function (inv) {
+        var tr = el("tr");
+        tr.appendChild(el("td", "", el("span", "kbd", inv.code).textContent));
+        tr.appendChild(el("td", "", inv.role));
+        tr.appendChild(el("td", "note", inv.created));
+        var ops = tr.appendChild(el("td", "", ""));
+        var del = el("button", "btn btn-ghost btn-sm", "作废");
+        del.addEventListener("click", function () {
+          fetch("/api/invites/" + encodeURIComponent(inv.code), { method: "DELETE" })
+            .then(function () { loadInvites(); });
+        });
+        ops.appendChild(del);
+        rows.appendChild(tr);
+      });
+      if (!(d.invites || []).length) {
+        rows.appendChild(el("tr", "", "")).appendChild(
+          el("td", "note", "暂无有效邀请码。"));
+      }
+    });
+  }
+  $("btn-new-invite").addEventListener("click", function () {
+    postJSON("/api/invites", { role: $("invite-role").value })
+      .then(function (r) {
+        if (r.status === 201) {
+          $("invite-msg").textContent = "新邀请码：" + r.data.code
+            + "（" + r.data.role + "）——复制给要注册的人，用一次即失效。";
+          loadInvites();
+        } else {
+          $("invite-msg").textContent = r.data.error || "生成失败";
+        }
+      });
+  });
+  var _usersObserver = new MutationObserver(function () {
+    if (!$("users-card").hidden) loadInvites();
+  });
+  _usersObserver.observe($("users-card"), { attributes: true, attributeFilter: ["hidden"] });
 
   // ------------------------------------------------ 产品卡片
   function render(list) {

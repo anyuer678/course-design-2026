@@ -825,5 +825,153 @@ class TestRbac(unittest.TestCase):
         self.assertEqual(status, 200)
 
 
+class TestAuthHashAndRegister(unittest.TestCase):
+    """轮四十二：owner 口令哈希化（password.txt 一次性信封）+ 自助注册/邀请码。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.LINKBOX_PORT = _free_port(18298)
+        cls.CACHEKV_PORT = _free_port(18238)
+        cls.COURSELAB_PORT = _free_port(18269)
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.auth = Auth(self._tmp.name)
+        from studio.users import UserStore
+        from studio.monitor import UptimeMonitor
+        self.users = UserStore(self._tmp.name, iterations=1000)
+        self.manager = build_manager(
+            linkbox_port=self.LINKBOX_PORT, lab_port=LAB_PORT,
+            simlab_port=SIMLAB_PORT, datascope_port=DATASCOPE_PORT,
+            cachekv_port=self.CACHEKV_PORT, sensorhub_port=SENSORHUB_PORT,
+            board_port=BOARD_PORT, courselab_port=self.COURSELAB_PORT,
+            linkbox_memory=True)
+        self.manager.uptime = UptimeMonitor(self.manager)
+        self.app = build_app(self.manager, self.auth, users=self.users)
+        self.owner_pw = self.auth.password
+
+    def handle(self, method, path, body=b"", headers=None):
+        from netlab.http1 import Request
+        req = Request(method=method, target=path, version="1.1",
+                      headers=[(k.lower(), v) for k, v in list(headers or [])],
+                      body=body, path=path, query=[], keep_alive=False,
+                      content_length=len(body))
+        return self.app.handle(req)
+
+    def login_as(self, name, password):
+        raw = json.dumps({"username": name, "password": password}).encode()
+        status, headers, body = self.handle(
+            "POST", "/api/login", raw, [("Content-Type", "application/json")])
+        self.assertEqual(status, 200, body)
+        for k, v in headers:
+            if k == "Set-Cookie" and v.startswith("wf_session="):
+                return v.split(";")[0]
+        self.fail("登录成功却没有会话 cookie")
+
+    def authed(self, method, path, cookie, body=b""):
+        return self.handle(method, path, body,
+                           [("Cookie", cookie)] +
+                           ([("Content-Type", "application/json")] if body else []))
+
+    def test_owner_password_hashed_and_envelope_spent(self):
+        """明文信封只到改口令为止：改后磁盘无明文、哈希仍验证、跨 Auth 实例可登录。"""
+        raw = self._tmp.name
+        pw_file = Path(raw) / "password.txt"
+        owner_file = Path(raw) / "owner.json"
+        self.assertTrue(pw_file.is_file())            # 初始信封存在
+        self.assertIn(self.owner_pw, pw_file.read_text(encoding="utf-8"))
+        self.assertNotIn(self.owner_pw, owner_file.read_text(encoding="utf-8"))
+        # 改口令 → 信封拆封（文件变纯注释）、owner.json 哈希更新
+        cookie = self.login_as(USERNAME, self.owner_pw)
+        status, _, _ = self.authed(
+            "POST", "/api/password", cookie,
+            json.dumps({"old": self.owner_pw, "new": "brand-new-pw1"}).encode())
+        self.assertEqual(status, 200)
+        self.assertEqual(self.auth.password, "brand-new-pw1")   # 内存缓存当前口令
+        text = pw_file.read_text(encoding="utf-8")
+        self.assertNotIn(self.owner_pw, text)
+        self.assertNotIn("brand-new-pw1", text)       # 新口令明文也不落盘
+        self.assertTrue(all(ln.startswith("#") for ln in
+                            text.splitlines() if ln.strip()))
+        # 跨 Auth 实例（重启）：哈希验证新口令、拒绝旧口令
+        reborn = Auth(raw)
+        self.assertTrue(reborn.verify("brand-new-pw1"))
+        self.assertFalse(reborn.verify(self.owner_pw))
+
+    def test_register_self_roles(self):
+        """无码注册 = viewer；owner 保留名拒绝；重名 409。"""
+        status, _, body = self.handle(
+            "POST", "/api/register",
+            json.dumps({"name": "carol", "password": "pw-123456789"}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 201)
+        self.assertEqual(json.loads(body)["role"], "viewer")
+        # 注册即登录：me 带身份
+        status, _, body = self.handle(
+            "GET", "/api/me", headers=[("Cookie", None)] if False else [])
+        # （会话要靠 Set-Cookie；重新登录验证角色）
+        self.assertEqual(self.users.verify("carol", "pw-123456789"), "viewer")
+        # owner 保留名 / 短口令 / 重名
+        status, _, _ = self.handle(
+            "POST", "/api/register",
+            json.dumps({"name": "owner", "password": "pw-123456789"}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 400)
+        status, _, _ = self.handle(
+            "POST", "/api/register",
+            json.dumps({"name": "carol", "password": "pw-123456789"}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 409)
+
+    def test_invite_codes_one_shot(self):
+        owner = self.login_as(USERNAME, self.owner_pw)
+        status, _, body = self.authed(
+            "POST", "/api/invites", owner,
+            json.dumps({"role": "operator"}).encode())
+        self.assertEqual(status, 201)
+        code = json.loads(body)["code"]
+        # 凭码注册 → operator；码用后即焚
+        status, _, body = self.handle(
+            "POST", "/api/register",
+            json.dumps({"name": "dave", "password": "pw-123456789",
+                        "invite": code}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 201)
+        self.assertEqual(json.loads(body)["role"], "operator")
+        status, _, _ = self.handle(
+            "POST", "/api/register",
+            json.dumps({"name": "erin", "password": "pw-123456789",
+                        "invite": code}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 400)                 # 二次使用：无效
+        self.assertEqual(self.users.verify("erin", "pw-123456789"), None)
+        # 无效码 400、成员不能生成邀请码
+        status, _, _ = self.handle(
+            "POST", "/api/register",
+            json.dumps({"name": "erin", "password": "pw-123456789",
+                        "invite": "no-such-code"}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 400)
+        self.users.add("mallory", "pw-123456789", "viewer")
+        mallory = self.login_as("mallory", "pw-123456789")
+        status, _, _ = self.authed(
+            "POST", "/api/invites", mallory,
+            json.dumps({"role": "operator"}).encode())
+        self.assertEqual(status, 403)
+        status, _, _ = self.authed("GET", "/api/invites", mallory)
+        self.assertEqual(status, 403)
+        # owner 作废邀请码
+        code2 = json.loads(self.authed(
+            "POST", "/api/invites", owner,
+            json.dumps({"role": "viewer"}).encode())[2])["code"]
+        status, _, _ = self.authed(
+            "DELETE", "/api/invites/" + code2, owner)
+        self.assertEqual(status, 200)
+        status, _, _ = self.authed(
+            "DELETE", "/api/invites/" + code2, owner)
+        self.assertEqual(status, 404)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
