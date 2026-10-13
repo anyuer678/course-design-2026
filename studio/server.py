@@ -4,6 +4,7 @@
 JSON 体校验、签名会话全是框架能力，这是"框架是真交付物"的现场证明。
 鉴权口径：单用户（owner），目录与状态只读公开；**启停等管理动作要求登录**
 （401）；实验台（showcase lab）并入门户托管，启停同权。
+2026-10-12：GET /ws/status WebSocket 实时推送产品状态（首包快照 + 2s 变化检测）。
 产品矩阵数据来自根 PRODUCTS.md：已实现的给启停，已规划如实标"已规划"。
 只绑回环：门户和被管理的产品一样，是本机自托管。
 """
@@ -168,6 +169,55 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
         pid = get_pid(ctx)
         return ctx.json(manager.status(pid))
 
+    # ---------------- 状态实时推送（WebSocket，2026-10-12，GAP P0 升级动作）
+    # 升级握手/帧协议全在 netlab（手写 RFC 6455）。探活绝不进事件循环线程：
+    # Windows 回环对未监听端口 connect_ex 每次约 0.6s，9 产品一轮 5s+，同步做
+    # 会把整个循环（含其他 WS 与 HTTP）卡死——快照一律取自 UptimeMonitor 后台
+    # 采样线程（起跑即采一轮），管理动作 start/stop 后 poke 立即触发新采样。
+    # 变化检测：2s 一次比对 (id, online, pid) 签名——pid 覆盖启停/崩溃，
+    # online 覆盖探活漂移；名称/端口这类不变量不进签名。
+    @app.ws("/ws/status")
+    def ws_status(session):
+        import json as _json
+        import time as _time
+        monitor = getattr(manager, "uptime", None)
+        state = {"sig": None, "due": 0.0}
+        POLL_SECONDS = 2.0
+
+        def _sig(products):
+            return [(p["id"], p["online"], p["pid"]) for p in products]
+
+        def send_status():
+            if monitor is None:               # 无采样器（测试手工装配）不推
+                return
+            products = monitor.snapshot()
+            if products is None:              # 采样器还没跑出第一轮：让前端
+                return                        # 先用初始 HTTP 数据，下一轮再推
+            state["sig"] = _sig(products)
+            session.send(_json.dumps({"type": "status", "products": products},
+                                     ensure_ascii=False))
+
+        def on_message(text):
+            send_status()                     # 任何消息（含 ping）都回最新快照
+
+        def on_poll():
+            now = _time.monotonic()
+            if now < state["due"] or session.closing or monitor is None:
+                return
+            state["due"] = now + POLL_SECONDS
+            products = monitor.snapshot()
+            if products is None:
+                return
+            sig = _sig(products)
+            if sig != state["sig"]:
+                state["sig"] = sig
+                session.send(_json.dumps({"type": "status", "products": products},
+                                         ensure_ascii=False))
+
+        send_status()
+        session.on_message = on_message
+        session.on_poll = on_poll
+
     # ------------------------------------------------ 探活历史（只读公开）
     @app.get("/api/history")
     def uptime_history(ctx):
@@ -180,25 +230,35 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
         return ctx.json(monitor.history())
 
     # ------------------------------------------------ 管理动作（要求登录）
+    def _poke_monitor() -> None:
+        """启停后让采样线程立刻跑一轮：/ws/status 推送延迟从 10s 降到毫秒级。"""
+        monitor = getattr(manager, "uptime", None)
+        if monitor is not None:
+            monitor.poke()
+
     @app.post("/api/products/<pid>/start")
     def product_start(ctx):
         require_user(ctx)
         pid = get_pid(ctx)
         try:
-            return ctx.json(manager.start(pid))
+            result = ctx.json(manager.start(pid))
         except ValueError as exc:
             raise HttpFail(400, str(exc)) from None
         except AlreadyOnline as exc:
             raise HttpFail(409, str(exc)) from None
+        _poke_monitor()
+        return result
 
     @app.post("/api/products/<pid>/stop")
     def product_stop(ctx):
         require_user(ctx)
         pid = get_pid(ctx)
         try:
-            return ctx.json(manager.stop(pid))
+            result = ctx.json(manager.stop(pid))
         except NotOurs as exc:
             raise HttpFail(409, str(exc)) from None
+        _poke_monitor()
+        return result
 
     # ------------------------------------------------ 操作审计（M2，要求登录）
     @app.get("/api/audit")

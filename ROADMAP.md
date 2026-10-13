@@ -1034,3 +1034,23 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   端到端真跑：真服务 + 无头 Edge setInputFiles 上传 → 转换提示/CSV 回填/
   画像渲染（数量 int、金额 float）/toast 全对、零 console 错误；数字级联
   run.bat/README/check_all 37→45；check_all 21/21 全绿。
+- ✅ **轮三十六：Studio 状态推送改 WebSocket——前端 3s 轮询退役（10-12/13，GAP P0 升级动作）**：
+  手写 RFC 6455 服务端帧（netlab 那套 `@app.ws` 装饰器平移到 studio），新端点
+  `/ws/status`：首包全量快照 → 每 2s on_poll 算 `(id, online, pid)` 签名，变则
+  推全量（量小不必 diff）；on_message（含 ping）一律回快照。关键架构修正：
+  **probe 永不进事件循环**——首版在握手路径现场探活，Windows 回环 connect_ex
+  逐端口 0.6s×9 直接把 WS 握手拖到 5.6s 超时；治本是把探活整体挪进
+  UptimeMonitor 后台线程（10s 一轮既喂探活历史也喂快照，`_cycle` 双出口），
+  WS 收包只读现成快照，握手毫秒级。配套新增 `sample_once()`（测试免等
+  interval）、`snapshot()`、`poke()`——管理动作（start/stop）成功后唤醒采样
+  线程，推送延迟从 10s 掉到秒级。前端 refresh() 改 WS 驱动：onmessage 更新
+  卡片/在线时长/审计，断线自动回退 `setInterval(refresh, 3000)` 轮询，侧栏
+  `ws-state` 徽标实时显示"● 实时推送（WebSocket）/ ○ 轮询模式（3s）"。
+  测试 +2（`TestWsStatus` 真套接字：启停后签名变化必推送、ping 回快照），
+  studio 24→26 双入口全绿。无头 Edge 走查：徽标切"● 实时推送"、页面在线串
+  停止 cachekv 后 3.9s 内翻转（= stop 动作耗时 + 探活确认 + on_poll 2s 粒度，
+  "probe 确认离线才推"的诚实口径使然，非缺陷）、零 console 错误、零 HTTP≥400。
+  数字级联 run.bat/README/check_all 24→26；check_all 21/21 全绿（259.9s）。
+  踩坑记录：走查脚本第一版选择器 `.card .pill` 与 DOM 不符（pill 只在审计区）——
+  在线状态看 `.card.online` 类串更稳；pageerror 只报 JS 异常，响应断言要单独挂
+  response 监听。

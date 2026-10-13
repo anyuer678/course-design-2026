@@ -11,7 +11,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/2] Running test suite (24 tests: auth + matrix + uptime monitor + lifecycles)...
+echo [1/2] Running test suite (26 tests: auth + matrix + uptime monitor + ws status push + lifecycles)...
 python -m pytest tests -q
 if errorlevel 1 (echo [!] step failed & pause & exit /b 1)
 echo.

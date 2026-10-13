@@ -242,6 +242,39 @@
     });
   }
 
+  // ---------------- 状态实时推送（2026-10-12，GAP P0 升级动作）
+  // 优先走 /ws/status（服务器变化才推，首包即快照）；断线自动回退 3s 轮询，
+  // 5s 后重连。侧栏 foot-state 徽标显示当前模式。登录态不在推送里——
+  // 初始 refresh() 与登录动作后各自拉一次（cookie 会话，变化极低频）。
+  var WS = null, WS_OK = false;
+  function setModeBadge() {
+    var b = $("ws-state");
+    if (!b) return;
+    b.textContent = WS_OK ? "● 实时推送（WebSocket）" : "○ 轮询模式（3s）";
+  }
+  function applyStatus(products) {
+    last = products || [];
+    render(last);
+    renderUptime();
+    refreshAudit();
+  }
+  function connectStatus() {
+    try {
+      WS = new WebSocket("ws://" + location.host + "/ws/status");
+    } catch (e) { setModeBadge(); return; }
+    WS.onopen = function () { WS_OK = true; setModeBadge(); };
+    WS.onmessage = function (ev) {
+      var msg;
+      try { msg = JSON.parse(ev.data); } catch (e) { return; }
+      if (msg.type === "status") applyStatus(msg.products);
+    };
+    WS.onclose = WS.onerror = function () {
+      WS_OK = false;
+      setModeBadge();
+      setTimeout(connectStatus, 5000);
+    };
+  }
+
   // ------------------------------------------------ 操作审计（M2，登录后可见）
   var OUTCOME_CLS = { ok: "pill ok", refused: "pill warn",
                       failed: "pill err", timeout: "pill err" };
@@ -348,7 +381,10 @@
   }
 
   refresh();
-  setInterval(refresh, 3000);
+  connectStatus();
+  setInterval(function () {
+    if (!WS_OK) refresh();               // WS 在线时轮询休眠，断线自动接管
+  }, 3000);
 
   // ------------------------------------------------ 侧栏导航（高亮跟随 + hash 定位）
   function activateNav(key) {

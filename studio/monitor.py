@@ -28,7 +28,9 @@ class UptimeMonitor:
         self.max_samples = max_samples
         self.clock = clock
         self.samples: list[tuple[float, dict[str, bool]]] = []   # 时间升序
+        self._snapshot: list[dict] | None = None    # 最新一轮全量状态（含 pid）
         self._lock = threading.Lock()
+        self._wake = threading.Event()              # poke：管理动作后立即采样
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -48,11 +50,41 @@ class UptimeMonitor:
         return reading
 
     def _loop(self) -> None:
-        while not self._stop.wait(self.interval):
-            try:
-                self.sample_once()
-            except Exception:
-                pass                      # 采样失败不许带垮线程；下轮再试
+        self._cycle()                         # 起跑先采一轮：/ws/status 首包靠它
+        while True:
+            self._wake.wait(self.interval)    # poke（启停动作）可提前唤醒
+            if self._stop.is_set():
+                return
+            self._wake.clear()
+            self._cycle()
+
+    def _cycle(self) -> None:
+        """一轮探活同时喂两个出口：探活历史（sample_once）与状态快照（/ws/status）。
+        快照字段复制 manager.status() 的形状——两处口径漂移靠测试钉住。"""
+        try:
+            reading = self.sample_once()
+        except Exception:
+            return                          # 采样失败不许带垮线程；下轮再试
+        products = []
+        for pid in self.manager.order:
+            p = self.manager.by_id[pid]
+            proc = self.manager.procs.get(pid)
+            products.append({
+                "id": p.id, "name": p.name, "tagline": p.tagline,
+                "port": p.port, "managed": p.managed,
+                "online": reading.get(pid, False), "kind": p.kind,
+                "pid": proc.pid if proc is not None else None})
+        with self._lock:
+            self._snapshot = products
+
+    def snapshot(self) -> list[dict] | None:
+        """最新一轮全量产品状态（/ws/status 用）；还没采过返回 None。"""
+        with self._lock:
+            return list(self._snapshot) if self._snapshot is not None else None
+
+    def poke(self) -> None:
+        """管理动作（启停）后调用：让采样线程立刻跑一轮，推送延迟从 10s 降到毫秒级。"""
+        self._wake.set()
 
     def start(self) -> None:
         if self._thread is not None:
@@ -63,6 +95,7 @@ class UptimeMonitor:
 
     def stop(self) -> None:
         self._stop.set()
+        self._wake.set()                      # 别让 join 卡在 wait(interval) 上
         thread = self._thread
         if thread is not None and thread.is_alive():
             thread.join(timeout=5)

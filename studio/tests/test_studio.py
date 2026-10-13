@@ -8,9 +8,12 @@
     - 在线 = TCP 探活；不是门户启动的进程不许 stop（409）；
     - 实验台（showcase lab）并入为 managed product：真启停真探活。
 """
+import base64
 import http.client
 import json
+import os
 import socket
+import struct
 import sys
 import tempfile
 import time
@@ -483,6 +486,141 @@ class TestUptimeMonitor(unittest.TestCase):
         self.assertEqual(len(h["samples"]), 5)         # 只留最近 5 条
         self.assertEqual(h["samples"][0][0], 30.0)     # 0/10/20 被裁掉
         self.assertEqual(h["samples"][-1][0], 70.0)
+
+
+class TestWsStatus(unittest.TestCase):
+    """/ws/status 真套接字（netlab 手写 RFC 6455）：首包快照 → 无变化不推 →
+    启动产品触发推送。客户端帧按规范掩码（WsClient 模式同 boardweb）。"""
+
+    @classmethod
+    def setUpClass(cls):
+        cls._tmp = tempfile.TemporaryDirectory()
+        cls.auth = Auth(cls._tmp.name)
+        cls.manager = build_manager(linkbox_port=18099, lab_port=17789,
+                                    simlab_port=18019, datascope_port=18029,
+                                    cachekv_port=18039, sensorhub_port=18048,
+                                    board_port=18058, courselab_port=18068,
+                                    linkbox_memory=True)
+        from studio.monitor import UptimeMonitor
+        cls.monitor = UptimeMonitor(cls.manager, interval=0.5)
+        cls.manager.uptime = cls.monitor          # /ws/status 的快照来源
+        cls.monitor.start()
+        from webframe import MicroServer
+        cls.server = MicroServer(build_app(cls.manager, cls.auth), port=0)
+        cls.port = cls.server.start()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.server.stop()
+        cls.monitor.stop()
+        cls._tmp.cleanup()
+
+    # ---- 精简 WsClient（照 boardweb/tests/test_ws_board.py 模式）----
+    def _mask_frame(self, opcode, payload):
+        mask = os.urandom(4)
+        masked = bytes(b ^ mask[i % 4] for i, b in enumerate(payload))
+        n = len(payload)
+        if n < 126:
+            head = bytes([0x80 | opcode, 0x80 | n])
+        else:
+            head = bytes([0x80 | opcode, 0x80 | 126]) + struct.pack(">H", n)
+        return head + mask + masked
+
+    def _ws_connect(self):
+        sock = socket.create_connection(("127.0.0.1", self.port), timeout=3)
+        key = base64.b64encode(os.urandom(16)).decode()
+        sock.sendall((
+            f"GET /ws/status HTTP/1.1\r\nHost: 127.0.0.1:{self.port}\r\n"
+            "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+            f"Sec-WebSocket-Key: {key}\r\nSec-WebSocket-Version: 13\r\n\r\n").encode())
+        buf = bytearray()
+        while b"\r\n\r\n" not in buf:
+            buf += sock.recv(4096)
+        head, buf = buf.split(b"\r\n\r\n", 1)
+        assert b"101" in bytes(head).split(b"\r\n")[0], bytes(head)
+        return sock, bytearray(buf)
+
+    def _recv_json(self, sock, buf, timeout=5.0):
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            msg = self._pop_frame(buf)
+            if msg is not None:
+                return msg
+            sock.settimeout(max(0.05, deadline - time.monotonic()))
+            try:
+                chunk = sock.recv(65536)
+            except socket.timeout:
+                continue
+            if not chunk:
+                return None
+            buf.extend(chunk)
+        return None
+
+    def _pop_frame(self, buf):
+        if len(buf) < 2:
+            return None
+        b1 = buf[0]
+        if not (b1 & 0x80) or (b1 & 0x0F) != 0x1:
+            return None
+        b2 = buf[1]
+        assert not (b2 & 0x80), "服务器帧不许掩码"
+        length, pos = b2 & 0x7F, 2
+        if length == 126:
+            if len(buf) < 4:
+                return None
+            length = struct.unpack(">H", buf[2:4])[0]
+            pos = 4
+        elif length == 127:
+            if len(buf) < 10:
+                return None
+            length = struct.unpack(">Q", buf[2:10])[0]
+            pos = 10
+        if len(buf) < pos + length:
+            return None
+        payload = bytes(buf[pos:pos + length])
+        del buf[:pos + length]
+        return json.loads(payload.decode("utf-8"))
+
+    def test_first_snapshot_no_change_then_push_on_start(self):
+        sock, buf = self._ws_connect()
+        self.addCleanup(sock.close)
+        snap = self._recv_json(sock, buf, timeout=6)
+        self.assertIsNotNone(snap, "连接后 6s 内没等到首包快照")
+        self.assertEqual(snap["type"], "status")
+        self.assertIn("courselab", [p["id"] for p in snap["products"]])
+        # 无变化：跨过一个轮询周期（2s）也不该有第二条——变化驱动，不是心跳
+        self.assertTrue(self._recv_none(sock, buf, window=2.6))
+        # 启动 courselab → pid 出现 → 签名变 → 推送（start 返回前就可能推）
+        self.manager.start("courselab")
+        self.addCleanup(self.manager.stop, "courselab")
+        pushed = self._recv_json(sock, buf, timeout=8)
+        self.assertIsNotNone(pushed, "启动后 8s 内没等到状态推送")
+        self.assertEqual(pushed["type"], "status")
+        lab = next(p for p in pushed["products"] if p["id"] == "courselab")
+        self.assertIsNotNone(lab["pid"])
+
+    def _recv_none(self, sock, buf, window=0.5):
+        """窗口期内不应有任何消息（变化驱动：安静是常态）。"""
+        sock.settimeout(window)
+        try:
+            chunk = sock.recv(65536)
+        except socket.timeout:
+            return True
+        if not chunk:
+            return True
+        buf.extend(chunk)
+        return self._pop_frame(buf) is None
+
+    def test_ping_message_resnapshots(self):
+        """任何消息（含 ping）都回一份全量快照——断线重连后的手动刷新通道。"""
+        sock, buf = self._ws_connect()
+        self.addCleanup(sock.close)
+        self._recv_json(sock, buf)                      # 先吃掉首包
+        sock.sendall(self._mask_frame(0x1, b'"ping"'))
+        again = self._recv_json(sock, buf)
+        self.assertIsNotNone(again)
+        self.assertEqual(again["type"], "status")
+        self.assertIn("lab", [p["id"] for p in again["products"]])
 
 
 class TestOverRealSocket(unittest.TestCase):
