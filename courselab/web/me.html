@@ -55,18 +55,18 @@ CL.api("/api/me").then(function (res) {
   card.appendChild(out);
   box.appendChild(card);
 
-  // 修改口令（F7）：改后其他会话即时失效，当前会话保留
+  // 修改密码（F7）：改后其他会话即时失效，当前会话保留
   var pwCard = CL.el("div", "card");
-  pwCard.appendChild(CL.el("h3", null, "修改口令"));
+  pwCard.appendChild(CL.el("h3", null, "修改密码"));
   var pwRow = CL.el("div", "toolbar");
-  var oldI = pwInput("当前口令");
+  var oldI = pwInput("当前密码");
   oldI.autocomplete = "current-password";
-  var newI = pwInput("新口令（至少 8 位，含字母与数字）");
-  var newI2 = pwInput("再输一遍新口令");
+  var newI = pwInput("新密码（至少 8 位，含字母与数字）");
+  var newI2 = pwInput("再输一遍新密码");
   var pwBtn = CL.el("button", "btn", "保存");
   var pwMsg = CL.el("p", "note", "修改成功后，你在其他设备上的登录会立即失效。");
   pwBtn.addEventListener("click", function () {
-    if (newI.value !== newI2.value) { pwMsg.textContent = "两次输入的新口令不一致。"; return; }
+    if (newI.value !== newI2.value) { pwMsg.textContent = "两次输入的新密码不一致。"; return; }
     pwBtn.disabled = true;
     CL.api("/api/auth/password", { method: "POST", body: {
       old_password: oldI.value, new_password: newI.value } })
@@ -76,8 +76,8 @@ CL.api("/api/me").then(function (res) {
           return;
         }
         oldI.value = ""; newI.value = ""; newI2.value = "";
-        pwMsg.textContent = (r.data.notice || "口令已更新") + "。";
-        CL.toast("口令已更新", "ok");
+        pwMsg.textContent = (r.data.notice || "密码已更新") + "。";
+        CL.toast("密码已更新", "ok");
       })
       .catch(function () { pwMsg.textContent = "网络错误，请重试。"; })
       .then(function () { pwBtn.disabled = false; });

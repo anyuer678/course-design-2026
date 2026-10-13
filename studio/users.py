@@ -88,7 +88,7 @@ class UserStore:
         if not isinstance(name, str) or not _NAME_RE.match(name):
             raise ValueError("用户名须为 2-20 位字母/数字/下划线/连字符")
         if not isinstance(password, str) or len(password) < _MIN_PW:
-            raise ValueError(f"口令至少 {_MIN_PW} 个字符")
+            raise ValueError(f"密码至少 {_MIN_PW} 个字符")
         if role not in ROLES:
             raise ValueError(f"角色只能是 {' / '.join(ROLES)}")
         if name in self.users:
@@ -117,7 +117,7 @@ class UserStore:
         if name not in self.users:
             raise KeyError(f"没有叫 {name!r} 的成员")
         if not isinstance(password, str) or len(password) < _MIN_PW:
-            raise ValueError(f"口令至少 {_MIN_PW} 个字符")
+            raise ValueError(f"密码至少 {_MIN_PW} 个字符")
         salt = secrets.token_bytes(16)
         self.users[name]["salt"] = salt.hex()
         self.users[name]["hash"] = self._hash(password, salt, self.iterations)
@@ -148,7 +148,7 @@ class UserStore:
         if name.lower() == USERNAME.lower():
             raise ValueError("该用户名为机主保留名，请换一个")
         if not isinstance(password, str) or len(password) < _MIN_PW:
-            raise ValueError(f"口令至少 {_MIN_PW} 个字符")
+            raise ValueError(f"密码至少 {_MIN_PW} 个字符")
         if name in self.users:
             raise KeyError(f"成员 {name!r} 已存在")
         if invite:

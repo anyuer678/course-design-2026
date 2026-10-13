@@ -28,11 +28,11 @@
     <input id="username" name="username" autocomplete="username" autofocus>
   </div>
   <div class="field">
-    <label for="password">口令</label>
+    <label for="password">密码</label>
     <div class="pass-row">
       <input id="password" name="password" type="password" autocomplete="current-password">
       <button type="button" class="btn btn-ghost btn-xs" id="toggle-pass"
-              aria-label="显示口令" aria-pressed="false">显示</button>
+              aria-label="显示密码" aria-pressed="false">显示</button>
     </div>
   </div>
   <button class="btn" id="submit">登录</button>
@@ -45,7 +45,7 @@
 CL.navbar();
 var msg = document.getElementById("msg");
 function show(text) { msg.textContent = text; msg.style.display = ""; }
-(function () {   // 口令可见性切换（Vercel Guidelines：密码框标配）
+(function () {   // 密码可见性切换（Vercel Guidelines：密码框标配）
   var input = document.getElementById("password");
   var btn = document.getElementById("toggle-pass");
   btn.addEventListener("click", function () {
@@ -59,7 +59,7 @@ function show(text) { msg.textContent = text; msg.style.display = ""; }
 function submit() {
   var username = document.getElementById("username").value.trim();
   var password = document.getElementById("password").value;
-  if (!username || !password) { show("请填写用户名与口令。"); return; }
+  if (!username || !password) { show("请填写用户名与密码。"); return; }
   var btn = document.getElementById("submit");
   if (btn.disabled) return;                  // 防连点：请求在途时不再提交
   btn.disabled = true; btn.textContent = "登录中…";

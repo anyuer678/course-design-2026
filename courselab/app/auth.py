@@ -1,7 +1,7 @@
 """账号与会话（F1 学生端 / F16 底座）：注册、登录、登出、PBKDF2、会话表、登录限流。
 
 边界（沿用设计文档 §三 F1）：
-- 口令 PBKDF2-HMAC-SHA256，盐 16B，迭代 120000，参数随用户存库；
+- 密码 PBKDF2-HMAC-SHA256，盐 16B，迭代 120000，参数随用户存库；
 - 会话 = 随机令牌 + 服务端会话表（可登出即失效），默认 12 小时；
 - 登录失败限流：同"用户名+IP" 10 分钟内失败 5 次后 429。
 """
@@ -31,7 +31,7 @@ class AuthError(Exception):
         self.code, self.message, self.http = code, message, http
 
 
-# ------------------------------------------------------------------ 口令
+# ------------------------------------------------------------------ 密码
 
 def hash_password(password: str):
     salt = secrets.token_bytes(16)
@@ -49,7 +49,7 @@ def verify_password(password: str, salt_hex: str, hash_hex: str, iterations: int
 
 def validate_password(password: str) -> None:
     if len(password or "") < 8 or not (re.search(r"[A-Za-z]", password) and re.search(r"\d", password)):
-        raise AuthError("BAD_PASSWORD", "口令至少 8 位，且需同时包含字母与数字")
+        raise AuthError("BAD_PASSWORD", "密码至少 8 位，且需同时包含字母与数字")
 
 
 def validate_credentials(username: str, password: str) -> None:
@@ -123,7 +123,7 @@ def login(db, username: str, password: str, ip: str = "", ua: str = "",
     row = db.one("SELECT * FROM users WHERE username = ?", (username,))
     if row is None or not verify_password(password, row["pwd_salt"], row["pwd_hash"], row["pwd_iter"]):
         record_failure(username, ip)
-        raise AuthError("BAD_CREDENTIALS", "用户名或口令不正确", 401)
+        raise AuthError("BAD_CREDENTIALS", "用户名或密码不正确", 401)
     if row["status"] == "pending":
         raise AuthError("USER_PENDING", "账号待管理员审批（通过后即可登录）", 403)
     if row["status"] != "active":
@@ -136,14 +136,14 @@ def login(db, username: str, password: str, ip: str = "", ua: str = "",
 
 def change_password(db, user_id: int, old_password: str, new_password: str,
                     keep_token: str = "", ip: str = "") -> None:
-    """改口令：旧口令校验（计入登录失败限流）；改后其他会话立即失效、当前会话保留。"""
+    """改密码：旧密码校验（计入登录失败限流）；改后其他会话立即失效、当前会话保留。"""
     row = db.one("SELECT * FROM users WHERE id = ?", (user_id,))
     if row is None:
         raise AuthError("NO_USER", "用户不存在", 404)
     check_rate(row["username"], ip)
     if not verify_password(old_password, row["pwd_salt"], row["pwd_hash"], row["pwd_iter"]):
         record_failure(row["username"], ip)
-        raise AuthError("BAD_OLD_PASSWORD", "当前口令不正确")
+        raise AuthError("BAD_OLD_PASSWORD", "当前密码不正确")
     validate_password(new_password)
     salt, hsh, it = hash_password(new_password)
     db.execute("UPDATE users SET pwd_salt = ?, pwd_hash = ?, pwd_iter = ? WHERE id = ?",

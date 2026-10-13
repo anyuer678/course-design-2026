@@ -24,13 +24,13 @@ _MIN_LEN = 8
 _PWD_ITER = 120_000
 
 _PASSWORD_NOTE = (
-    "# Studio 门户登录口令（自动生成，可改）。用户名固定为 owner。\n"
-    "# 改口令：门户页面右上角，或 POST /api/password。\n"
-    "# 本目录（studio/data/）已进 .gitignore，不要提交。\n")
+    "# Studio 恢复口令（自动生成）——仅用于首次登录或忘记密码时找回。\n"
+    "# 登录后请在「账户」页设置自己的密码；设置后本文件自动作废。\n"
+    "# 用户名固定为 owner。本目录（studio/data/）已进 .gitignore，不要提交。\n")
 
 _ENVELOPE_SPENT = (
-    "# 口令已通过门户修改，本文件不再是凭据来源（明文已从磁盘消失）。\n"
-    "# 忘记口令：删除 data/owner.json 后重启门户，会重新生成初始信封。\n")
+    "# 密码已通过门户设置，本恢复口令作废（明文已从磁盘消失）。\n"
+    "# 忘记密码：删除 data/owner.json 后重启门户，会重新生成恢复口令。\n")
 
 
 def _hash(password: str, salt: bytes) -> str:
@@ -124,7 +124,7 @@ class Auth:
 
     def set_password(self, new: str) -> None:
         if not isinstance(new, str) or len(new) < _MIN_LEN:
-            raise ValueError(f"新口令至少 {_MIN_LEN} 个字符")
+            raise ValueError(f"新密码至少 {_MIN_LEN} 个字符")
         salt = secrets.token_bytes(16)
         self._record = {"salt": salt.hex(), "hash": _hash(new, salt),
                         "iter": _PWD_ITER}

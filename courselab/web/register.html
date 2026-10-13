@@ -36,11 +36,11 @@
     <div class="field-err" id="err-display_name"></div>
   </div>
   <div class="field">
-    <label for="password">口令（至少 8 位，含字母与数字）</label>
+    <label for="password">密码（至少 8 位，含字母与数字）</label>
     <div class="pass-row">
       <input id="password" name="password" type="password" autocomplete="new-password">
       <button type="button" class="btn btn-ghost btn-xs" id="toggle-pass"
-              aria-label="显示口令" aria-pressed="false">显示</button>
+              aria-label="显示密码" aria-pressed="false">显示</button>
     </div>
     <div class="field-err" id="err-password"></div>
   </div>
@@ -72,7 +72,7 @@ function fieldErr(id, text) {
   box.style.display = text ? "" : "none";
 }
 
-(function () {   // 口令可见性切换
+(function () {   // 密码可见性切换
   var input = document.getElementById("password");
   var btn = document.getElementById("toggle-pass");
   btn.addEventListener("click", function () {
@@ -100,10 +100,10 @@ function validate() {
     fieldErr("display_name", "昵称最长 32 个字符"); bad = true;
   }
   if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
-    fieldErr("password", "口令至少 8 位，且需同时包含字母与数字"); bad = true;
+    fieldErr("password", "密码至少 8 位，且需同时包含字母与数字"); bad = true;
   }
   if (password2 !== password) {
-    fieldErr("password2", "两次输入的口令不一致"); bad = true;
+    fieldErr("password2", "两次输入的密码不一致"); bad = true;
   }
   if (bad) return null;
   return { username: username, display_name: displayName, password: password };

@@ -113,9 +113,9 @@
       if (!/^[A-Za-z0-9_-]{2,20}$/.test(name))
         tips.push("用户名须为 2-20 位字母/数字/下划线/连字符");
       if (pw.length < 8)
-        tips.push("口令至少 8 位");
+        tips.push("密码至少 8 位");
       if (pw !== pw2)
-        tips.push("两次输入的口令不一致");
+        tips.push("两次输入的密码不一致");
       if (tips.length) { msg.textContent = tips.join("；") + "。"; return; }
       var btn = $("btn-register");
       btn.disabled = true; btn.textContent = "注册中…"; msg.textContent = "";
@@ -469,13 +469,13 @@
         });
         roleCell.appendChild(sel);
         var mgmt = tr.appendChild(el("td", "", ""));
-        var reset = el("button", "btn btn-ghost btn-sm", "重置口令");
+        var reset = el("button", "btn btn-ghost btn-sm", "重置密码");
         reset.addEventListener("click", function () {
-          var pw = window.prompt("为 " + u.name + " 设置新口令（至少 8 位）：", "");
+          var pw = window.prompt("为 " + u.name + " 设置新密码（至少 8 位）：", "");
           if (pw === null) return;
           postJSON("/api/users/" + u.name + "/reset", { password: pw })
             .then(function (r) {
-              usersMsg(r.status === 200 ? u.name + " 口令已重置" : (r.data.error || "重置失败"));
+              usersMsg(r.status === 200 ? u.name + " 密码已重置" : (r.data.error || "重置失败"));
             });
         });
         mgmt.appendChild(reset);
@@ -571,7 +571,7 @@
     "audit.read": "查看操作审计",
     "users.manage": "成员管理",
     "invites.manage": "邀请码管理",
-    "portal.password": "修改门户口令"
+    "portal.password": "修改门户密码"
   };
   function renderPerms() {
     fetch("/api/me").then(function (r) { return r.json(); }).then(function (d) {
@@ -593,14 +593,14 @@
       .then(function (r) {
         var msg = $("passwd-msg");
         if (r.status === 200) {
-          msg.textContent = "口令已改（新口令立即生效），初始口令信封已作废。";
+          msg.textContent = "密码已修改（立即生效），恢复口令信封已作废。";
           $("old-pass").value = "";
           $("new-pass").value = "";
         } else {
-          msg.textContent = r.data.error || "改口令失败";
+          msg.textContent = r.data.error || "修改失败";
         }
       })
-      .finally(function () { btn.disabled = false; btn.textContent = "改口令"; });
+      .finally(function () { btn.disabled = false; btn.textContent = "修改密码"; });
   }
 
   function initAccount() {

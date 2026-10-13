@@ -111,7 +111,7 @@ class PortalCase(unittest.TestCase):
         status, _, body = self.handle("POST", "/api/login", raw,
                                       [("Content-Type", "application/json")])
         self.assertEqual(status, 401)
-        self.assertIn("用户名或口令", body.decode("utf-8"))
+        self.assertIn("用户名或密码", body.decode("utf-8"))
         # 对口令 → 会话
         cookie = self.login()
         status, _, body = self.handle(

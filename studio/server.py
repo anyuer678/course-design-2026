@@ -126,7 +126,7 @@ def build_app(manager: ProductManager, auth: Auth,
         if not ctx.session.get("user"):
             raise HttpFail(401, "请先登录（POST /api/login）")
         if ctx.session.get("gen") != auth.generation:
-            raise HttpFail(401, "口令已更新，请重新登录")
+            raise HttpFail(401, "密码已更新，请重新登录")
 
     def require_perm(ctx, perm: str) -> str:
         """用户分层（轮四十四）：按 users.PERMISSIONS 权限点把门——
@@ -155,7 +155,7 @@ def build_app(manager: ProductManager, auth: Auth,
             role = users.verify(name, body["password"])
             if role is None:
                 # 不区分"没有此人/口令错"（不给猜测者喂信息）
-                raise HttpFail(401, "用户名或口令不对")
+                raise HttpFail(401, "用户名或密码不对")
             ctx.session["user"] = name
             ctx.session["role"] = role
         ctx.session["gen"] = auth.generation           # 改口令即踢旧世代会话
@@ -176,10 +176,10 @@ def build_app(manager: ProductManager, auth: Auth,
 
     @app.post("/api/password")
     def change_password(ctx):
-        require_perm(ctx, "portal.password")  # 成员口令由 owner 重置，不自助改
+        require_perm(ctx, "portal.password")  # 成员密码由 owner 重置，不自助改
         body = ctx.json_body(_PASSWORD_SCHEMA)
         if not auth.verify(body["old"]):
-            raise HttpFail(400, "旧口令不对")
+            raise HttpFail(400, "当前密码不正确")
         try:
             auth.set_password(body["new"])
         except ValueError as exc:
