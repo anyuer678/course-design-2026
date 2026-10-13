@@ -1070,3 +1070,18 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   第二页面"●协同 2 人"+收到推送 markDirty、零 console 错误；截图确认视觉渲染
   （箭头带头/便利贴折行）。数字级联 run.bat/README（根+产品）/check_all 13→15；
   check_all 21/21 全绿。协同编辑（同房间 WebSocket 深度同步）留下一阶段。
+- ✅ **轮三十八：八产品截图刷新——四轮新功能进 README 门面（10-13，GAP 最便宜三大分③）**：
+  screenshots/ 八张图停留在 10-11，LinkBox 统计曲线、Studio 探活历史+WS 徽标、
+  DataScope xlsx 导入、BoardWeb 图形库全没进图——README 门面落后于产品实况。
+  新增 scripts/shoot_all.js（无头 Edge 批量截图，deviceScaleFactor=2 高清，
+  入库可复用）：起 8 服务（studio/linkbox/simlab/datascope/cachekv/sensorhub/
+  courselab/boardweb）→ 逐页截图替换。演示内容：boardweb 种 Raft 流程图
+  （矩形+文字+箭头+菱形判断+便利贴，正好展示轮三十七全家桶）；cachekv 走
+  /api/demo 种 12 键；datascope 点"加载示例数据"；linkbox 截统计页（趋势
+  三线+Top5+库存环形）；sensorhub 点"看曲线"（告警红点+阈值线）；studio 整页
+  （矩阵绿点+探活历史红绿条+"● 实时推送"徽标）。踩坑：sensorhub 有 WS 实时
+  推送，networkidle 永不满足→改 domcontentloaded+固定等待；种文档要一次写对
+  （首版 shapes 双层嵌套，画布静默空白——GET /api/doc 验证结构再截图）；
+  bash & 起服务跨命令回收→run_in_background 逐个起。截图验收逐张目检后才
+  替换。lab（showcase/lab.py :7788）是展示层控制台非独立产品，README/截图
+  归 showcase 文档体系，不属"每产品 README"范围——如实不改。
