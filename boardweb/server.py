@@ -10,7 +10,9 @@ API：
     GET  /api/backups            备份清单（文件名 + 时间）
     WS   /ws/board               协同通道：add/clear 增量广播，undo/删除/微调等
                                  结构性变更走全量 sync；服务端不回显发送方；
-                                 peers 计数进出都推。单线程事件循环，hub 免锁。
+                                 peers 计数进出都推；cursor 光标 presence
+                                 （进房分配成员 id/颜色，服务端注入身份+30ms 限流，
+                                 只广播不落盘）。单线程事件循环，hub 免锁。
 只绑回环。存储：data/doc.json + data/backups/ + data/img/。
 协同与持久化的边界：实时层只管"别人画的我看得见"，落盘仍是各端自动保存
 （last-save-wins + version 单调），不引入 OT/CRDT——课设口径的如实简化。
@@ -149,6 +151,10 @@ def build_app(data_dir: Path | None = None) -> MicroApp:
     # hub = 本 app 实例的活跃会话集。netlab 事件循环单线程跑全部 WS 回调，
     # 集合增删与广播天然串行，不需要锁。
     peers: set = set()
+    peer_seq = [0]                    # 成员序号（进房自增，退出不复用也无所谓）
+    PEER_COLORS = ["#2563eb", "#059669", "#d97706",
+                   "#7c3aed", "#dc2626", "#0891b2"]
+    CURSOR_MIN_GAP = 0.03             # 同会话光标包最小间隔（秒）——限流不设白名单
 
     def broadcast(text: str, skip=None) -> None:
         for s in list(peers):
@@ -163,8 +169,13 @@ def build_app(data_dir: Path | None = None) -> MicroApp:
     @app.ws("/ws/board")
     def ws_board(session):
         peers.add(session)
-        session.send(json.dumps({"type": "hello", "peers": len(peers)},
-                                ensure_ascii=False))
+        peer_seq[0] += 1
+        peer = {"id": peer_seq[0],
+                "color": PEER_COLORS[(peer_seq[0] - 1) % len(PEER_COLORS)]}
+        session.peer = peer           # 光标广播时服务端注入，不信任客户端自报
+        session.last_cursor = 0.0
+        session.send(json.dumps({"type": "hello", "peers": len(peers),
+                                 "you": peer}, ensure_ascii=False))
         broadcast(peers_msg(), skip=session)
 
         def on_message(text):
@@ -180,6 +191,21 @@ def build_app(data_dir: Path | None = None) -> MicroApp:
                     session.send('{"type":"error","error":"add 须带 shape 对象"}')
                     return
                 broadcast(json.dumps({"type": "add", "shape": shape},
+                                     ensure_ascii=False), skip=session)
+            elif kind == "cursor":
+                # 光标 presence：高频小包，只广播不落盘、不进撤销；
+                # 服务端限流（同会话 <30ms 丢弃）+注入会话身份。
+                now = time.monotonic()
+                if now - session.last_cursor < CURSOR_MIN_GAP:
+                    return
+                x, y = msg.get("x"), msg.get("y")
+                if not isinstance(x, (int, float)) or not isinstance(y, (int, float)):
+                    session.send('{"type":"error","error":"cursor 须带数字 x/y"}')
+                    return
+                session.last_cursor = now
+                broadcast(json.dumps({"type": "cursor", "id": peer["id"],
+                                      "color": peer["color"],
+                                      "x": round(x, 1), "y": round(y, 1)},
                                      ensure_ascii=False), skip=session)
             elif kind == "clear":
                 broadcast('{"type":"clear"}', skip=session)

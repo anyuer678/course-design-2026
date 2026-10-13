@@ -1085,3 +1085,18 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   bash & 起服务跨命令回收→run_in_background 逐个起。截图验收逐张目检后才
   替换。lab（showcase/lab.py :7788）是展示层控制台非独立产品，README/截图
   归 showcase 文档体系，不属"每产品 README"范围——如实不改。
+- ✅ **轮三十九：BoardWeb 多人光标 presence——协同"看见彼此"（10-13，GAP P7 第二阶段）**：
+  互见式协同（笔画同步）已能对上画的内容，但看不到"人"——白板的核心体验是
+  知道谁在画布上、正在指哪里。服务端：进房分配成员 id（自增）+调色板轮换颜色，
+  hello 带 `you:{id,color}`；新 `cursor` 消息只广播不落盘不进撤销，**身份由服务端
+  注入**（不信任客户端自报 id/color），30ms 同会话限流（限流在坏输入校验之前
+  ——保护优先，窗内坏包静默吞）。前端：**overlay 独立画布**叠在主画布上
+  （pointer-events:none）——光标渲染完全不碰主画布，不与形状重绘抢帧；
+  pointermove 80ms 节流发送；收到光标置脏 + rAF 循环统一重绘（一帧最多一次）；
+  4s 无动作自动清出；断线清空重连。测试 +1（hello 带 you 身份、cursor 注入
+  id 广播不回显、<30ms 连发被限流——**测试时序坑：recv_none 的 0.5s 窗口
+  本身就是限流窗的放大器，连发断言必须放在读队列之前**、坏输入报错不断连）
+  → 16 双入口绿。无头 Edge 双页面走查：p2 页面清晰渲染 p1 的光标三角+"成员 1"
+  标签（overlay 像素取样 1009 点）、"●协同 2 人"、零 console 错误。级联
+  15→16：run.bat/README/check_all；**坑回改：用 Python 写 run.bat 忘 CRLF——
+  21 行全 LF，当场字节级复核修复（ASCII+CRLF 双纪律）**。check_runbat 对账过。

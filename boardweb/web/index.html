@@ -20,9 +20,11 @@ body{background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,"Microsoft Ya
 input[type=color]{width:2.1rem;height:1.7rem;padding:0;border:1px solid var(--line);border-radius:6px;background:var(--card);cursor:pointer}
 select,input[type=number]{font:inherit;font-size:.85rem;padding:.3rem .45rem;border:1px solid var(--line);
   border-radius:6px;background:var(--card);color:var(--ink)}
-#board{display:block;margin:1rem auto;border:1px solid var(--line-strong);border-radius:8px;
+#board-wrap{position:relative;width:1120px;margin:1rem auto}
+#board{display:block;border:1px solid var(--line-strong);border-radius:8px;
   background:#fff;box-shadow:var(--shadow-pop,0 4px 14px rgba(0,0,0,.08));touch-action:none;cursor:crosshair}
 #board.tool-select{cursor:default}
+#overlay{position:absolute;inset:0;pointer-events:none}
 .props{display:flex;gap:.4rem;align-items:center;flex-wrap:wrap;justify-content:center;
   padding:.4rem .8rem;font-size:.84rem;color:var(--muted)}
 .props input[type=number]{width:4.6rem}
@@ -65,7 +67,10 @@ kbd{background:var(--line-soft,#efefef);border:1px solid var(--line);border-radi
   <span id="ws-state" title="协同状态：●实时同步在线人数；○仅本地（断线重连中）">—</span>
   <span id="save-state">—</span>
 </div>
-<canvas id="board" width="1120" height="640"></canvas>
+<div id="board-wrap">
+  <canvas id="board" width="1120" height="640"></canvas>
+  <canvas id="overlay" width="1120" height="640"></canvas>
+</div>
 <div class="props" id="props">
   <b>微调</b>
   <label>X <input type="number" id="p-x" step="1" disabled></label>

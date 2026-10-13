@@ -17,6 +17,10 @@
   var dirty = false, saveTimer = null;
   var imgCache = {};               // url -> HTMLImageElement
   var ws = null, wsPeers = 0;      // 协同通道与在线人数
+  var myId = 0;                    // 服务端分配的成员 id（hello.you）
+  var remote = {};                 // 远端光标 {id: {x,y,color,name,ts}}
+  var octx = null;                 // overlay 画布（光标层，不动主画布）
+  var overlayDirty = false;
 
   function status(text) { $("save-state").textContent = text; }
   function wsStatus() {
@@ -24,7 +28,7 @@
       ? "●协同 " + wsPeers + " 人" : "○本地模式";
     $("ws-state").textContent = text;
     $("ws-state2").textContent = (ws && ws.readyState === 1)
-      ? "实时协同中" : "当前仅本地";
+      ? "实时协同中（成员光标互见）" : "当前仅本地";
   }
   function markDirty() {
     dirty = true;
@@ -235,6 +239,7 @@
   });
   canvas.addEventListener("pointermove", function (ev) {
     var p = pos(ev);
+    sendCursorThrottled(p[0], p[1]);       // 光标 presence：任何工具下都广播
     if (drawing) {
       if (drawing.type === "pen") drawing.pts.push(p);
       else { drawing.x2 = p[0]; drawing.y2 = p[1];
@@ -435,6 +440,55 @@
     if (!left) done();
   }
 
+  // ------------------------------------------------ 光标 presence（overlay 层）
+  function initOverlay() {
+    var ov = $("overlay");
+    octx = ov.getContext("2d");
+    // 收到光标 / 过期清理后置脏，rAF 循环统一重绘（一帧最多画一次）
+    (function loop() {
+      if (overlayDirty) { overlayDirty = false; drawOverlay(); }
+      requestAnimationFrame(loop);
+    })();
+    setInterval(function () {          // 4s 无动作的远端光标清出
+      var now = Date.now(), gone = false;
+      Object.keys(remote).forEach(function (id) {
+        if (now - remote[id].ts > 4000) { delete remote[id]; gone = true; }
+      });
+      if (gone) overlayDirty = true;
+    }, 2000);
+  }
+  function drawOverlay() {
+    octx.clearRect(0, 0, W, H);
+    Object.keys(remote).forEach(function (id) {
+      var c = remote[id];
+      octx.fillStyle = c.color;
+      octx.strokeStyle = "#fff"; octx.lineWidth = 1.5;
+      octx.beginPath();                 // 光标小三角
+      octx.moveTo(c.x, c.y);
+      octx.lineTo(c.x + 11, c.y + 4); octx.lineTo(c.x + 5, c.y + 12);
+      octx.closePath(); octx.fill(); octx.stroke();
+      var label = "成员 " + id;         // 名字标签
+      octx.font = "12px system-ui, 'Microsoft YaHei', sans-serif";
+      var w = octx.measureText(label).width + 10;
+      octx.beginPath();
+      octx.moveTo(c.x + 10, c.y + 12);
+      octx.arcTo(c.x + 10 + w, c.y + 12, c.x + 10 + w, c.y + 30, 6);
+      octx.arcTo(c.x + 10 + w, c.y + 30, c.x + 10, c.y + 30, 6);
+      octx.arcTo(c.x + 10, c.y + 30, c.x + 10, c.y + 12, 6);
+      octx.arcTo(c.x + 10, c.y + 12, c.x + 10 + w, c.y + 12, 6);
+      octx.closePath(); octx.fill(); octx.stroke();
+      octx.fillStyle = "#fff";
+      octx.fillText(label, c.x + 15, c.y + 25);
+    });
+  }
+  var lastCursorSent = 0;
+  function sendCursorThrottled(x, y) {
+    var now = Date.now();
+    if (now - lastCursorSent < 80) return;   // 前端节流 80ms（服务端还有 30ms 闸）
+    lastCursorSent = now;
+    wsSend({ type: "cursor", x: x, y: y });
+  }
+
   // ------------------------------------------------ 协同（WebSocket）
   function wsSend(obj) {
     if (ws && ws.readyState === 1) {
@@ -451,7 +505,13 @@
     ws.onmessage = function (ev) {
       var m; try { m = JSON.parse(ev.data); } catch (e) { return; }
       if (m.type === "hello" || m.type === "peers") {
+        if (m.type === "hello" && m.you) myId = m.you.id;
         wsPeers = m.peers; wsStatus();
+      } else if (m.type === "cursor") {
+        var c = remote[m.id] || (remote[m.id] = {});
+        c.x = m.x; c.y = m.y; c.color = m.color;
+        c.ts = Date.now();
+        overlayDirty = true;
       } else if (m.type === "add") {
         var s = m.shape;
         if (s && s.type === "image" && !imgCache[s.img]) preloadImages([s], render);
@@ -466,7 +526,9 @@
       }
     };
     ws.onclose = function () {
-      ws = null; wsPeers = 0; wsStatus();
+      ws = null; wsPeers = 0; myId = 0;
+      remote = {}; overlayDirty = true;   // 断线清光标（重连后按新身份重来）
+      wsStatus();
       setTimeout(wsConnect, 3000);       // 断线退回本地模式，3 秒重连
     };
     ws.onerror = function () { try { ws.close(); } catch (e) { /* already */ } };
@@ -489,6 +551,7 @@
   });
 
   disableProps();
+  initOverlay();
   wsStatus();
   boot();
 })();

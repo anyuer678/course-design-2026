@@ -52,13 +52,14 @@ python server.py --port 8025  # 启动画板服务（Studio 门户可一键启�
 | POST | /api/img?name=x.png | 上传贴图（≤8MiB）→ {url} |
 | GET | /img/<file> | 读贴图（文件名白名单防穿越） |
 
-## 测试策略（15 项）
+## 测试策略（16 项）
 
 文档往返与版本递增、**图形库五类新形状逐字段往返**（arrow/triangle/diamond/
 text/sticky）、坏体 400、备份轮转 keep=10（同秒连存不互覆——时戳掺随机）、
 贴图上传取回、扩展名白名单 400、8MiB 上限 413、路径穿越 404、页面可达；
-WS 协同五段链路（握手→peers→增量不回显→sync/clear→坏消息不断连）+
-**新形状原样广播**、超限 sync 拒播不断连。
+WS 协同五段链路（握手含 you 身份→peers→增量不回显→sync/clear→坏消息不断连）+
+**新形状原样广播**、**光标 presence**（服务端注入成员 id/颜色、30ms 限流、
+坏输入报错）、超限 sync 拒播不断连。
 
 ## 已知边界
 

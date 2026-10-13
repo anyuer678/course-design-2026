@@ -135,12 +135,39 @@ class TestWsBoard(unittest.TestCase):
 
     def test_hello_and_peers_broadcast(self):
         a = self._connect()
-        self.assertEqual(a.recv_json(), {"type": "hello", "peers": 1})
+        hello = a.recv_json()
+        self.assertEqual(hello["peers"], 1)
+        self.assertEqual(hello["you"]["id"], 1)      # 进房分配成员 id
+        self.assertTrue(hello["you"]["color"].startswith("#"))
         b = self._connect()
-        self.assertEqual(b.recv_json(), {"type": "hello", "peers": 2})
+        self.assertEqual(b.recv_json()["you"]["id"], 2)  # 成员 id 自增不重复
         self.assertEqual(a.recv_json(), {"type": "peers", "peers": 2})  # b 进场推给 a
         b.close()
         self.assertEqual(a.recv_json(), {"type": "peers", "peers": 1})  # b 退场回收
+
+    def test_cursor_presence_broadcast_no_echo(self):
+        """轮三十九多人光标：cursor 服务端注入会话身份广播、不回显、坏输入报错不断连。"""
+        a, b = self._connect(), self._connect()
+        a.recv_json(); b.recv_json()                     # hello ×2（各自含 you）
+        a.recv_json()                                    # peers=2
+        a.send_json({"type": "cursor", "x": 100, "y": 50})
+        a.send_json({"type": "cursor", "x": 200, "y": 60})   # 连发：<30ms 被限流
+        got = b.recv_json()
+        self.assertEqual(got["type"], "cursor")
+        self.assertEqual(got["id"], 1)                   # 服务端注入 a 的成员 id
+        self.assertEqual((got["x"], got["y"]), (100, 50))
+        self.assertTrue(a.recv_none())                   # 不回显发送方
+        # b 只收到一条——第二条 <30ms 被服务端丢弃（recv_none 0.5s 后仍无新包）
+        time.sleep(0.05)                                 # 过限流窗再发一条
+        a.send_json({"type": "cursor", "x": 300, "y": 70})
+        got2 = b.recv_json()
+        self.assertEqual((got2["x"], got2["y"]), (300, 70))
+        # 坏输入报错但连接活着（限流在先——坏输入也要先过 30ms 窗才轮到校验）
+        time.sleep(0.05)
+        a.send_json({"type": "cursor", "x": "left"})
+        self.assertIn("error", a.recv_json())
+        a.send_json({"type": "ping"})
+        self.assertEqual(a.recv_json(), {"type": "pong"})
 
     def test_add_broadcasts_without_echo(self):
         a, b = self._connect(), self._connect()
