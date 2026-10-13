@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#fafafa">
+<title>操作审计 · Studio 门户</title>
+<link rel="stylesheet" href="/static/assets/kb.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-page="audit">
+<div id="toast-box"></div>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand"><span class="logo">ST</span>Studio</div>
+    <div class="side-section">门户</div>
+    <a class="side-link" href="/">产品矩阵</a>
+    <a class="side-link active" href="/audit.html">操作审计</a>
+    <a class="side-link" href="/team.html">成员与邀请</a>
+    <a class="side-link" href="/account.html">账户</a>
+    <a class="side-link" href="/login.html">登录 / 注册</a>
+    <div class="side-foot">
+      <div class="badge-dot" id="ws-state">○ 轮询模式（3s）</div>
+      <div class="badge-dot" id="foot-state">只绑 127.0.0.1</div>
+      <div>门户跑在自研 webframe 上</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="pagebar">
+      <div class="crumb">Studio / <b>操作审计</b></div>
+      <span class="spacer"></span>
+      <div id="authbox" class="authbox" style="display:flex;gap:.5rem;align-items:center">
+        <span class="note" id="auth-msg"></span>
+        <div id="auth-guest" style="display:flex;gap:.5rem;align-items:center">
+          <span class="note">未登录——<a href="/login.html">登录 / 注册</a></span>
+        </div>
+        <div id="auth-user" style="display:flex;gap:.5rem;align-items:center" hidden>
+          <span class="note" id="whoami"></span>
+          <button id="btn-logout" class="btn btn-ghost btn-sm">登出</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="overline">Audit</div>
+      <h1>操作审计 <span class="note">（启停动作的账，含拒绝与失败；需登录查看）</span></h1>
+      <div id="dash" class="dash" hidden>
+        <div class="dash-chart" id="dash-actions"></div>
+        <div class="dash-chart" id="dash-outcomes"></div>
+      </div>
+      <table class="kb">
+        <thead><tr>
+          <th>时间</th><th>动作</th><th>产品</th><th>结果</th><th>操作人</th><th>说明</th>
+        </tr></thead>
+        <tbody id="audit-rows">
+          <tr><td colspan="6" class="note">登录后可见。</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <footer>Studio P0 · 数据只在本机 · 只绑 127.0.0.1 · UI 共享设计系统 kb.css 2.1</footer>
+  </div>
+</div>
+<script src="/static/assets/echarts.min.js"></script>
+<script src="/static/app.js"></script>
+
+</body>
+</html>

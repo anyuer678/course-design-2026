@@ -1191,3 +1191,19 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   ——坏输入零请求发出）。测试 36 项零改动全绿；走查：未登录点启动 → toast
   出现（err 红边、in 态）→ 3.2s 自动消失、无 alert dialog、零 console 错误；
   预校验拦截三连提示且 /api/register 零请求。纯前端改动。
+
+- ✅ **轮四十六：门户多页面化 + 内嵌控制台（10-13，用户"页面 UI 应多页面分工、控制台没内嵌项目群"）**：
+  单页长滚动拆成 **6 页分工**（共享 kb.css shell 骨架，生成器 build_pages.py 一次产出防漂移）：
+  `/` 产品矩阵（认证引导卡+矩阵+探活）、`/audit.html` 操作审计（dash+表）、`/team.html`
+  成员与邀请（owner，非管理员如实显示无权卡）、`/account.html` 我的分层与权限+改口令、
+  `/login.html` 登录/注册双栏（已登录访问跳走）、**`/console.html?pid=x` 产品内嵌控制台**
+  ——iframe 直接嵌产品页（侧栏+顶栏保留，"在新窗口打开"并存），未登录也能进（产品本身
+  公开只读）；board 是探活行协议口如实拒绝内嵌并指路 BoardWeb；离线产品如实提示"先启动"。
+  server 加 5 条 pretty 路由（带/不带 .html 双挂）。app.js 重构为**页面分派架构**：
+  body[data-page] → bootstrap（共享 portal 拉取+renderAuth+侧栏显隐）→ 按页 init，
+  全部元素引用都在自己的页面里，不再依赖单页全量 DOM。矩阵卡"打开产品"（新窗口）
+  改"进入控制台"（内嵌）。测试 36 项零改动全绿（旧断言走 handle 不受路由影响）；
+  走查：六页 data-page 全对、未登录 8 个"进入控制台"、cachekv iframe 嵌入实证、
+  注册后跳矩阵、owner team 页正常，零 console 错误。**排障坑（两次都是它）**：
+  TaskStop 门户会整树收掉它拉起的产品——走查产品全离线的"链接消失"是环境不是代码；
+  多页验证前先 curl /api/products 探活产品在不在。门户保持运行交付用户试用。

@@ -5,40 +5,39 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E">
 <meta name="theme-color" content="#fafafa">
-<title>Studio · 产品矩阵门户</title>
+<title>产品矩阵 · Studio 门户</title>
 <link rel="stylesheet" href="/static/assets/kb.css">
 <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body data-page="products">
 <div id="toast-box"></div>
 <div class="shell">
   <aside class="sidebar">
     <div class="side-brand"><span class="logo">ST</span>Studio</div>
     <div class="side-section">门户</div>
-    <a class="side-link active" href="#cards" data-nav="cards">产品矩阵</a>
-    <a class="side-link" href="#audit" data-nav="audit">操作审计</a>
-    <a class="side-link" href="#account" data-nav="account">账户</a>
+    <a class="side-link active" href="/">产品矩阵</a>
+    <a class="side-link" href="/audit.html">操作审计</a>
+    <a class="side-link" href="/team.html">成员与邀请</a>
+    <a class="side-link" href="/account.html">账户</a>
+    <a class="side-link" href="/login.html">登录 / 注册</a>
     <div class="side-foot">
       <div class="badge-dot" id="ws-state">○ 轮询模式（3s）</div>
       <div class="badge-dot" id="foot-state">只绑 127.0.0.1</div>
       <div>门户跑在自研 webframe 上</div>
-      <div>初始口令在 studio/data/password.txt</div>
     </div>
   </aside>
 
   <div class="main">
     <div class="pagebar">
-      <div class="crumb">Studio / <b id="crumb-page">产品矩阵</b></div>
+      <div class="crumb">Studio / <b>产品矩阵</b></div>
       <span class="spacer"></span>
       <div id="authbox" class="authbox" style="display:flex;gap:.5rem;align-items:center">
         <span class="note" id="auth-msg"></span>
         <div id="auth-guest" style="display:flex;gap:.5rem;align-items:center">
-          <span class="note">未登录——登录 / 注册见页面顶部卡片</span>
+          <span class="note">未登录——<a href="/login.html">登录 / 注册</a></span>
         </div>
         <div id="auth-user" style="display:flex;gap:.5rem;align-items:center" hidden>
           <span class="note" id="whoami"></span>
-          <button id="btn-users" class="btn btn-ghost btn-sm" hidden
-                  title="成员管理（仅管理员）">成员</button>
           <button id="btn-logout" class="btn btn-ghost btn-sm">登出</button>
         </div>
       </div>
@@ -47,38 +46,13 @@
     <div class="page">
       <div class="overline">Access</div>
       <div class="card" id="auth-hero" hidden style="margin-top:1rem">
-        <div style="display:flex;gap:1.5rem;flex-wrap:wrap">
-          <div style="flex:1 1 260px;min-width:240px">
-            <h2 style="margin-top:0">登录</h2>
-            <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:.5rem">
-              <input id="login-user" value="" class="inp" placeholder="用户名（owner 或成员名）">
-              <input id="login-pass" type="password" placeholder="口令" class="inp"
-                     autocomplete="current-password">
-              <button id="btn-login" class="btn btn-sm" style="width:auto">登录</button>
-            </div>
-            <p class="note" id="login-msg"></p>
-            <p class="note" id="envelope-hint" hidden>首次部署：初始口令在
-              <span class="kbd">studio/data/password.txt</span>——登录后请立即在
-              「账户」页修改，修改后该文件自动作废。</p>
-          </div>
-          <div style="flex:1 1 260px;min-width:240px;border-left:1px solid var(--line);padding-left:1.5rem">
-            <h2 style="margin-top:0">注册</h2>
-            <div class="toolbar" style="flex-direction:column;align-items:stretch;gap:.5rem">
-              <input id="reg-name" placeholder="用户名（2-20 位字母/数字/下划线/连字符）" class="inp">
-              <input id="reg-pass" type="password" placeholder="口令（至少 8 位）" class="inp">
-              <input id="reg-pass2" type="password" placeholder="再输一遍口令" class="inp">
-              <input id="reg-invite" placeholder="邀请码（选填，管理员提供）" class="inp">
-              <button id="btn-register" class="btn btn-ghost btn-sm" style="width:auto">注册并登录</button>
-            </div>
-            <p class="note" id="reg-msg"></p>
-            <p class="note">不填邀请码 = viewer 只读；管理员邀请码可给 operator 启停权限。</p>
-          </div>
-        </div>
+        <p class="note" style="margin:0">你还未登录。启停产品需要登录——
+          <a href="/login.html">前往登录 / 注册</a>。产品目录与状态对所有人公开只读。</p>
       </div>
 
       <div class="overline">Product Matrix</div>
       <h1>产品矩阵</h1>
-      <p class="note">目录 · 一键启停 · 状态面板 · 导航。管理动作（启停）需登录；
+      <p class="note">目录 · 一键启停 · <b>内嵌控制台</b> · 状态面板。管理动作（启停）需登录；
         "在线 = 端口连得上"，不撒谎。</p>
       <section id="cards" class="grid" style="margin-top:1rem"></section>
 
@@ -93,83 +67,12 @@
           服务刚启动时这里还是空的，等几分钟就有形状了。</p>
       </div>
 
-      <div class="overline">Audit</div>
-      <h2 id="audit">操作审计 <span class="note">（启停动作的账，含拒绝与失败；需登录查看）</span></h2>
-      <div id="dash" class="dash" hidden>
-        <div class="dash-chart" id="dash-actions"></div>
-        <div class="dash-chart" id="dash-outcomes"></div>
-      </div>
-      <table class="kb">
-        <thead><tr>
-          <th>时间</th><th>动作</th><th>产品</th><th>结果</th><th>操作人</th><th>说明</th>
-        </tr></thead>
-        <tbody id="audit-rows">
-          <tr><td colspan="6" class="note">登录后可见。</td></tr>
-        </tbody>
-      </table>
-
-      <div class="overline">Team</div>
-      <h2 id="users">成员管理 <span class="note">（RBAC：owner 管理员 / operator 可启停 /
-        viewer 只读；仅管理员可见）</span></h2>
-      <div class="card" id="users-card" hidden>
-        <table class="kb">
-          <thead><tr><th>成员</th><th>角色</th><th>管理</th></tr></thead>
-          <tbody id="users-rows"></tbody>
-        </table>
-        <div class="toolbar" style="margin-top:.6rem">
-          <input id="new-user-name" placeholder="用户名（2-20 位字母数字）" class="inp"
-                 style="flex:none;width:13rem">
-          <input id="new-user-pass" type="password" placeholder="口令（至少 8 位）" class="inp"
-                 style="flex:none;width:11rem">
-          <select id="new-user-role" style="flex:none">
-            <option value="operator">operator（可启停）</option>
-            <option value="viewer">viewer（只读）</option>
-          </select>
-          <button id="btn-add-user" class="btn btn-ghost btn-sm">添加成员</button>
-        </div>
-        <p class="note" id="users-msg"></p>
-        <div class="overline" style="margin-top:.8rem">Invites</div>
-        <p class="note">邀请码：注册页填入即可获得对应角色（一次性，用后即焚）。
-          不发码也没关系——不填码注册一律 viewer 只读。</p>
-        <div class="toolbar">
-          <select id="invite-role" style="flex:none">
-            <option value="operator">operator 邀请码</option>
-            <option value="viewer">viewer 邀请码</option>
-          </select>
-          <button id="btn-new-invite" class="btn btn-ghost btn-sm">生成邀请码</button>
-        </div>
-        <table class="kb" style="margin-top:.4rem">
-          <thead><tr><th>邀请码</th><th>角色</th><th>生成日期</th><th></th></tr></thead>
-          <tbody id="invite-rows"></tbody>
-        </table>
-        <p class="note" id="invite-msg"></p>
-      </div>
-
-      <div class="overline">Account</div>
-      <h2 id="account">我的分层与权限 <span class="note">（L3 管理员 &gt; L2 操作员 &gt; L1 观察者
-        &gt; L0 未登录公开只读）</span></h2>
-      <div class="card" id="perm-card">
-        <p class="note" id="perm-me">未登录（L0）：仅可浏览产品矩阵与状态。</p>
-        <div id="perm-list" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
-      </div>
-      <h2>改口令</h2>
-      <div class="card">
-        <div class="toolbar">
-          <input id="old-pass" type="password" placeholder="旧口令" class="inp"
-                 style="flex:none;width:12rem" autocomplete="current-password">
-          <input id="new-pass" type="password" placeholder="新口令（至少 8 位）" class="inp"
-                 style="flex:none;width:14rem" autocomplete="new-password">
-          <button id="btn-passwd" class="btn btn-ghost btn-sm">改口令</button>
-        </div>
-        <p class="note" id="passwd-msg"></p>
-      </div>
-
       <div class="overline">Guides</div>
       <h2>讲解层</h2>
       <div class="card">
         <p class="note">每个课设项目"怎么实现的"看仓库根 <span class="kbd">showcase/index.html</span>
-          （33 页全绿）。实验台已并入上面的卡片（"展示层实验台"），启动后打开
-          <span class="kbd">http://127.0.0.1:7788/showcase/index.html</span> 就是项目群控制台。</p>
+          （33 页全绿）。实验台已并入上面的卡片（"展示层实验台"），启动后经「进入控制台」
+          即达项目群。</p>
       </div>
     </div>
 
@@ -178,5 +81,6 @@
 </div>
 <script src="/static/assets/echarts.min.js"></script>
 <script src="/static/app.js"></script>
+
 </body>
 </html>

@@ -408,6 +408,16 @@ def build_app(manager: ProductManager, auth: Auth,
         page = (WEB_ROOT / "index.html").read_bytes()
         return Response(page, content_type="text/html; charset=utf-8")
 
+    # ------------------------------------------------ 多页面（轮四十六页面分工）
+    for _page in ("audit", "team", "account", "login", "console"):
+        def _make_page(name):
+            def page_view(ctx):
+                page = (WEB_ROOT / (name + ".html")).read_bytes()
+                return Response(page, content_type="text/html; charset=utf-8")
+            return page_view
+        app.get("/" + _page)(_make_page(_page))
+        app.get("/" + _page + ".html")(_make_page(_page))   # 直接敲 .html 也达
+
     app.static("/static", WEB_ROOT)
     return app
 

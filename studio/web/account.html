@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#fafafa">
+<title>账户 · Studio 门户</title>
+<link rel="stylesheet" href="/static/assets/kb.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-page="account">
+<div id="toast-box"></div>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand"><span class="logo">ST</span>Studio</div>
+    <div class="side-section">门户</div>
+    <a class="side-link" href="/">产品矩阵</a>
+    <a class="side-link" href="/audit.html">操作审计</a>
+    <a class="side-link" href="/team.html">成员与邀请</a>
+    <a class="side-link active" href="/account.html">账户</a>
+    <a class="side-link" href="/login.html">登录 / 注册</a>
+    <div class="side-foot">
+      <div class="badge-dot" id="ws-state">○ 轮询模式（3s）</div>
+      <div class="badge-dot" id="foot-state">只绑 127.0.0.1</div>
+      <div>门户跑在自研 webframe 上</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="pagebar">
+      <div class="crumb">Studio / <b>账户</b></div>
+      <span class="spacer"></span>
+      <div id="authbox" class="authbox" style="display:flex;gap:.5rem;align-items:center">
+        <span class="note" id="auth-msg"></span>
+        <div id="auth-guest" style="display:flex;gap:.5rem;align-items:center">
+          <span class="note">未登录——<a href="/login.html">登录 / 注册</a></span>
+        </div>
+        <div id="auth-user" style="display:flex;gap:.5rem;align-items:center" hidden>
+          <span class="note" id="whoami"></span>
+          <button id="btn-logout" class="btn btn-ghost btn-sm">登出</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="overline">Account</div>
+      <h1>我的分层与权限 <span class="note">（L3 管理员 &gt; L2 操作员 &gt; L1 观察者
+        &gt; L0 未登录公开只读）</span></h1>
+      <div class="card" id="perm-card">
+        <p class="note" id="perm-me">未登录（L0）：仅可浏览产品矩阵与状态。</p>
+        <div id="perm-list" style="display:flex;gap:.5rem;flex-wrap:wrap"></div>
+      </div>
+      <h2>改口令</h2>
+      <div class="card">
+        <div class="toolbar">
+          <input id="old-pass" type="password" placeholder="旧口令" class="inp"
+                 style="flex:none;width:12rem" autocomplete="current-password">
+          <input id="new-pass" type="password" placeholder="新口令（至少 8 位）" class="inp"
+                 style="flex:none;width:14rem" autocomplete="new-password">
+          <button id="btn-passwd" class="btn btn-ghost btn-sm">改口令</button>
+        </div>
+        <p class="note" id="passwd-msg"></p>
+        <p class="note" id="envelope-hint" hidden>你仍在使用初始口令（信封未拆）——
+          修改后 <span class="kbd">password.txt</span> 自动作废，明文从磁盘消失。</p>
+      </div>
+    </div>
+
+    <footer>Studio P0 · 数据只在本机 · 只绑 127.0.0.1 · UI 共享设计系统 kb.css 2.1</footer>
+  </div>
+</div>
+<script src="/static/assets/echarts.min.js"></script>
+<script src="/static/app.js"></script>
+
+</body>
+</html>

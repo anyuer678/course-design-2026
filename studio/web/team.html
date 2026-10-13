@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%232563eb'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#fafafa">
+<title>成员与邀请 · Studio 门户</title>
+<link rel="stylesheet" href="/static/assets/kb.css">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body data-page="team">
+<div id="toast-box"></div>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="side-brand"><span class="logo">ST</span>Studio</div>
+    <div class="side-section">门户</div>
+    <a class="side-link" href="/">产品矩阵</a>
+    <a class="side-link" href="/audit.html">操作审计</a>
+    <a class="side-link active" href="/team.html">成员与邀请</a>
+    <a class="side-link" href="/account.html">账户</a>
+    <a class="side-link" href="/login.html">登录 / 注册</a>
+    <div class="side-foot">
+      <div class="badge-dot" id="ws-state">○ 轮询模式（3s）</div>
+      <div class="badge-dot" id="foot-state">只绑 127.0.0.1</div>
+      <div>门户跑在自研 webframe 上</div>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="pagebar">
+      <div class="crumb">Studio / <b>成员与邀请</b></div>
+      <span class="spacer"></span>
+      <div id="authbox" class="authbox" style="display:flex;gap:.5rem;align-items:center">
+        <span class="note" id="auth-msg"></span>
+        <div id="auth-guest" style="display:flex;gap:.5rem;align-items:center">
+          <span class="note">未登录——<a href="/login.html">登录 / 注册</a></span>
+        </div>
+        <div id="auth-user" style="display:flex;gap:.5rem;align-items:center" hidden>
+          <span class="note" id="whoami"></span>
+          <button id="btn-logout" class="btn btn-ghost btn-sm">登出</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="page">
+      <div class="overline">Team</div>
+      <h1>成员与邀请 <span class="note">（RBAC：owner 管理员 / operator 可启停 /
+        viewer 只读；仅管理员可见）</span></h1>
+      <div class="card" id="users-card" hidden>
+        <table class="kb">
+          <thead><tr><th>成员</th><th>角色</th><th>管理</th></tr></thead>
+          <tbody id="users-rows"></tbody>
+        </table>
+        <div class="toolbar" style="margin-top:.6rem">
+          <input id="new-user-name" placeholder="用户名（2-20 位字母数字）" class="inp"
+                 style="flex:none;width:13rem">
+          <input id="new-user-pass" type="password" placeholder="口令（至少 8 位）" class="inp"
+                 style="flex:none;width:11rem">
+          <select id="new-user-role" style="flex:none">
+            <option value="operator">operator（可启停）</option>
+            <option value="viewer">viewer（只读）</option>
+          </select>
+          <button id="btn-add-user" class="btn btn-ghost btn-sm">添加成员</button>
+        </div>
+        <p class="note" id="users-msg"></p>
+        <div class="overline" style="margin-top:.8rem">Invites</div>
+        <p class="note">邀请码：注册时填入即可获得对应角色（一次性，用后即焚）。
+          不发码也没关系——不填码注册一律 viewer 只读。</p>
+        <div class="toolbar">
+          <select id="invite-role" style="flex:none">
+            <option value="operator">operator 邀请码</option>
+            <option value="viewer">viewer 邀请码</option>
+          </select>
+          <button id="btn-new-invite" class="btn btn-ghost btn-sm">生成邀请码</button>
+        </div>
+        <table class="kb" style="margin-top:.4rem">
+          <thead><tr><th>邀请码</th><th>角色</th><th>生成日期</th><th></th></tr></thead>
+          <tbody id="invite-rows"></tbody>
+        </table>
+        <p class="note" id="invite-msg"></p>
+      </div>
+      <div class="card" id="team-deny" hidden>
+        <p class="note" style="margin:0">成员管理仅管理员（owner）可用。</p>
+      </div>
+    </div>
+
+    <footer>Studio P0 · 数据只在本机 · 只绑 127.0.0.1 · UI 共享设计系统 kb.css 2.1</footer>
+  </div>
+</div>
+<script src="/static/assets/echarts.min.js"></script>
+<script src="/static/app.js"></script>
+
+</body>
+</html>
