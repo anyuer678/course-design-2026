@@ -3,6 +3,8 @@
   "use strict";
   var busy = {};
   var user = null;
+  var role = null;                   // RBAC：owner / operator / viewer / null 未登录
+  var ROLE_LABEL = { owner: "管理员", operator: "操作员", viewer: "观察者" };
   var last = [];
 
   function el(tag, cls, text) {
@@ -31,7 +33,11 @@
     // （2026-10-07 走查：登录后表单曾与"已登录"并排显示）
     $("auth-guest").style.display = user ? "none" : "flex";
     $("auth-user").style.display = user ? "flex" : "none";
-    if (user) $("whoami").textContent = "已登录：" + user;
+    if (user) {
+      $("whoami").textContent = user + " · " + (ROLE_LABEL[role] || role || "?");
+      $("btn-users").hidden = role !== "owner";
+      $("users-card").hidden = role !== "owner" ? true : $("users-card").hidden;
+    }
   }
 
   function authMsg(text) { $("auth-msg").textContent = text || ""; }
@@ -39,10 +45,11 @@
   function login() {
     var btn = $("btn-login");
     btn.disabled = true; btn.textContent = "登录中…"; authMsg("");
-    postJSON("/api/login", { username: "owner", password: $("login-pass").value })
+    postJSON("/api/login", { username: $("login-user").value.trim() || "owner",
+                             password: $("login-pass").value })
       .then(function (r) {
         if (r.status === 200) {
-          user = r.data.user;
+          user = r.data.user; role = r.data.role;
           $("login-pass").value = "";
           renderAuth();
           refresh();
@@ -57,7 +64,8 @@
     var btn = $("btn-logout");
     btn.disabled = true; btn.textContent = "登出中…";
     postJSON("/api/logout").then(function () {
-      user = null;
+      user = null; role = null;
+      $("users-card").hidden = true;      // 面板跟登录态走，登出即收
       renderAuth();
       authMsg("已登出");
       refresh();
@@ -88,6 +96,83 @@
   $("btn-logout").addEventListener("click", logout);
   $("btn-passwd").addEventListener("click", changePassword);
 
+  // ------------------------------------------------ 成员管理（RBAC，owner 专属）
+  function usersMsg(text) { $("users-msg").textContent = text || ""; }
+  function loadUsers() {
+    fetch("/api/users").then(function (r) { return r.json(); }).then(function (d) {
+      var rows = $("users-rows");
+      rows.textContent = "";
+      (d.users || []).forEach(function (u) {
+        var tr = el("tr");
+        tr.appendChild(el("td", "", u.name));
+        var roleCell = tr.appendChild(el("td", "", ""));
+        var sel = el("select");
+        ["operator", "viewer"].forEach(function (r) {
+          var op = el("option", "", r === "operator" ? "operator（可启停）" : "viewer（只读）");
+          op.value = r; if (r === u.role) op.selected = true;
+          sel.appendChild(op);
+        });
+        sel.addEventListener("change", function () {
+          postJSON("/api/users/" + u.name + "/role", { role: sel.value })
+            .then(function (r) {
+              if (r.status === 200) { usersMsg(u.name + " → " + sel.value); loadUsers(); }
+              else usersMsg(r.data.error || "改角色失败");
+            });
+        });
+        roleCell.appendChild(sel);
+        var mgmt = tr.appendChild(el("td", "", ""));
+        var reset = el("button", "btn btn-ghost btn-sm", "重置口令");
+        reset.addEventListener("click", function () {
+          var pw = window.prompt("为 " + u.name + " 设置新口令（至少 8 位）：", "");
+          if (pw === null) return;
+          postJSON("/api/users/" + u.name + "/reset", { password: pw })
+            .then(function (r) {
+              usersMsg(r.status === 200 ? u.name + " 口令已重置" : (r.data.error || "重置失败"));
+            });
+        });
+        mgmt.appendChild(reset);
+        mgmt.appendChild(document.createTextNode(" "));
+        var del = el("button", "btn btn-ghost btn-sm", "删除");
+        del.addEventListener("click", function () {
+          if (!window.confirm("删除成员 " + u.name + "？")) return;
+          fetch("/api/users/" + u.name, { method: "DELETE" })
+            .then(function (r) { return r.json().then(function (d2) { return { status: r.status, d: d2 }; }); })
+            .then(function (r) {
+              if (r.status === 200) { usersMsg(u.name + " 已删除"); loadUsers(); }
+              else usersMsg(r.d.error || "删除失败");
+            });
+        });
+        mgmt.appendChild(del);
+        rows.appendChild(tr);
+      });
+      if (!(d.users || []).length) {
+        rows.appendChild(el("tr", "note", "")).appendChild(
+          el("td", "note", "还没有成员——用下面的表单添加。"));
+      }
+    });
+  }
+  $("btn-users").addEventListener("click", function () {
+    var card = $("users-card");
+    card.hidden = false;
+    loadUsers();
+    card.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+  $("btn-add-user").addEventListener("click", function () {
+    postJSON("/api/users", {
+      name: $("new-user-name").value.trim(),
+      password: $("new-user-pass").value,
+      role: $("new-user-role").value
+    }).then(function (r) {
+      if (r.status === 201) {
+        usersMsg(r.data.name + " 已添加（" + r.data.role + "）");
+        $("new-user-name").value = ""; $("new-user-pass").value = "";
+        loadUsers();
+      } else {
+        usersMsg(r.data.error || "添加失败");
+      }
+    });
+  });
+
   // ------------------------------------------------ 产品卡片
   function render(list) {
     var box = $("cards");
@@ -103,8 +188,22 @@
       card.appendChild(el("p", "note", p.tagline));
       if (p.managed) {
         var row = el("div", "row");
+        var canOperate = role === "owner" || role === "operator";
         if (busy[p.id]) {
           row.appendChild(el("span", "note", busy[p.id]));
+        } else if (!user) {
+          // 未登录：按钮照画，act() 会提示先登录（登录态由服务端裁决）
+          if (p.online) {
+            var stop0 = el("button", "btn ghost", "停止");
+            stop0.addEventListener("click", function () { act(p.id, "stop"); });
+            row.appendChild(stop0);
+          } else {
+            var start0 = el("button", "btn", "启动");
+            start0.addEventListener("click", function () { act(p.id, "start"); });
+            row.appendChild(start0);
+          }
+        } else if (!canOperate) {
+          row.appendChild(el("span", "note", "观察者只读"));
         } else if (p.online) {
           if (p.kind === "desktop") {
             // 桌面窗口应用：端口是探活行协议口，不是 HTTP——导航过去只会报
@@ -138,6 +237,10 @@
 
   function act(id, action) {
     if (!user) { alert("管理动作需要先登录（右上角）"); return; }
+    if (role !== "owner" && role !== "operator") {
+      alert("当前角色（" + (ROLE_LABEL[role] || role) + "）无权启停产品");
+      return;
+    }
     busy[id] = action === "start" ? "启动中…" : "停止中…";
     render(last);
     fetch("/api/products/" + id + "/" + action, { method: "POST" })
@@ -235,6 +338,7 @@
     fetch("/api/products").then(function (r) { return r.json(); }).then(function (data) {
       last = data.products || [];
       user = (data.portal && data.portal.user) || null;
+      role = (data.portal && data.portal.role) || null;
       renderAuth();
       render(last);
       renderUptime();
@@ -374,6 +478,7 @@
         tr.appendChild(el("td", "", el("span", "kbd", e.pid).textContent));
         tr.appendChild(el("td", "", "")).appendChild(
           el("span", OUTCOME_CLS[e.outcome] || "pill", e.outcome));
+        tr.appendChild(el("td", "", e.user || "—"));   // RBAC：谁动的
         tr.appendChild(el("td", "note", e.detail || ""));
         rows.appendChild(tr);
       });

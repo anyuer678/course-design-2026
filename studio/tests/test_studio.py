@@ -657,5 +657,173 @@ class TestOverRealSocket(unittest.TestCase):
         conn.close()
 
 
+class TestRbac(unittest.TestCase):
+    """轮四十 RBAC：成员账号簿 + 角色权限门。owner 沿用原认证体系不入册。
+
+    可独立推导的性质：
+        - 成员口令 pbkdf2 哈希落盘（明文不进 users.json）；
+        - owner 能建/列/改角色/重置/删成员；operator/viewer 访问成员管理一律 403；
+        - start/stop：owner/operator 放行、viewer 403；审计 user 列记"谁动的"；
+        - 登录错误统一话术（成员不存在与口令错不区分）。
+    每个测试独立 tmp + 独立 UserStore（类级共享会跨测试污染成员册）。
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.LINKBOX_PORT = _free_port(18198)
+        cls.CACHEKV_PORT = _free_port(18138)
+        cls.COURSELAB_PORT = _free_port(18169)
+
+    def setUp(self):
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.auth = Auth(self._tmp.name)
+        from studio.users import UserStore
+        from studio.monitor import UptimeMonitor
+        self.users = UserStore(self._tmp.name, iterations=1000)
+        self.manager = build_manager(
+            linkbox_port=self.LINKBOX_PORT, lab_port=LAB_PORT,
+            simlab_port=SIMLAB_PORT, datascope_port=DATASCOPE_PORT,
+            cachekv_port=self.CACHEKV_PORT, sensorhub_port=SENSORHUB_PORT,
+            board_port=BOARD_PORT, courselab_port=self.COURSELAB_PORT,
+            linkbox_memory=True,
+            audit_path=Path(self._tmp.name) / "audit.sqlite3")
+        self.manager.uptime = UptimeMonitor(self.manager)
+        self.app = build_app(self.manager, self.auth, users=self.users)
+        if self.manager.audit is not None:    # 先关审计连接再清 tmp（Windows 文件锁）
+            self.addCleanup(self.manager.audit.close)
+        self.owner_pw = self.auth.password
+
+    def handle(self, method, path, body=b"", headers=None):
+        from netlab.http1 import Request
+        req = Request(method=method, target=path, version="1.1",
+                      headers=[(k.lower(), v) for k, v in list(headers or [])],
+                      body=body, path=path, query=[], keep_alive=False,
+                      content_length=len(body))
+        return self.app.handle(req)
+
+    def login_as(self, name, password):
+        raw = json.dumps({"username": name, "password": password}).encode()
+        status, headers, body = self.handle(
+            "POST", "/api/login", raw, [("Content-Type", "application/json")])
+        self.assertEqual(status, 200, body)
+        for k, v in headers:
+            if k == "Set-Cookie" and v.startswith("wf_session="):
+                return v.split(";")[0]
+        self.fail("登录成功却没有会话 cookie")
+
+    def login_owner(self):
+        return self.login_as(USERNAME, self.owner_pw)
+
+    def authed(self, method, path, cookie, body=b""):
+        return self.handle(method, path, body,
+                           [("Cookie", cookie)] +
+                           ([("Content-Type", "application/json")] if body else []))
+
+    def add_member(self, name, role):
+        raw = json.dumps({"name": name, "password": "pw-123456789",
+                          "role": role}).encode()
+        status, _, _ = self.authed("POST", "/api/users", self.login_owner(), raw)
+        assert status == 201, (name, role, status)
+        return self.login_as(name, "pw-123456789")
+
+    def test_user_store_hashing_and_verify(self):
+        self.users.add("alice", "op-pass-123", "operator")
+        self.assertEqual(self.users.verify("alice", "op-pass-123"), "operator")
+        self.assertIsNone(self.users.verify("alice", "wrong"))
+        self.assertIsNone(self.users.verify("ghost", "whatever"))
+        raw = self.users.path.read_text(encoding="utf-8")
+        self.assertNotIn("op-pass-123", raw)          # 明文不落盘
+        # 校验闸：坏名/短口令/坏角色/重名
+        for name, pw, role in (("a", "longenough1", "viewer"),
+                               ("bob", "short", "viewer"),
+                               ("bob", "longenough1", "admin"),
+                               ("alice", "longenough1", "viewer")):
+            with self.assertRaises((ValueError, KeyError)):
+                self.users.add(name, pw, role)
+
+    def test_owner_manages_members(self):
+        cookie = self.login_owner()
+        for name, role in (("alice", "operator"), ("bob", "viewer")):
+            raw = json.dumps({"name": name, "password": "pw-123456789",
+                              "role": role}).encode()
+            status, _, _ = self.authed("POST", "/api/users", cookie, raw)
+            self.assertEqual(status, 201, (name, role))
+        status, _, body = self.authed("GET", "/api/users", cookie)
+        self.assertEqual(status, 200)
+        self.assertEqual([u["name"] for u in json.loads(body)["users"]],
+                         ["alice", "bob"])        # 排序稳定
+        # 改角色 / 重置口令 / 删除
+        status, _, _ = self.authed(
+            "POST", "/api/users/bob/role", cookie,
+            json.dumps({"role": "operator"}).encode())
+        self.assertEqual(status, 200)
+        status, _, _ = self.authed(
+            "POST", "/api/users/bob/reset", cookie,
+            json.dumps({"password": "brand-new-pw"}).encode())
+        self.assertEqual(status, 200)
+        self.assertEqual(self.users.verify("bob", "brand-new-pw"), "operator")
+        status, _, _ = self.authed("DELETE", "/api/users/bob", cookie)
+        self.assertEqual(status, 200)
+        status, _, _ = self.authed("DELETE", "/api/users/bob", cookie)
+        self.assertEqual(status, 404)             # 再删一次：如实 404
+        status, _, _ = self.authed(
+            "POST", "/api/users", cookie,
+            json.dumps({"name": "alice", "password": "pw-123456789",
+                        "role": "viewer"}).encode())
+        self.assertEqual(status, 409)             # 重名
+
+    def test_role_gates_on_start_stop(self):
+        alice = self.add_member("alice", "operator")
+        bob = self.add_member("bob", "viewer")
+        # viewer：启停一律 403（权限门在业务校验之前）
+        status, _, body = self.authed(
+            "POST", "/api/products/nonexist/start", bob)
+        self.assertEqual(status, 403, body)
+        status, _, _ = self.authed("POST", "/api/products/cachekv/stop", bob)
+        self.assertEqual(status, 403)
+        # operator：权限门已过（进业务层）——404 产品如实 404 而非 403
+        status, _, body = self.authed(
+            "POST", "/api/products/nonexist/start", alice)
+        self.assertEqual(status, 404)
+        # 成员管理对 operator/viewer 一律 403
+        status, _, _ = self.authed(
+            "POST", "/api/users", alice,
+            json.dumps({"name": "eve", "password": "pw-123456789",
+                        "role": "viewer"}).encode())
+        self.assertEqual(status, 403)
+        status, _, _ = self.authed("GET", "/api/users", bob)
+        self.assertEqual(status, 403)
+        # owner 改口令照旧；成员口令由 owner 重置（/api/password 对成员 403）
+        status, _, _ = self.authed(
+            "POST", "/api/password", bob,
+            json.dumps({"old": "pw-123456789", "new": "new-pass-1234"}).encode())
+        self.assertEqual(status, 403)
+
+    def test_audit_records_actor(self):
+        alice = self.add_member("alice", "operator")
+        # 真 start cachekv（纯 Python 秒级）：成功入账且 user 列是 alice
+        status, _, _ = self.authed(
+            "POST", "/api/products/cachekv/start", alice)
+        self.assertEqual(status, 200, "operator 应能真启动产品")
+        try:
+            status, _, body = self.authed("GET", "/api/audit", alice)
+            events = json.loads(body)["events"]
+            self.assertTrue(events)
+            self.assertEqual(events[0]["action"], "start")
+            self.assertEqual(events[0]["user"], "alice")  # 谁动的，账上有名
+        finally:
+            self.authed("POST", "/api/products/cachekv/stop", alice)
+
+    def test_member_login_and_logout(self):
+        cookie = self.add_member("alice", "operator")
+        status, _, body = self.handle("GET", "/api/me", headers=[("Cookie", cookie)])
+        me = json.loads(body)
+        self.assertEqual(me["user"], "alice")
+        self.assertEqual(me["role"], "operator")
+        status, _, _ = self.handle("POST", "/api/logout", headers=[("Cookie", cookie)])
+        self.assertEqual(status, 200)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

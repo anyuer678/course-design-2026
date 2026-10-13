@@ -27,11 +27,13 @@ try:                                                          # noqa: E402
     from .auth import USERNAME, Auth
     from .manager import AlreadyOnline, NotOurs, Product, ProductManager
     from .monitor import UptimeMonitor
+    from .users import UserStore
 except ImportError:                     # 作为脚本直接跑（python server.py）
     from audit import AuditLog
     from auth import USERNAME, Auth
     from manager import AlreadyOnline, NotOurs, Product, ProductManager
     from monitor import UptimeMonitor
+    from users import UserStore
 
 WEB_ROOT = ROOT / "web"
 DATA_DIR = ROOT / "data"
@@ -40,6 +42,9 @@ DEFAULT_PORT = 8017                # 8018 留给 LinkBox，8000 是 B31，7788 �
 _START_SCHEMA = {}
 _LOGIN_SCHEMA = {"username": (str, True), "password": (str, True)}
 _PASSWORD_SCHEMA = {"old": (str, True), "new": (str, True)}
+_USER_SCHEMA = {"name": (str, True), "password": (str, True), "role": (str, True)}
+_ROLE_SCHEMA = {"role": (str, True)}
+_RESET_SCHEMA = {"password": (str, True)}
 
 
 def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
@@ -108,8 +113,11 @@ def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
     return ProductManager(products, audit=audit)
 
 
-def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
+def build_app(manager: ProductManager, auth: Auth,
+              users: UserStore | None = None) -> MicroApp:
     app = MicroApp(session_secret=auth.secret)
+    if users is None:                   # 测试/直跑兜底：给一个空成员册
+        users = UserStore(DATA_DIR / "users-test", iterations=1000)
 
     def require_user(ctx) -> None:
         """已登录且世代匹配。改口令后旧世代会话一律重新登录。"""
@@ -117,6 +125,14 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
             raise HttpFail(401, "请先登录（POST /api/login）")
         if ctx.session.get("gen") != auth.generation:
             raise HttpFail(401, "口令已更新，请重新登录")
+
+    def require_role(ctx, *roles) -> str:
+        """RBAC（轮四十）：require_user 之上再查角色。返回当前用户名。"""
+        require_user(ctx)
+        role = ctx.session.get("role")
+        if role not in roles:
+            raise HttpFail(403, "当前角色无权执行此操作")
+        return ctx.session["user"]
 
     def get_pid(ctx) -> str:
         pid = ctx.params["pid"]
@@ -128,11 +144,20 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
     @app.post("/api/login")
     def login(ctx):
         body = ctx.json_body(_LOGIN_SCHEMA, allow_unknown=True)
-        if body["username"] != USERNAME or not auth.verify(body["password"]):
-            raise HttpFail(401, "用户名或口令不对")     # 不区分哪个错（不给猜测者喂信息）
-        ctx.session["user"] = USERNAME
+        name = body["username"]
+        if name == USERNAME and auth.verify(body["password"]):
+            ctx.session["user"] = USERNAME
+            ctx.session["role"] = "owner"
+        else:
+            role = users.verify(name, body["password"])
+            if role is None:
+                # 不区分"没有此人/口令错"（不给猜测者喂信息）
+                raise HttpFail(401, "用户名或口令不对")
+            ctx.session["user"] = name
+            ctx.session["role"] = role
         ctx.session["gen"] = auth.generation           # 改口令即踢旧世代会话
-        return ctx.json({"user": USERNAME})
+        return ctx.json({"user": ctx.session["user"],
+                         "role": ctx.session["role"]})
 
     @app.post("/api/logout")
     def logout(ctx):
@@ -141,11 +166,12 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
 
     @app.get("/api/me")
     def me(ctx):
-        return ctx.json({"user": ctx.session.get("user")})
+        return ctx.json({"user": ctx.session.get("user"),
+                         "role": ctx.session.get("role")})
 
     @app.post("/api/password")
     def change_password(ctx):
-        require_user(ctx)
+        require_role(ctx, "owner")            # 成员口令由 owner 重置，不自助改
         body = ctx.json_body(_PASSWORD_SCHEMA)
         if not auth.verify(body["old"]):
             raise HttpFail(400, "旧口令不对")
@@ -156,12 +182,66 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
         auth.bump_generation()                # 旧世代会话（含本会话）全部失效
         return ctx.json({"changed": True})
 
+    # ------------------------------------------------ 成员管理（RBAC，owner 专属）
+    @app.get("/api/users")
+    def users_list(ctx):
+        require_role(ctx, "owner")
+        return ctx.json({"users": users.listing()})
+
+    @app.post("/api/users")
+    def users_add(ctx):
+        require_role(ctx, "owner")
+        body = ctx.json_body(_USER_SCHEMA)
+        try:
+            users.add(body["name"], body["password"], body["role"])
+        except ValueError as exc:
+            raise HttpFail(400, str(exc)) from None
+        except KeyError as exc:
+            raise HttpFail(409, str(exc)) from None
+        return ctx.json({"ok": True, "name": body["name"],
+                         "role": body["role"]}, status=201)
+
+    @app.post("/api/users/<name>/role")
+    def users_set_role(ctx):
+        require_role(ctx, "owner")
+        body = ctx.json_body(_ROLE_SCHEMA)
+        try:
+            users.set_role(ctx.params["name"], body["role"])
+        except KeyError as exc:
+            raise HttpFail(404, str(exc)) from None
+        except ValueError as exc:
+            raise HttpFail(400, str(exc)) from None
+        return ctx.json({"ok": True, "name": ctx.params["name"],
+                         "role": body["role"]})
+
+    @app.post("/api/users/<name>/reset")
+    def users_reset(ctx):
+        require_role(ctx, "owner")
+        body = ctx.json_body(_RESET_SCHEMA)
+        try:
+            users.reset_password(ctx.params["name"], body["password"])
+        except KeyError as exc:
+            raise HttpFail(404, str(exc)) from None
+        except ValueError as exc:
+            raise HttpFail(400, str(exc)) from None
+        return ctx.json({"ok": True, "name": ctx.params["name"]})
+
+    @app.delete("/api/users/<name>")
+    def users_remove(ctx):
+        require_role(ctx, "owner")
+        try:
+            users.remove(ctx.params["name"])
+        except KeyError as exc:
+            raise HttpFail(404, str(exc)) from None
+        return ctx.json({"ok": True})
+
     # ------------------------------------------------ 产品目录与状态（只读公开）
     @app.get("/api/products")
     def products(ctx):
         return ctx.json({"products": manager.listing(),
                          "portal": {"framework": "webframe", "port": app.port,
                                     "user": ctx.session.get("user"),
+                                    "role": ctx.session.get("role"),
                                     "username": USERNAME}})
 
     @app.get("/api/products/<pid>/status")
@@ -238,10 +318,10 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
 
     @app.post("/api/products/<pid>/start")
     def product_start(ctx):
-        require_user(ctx)
+        user = require_role(ctx, "owner", "operator")   # viewer 只读（RBAC）
         pid = get_pid(ctx)
         try:
-            result = ctx.json(manager.start(pid))
+            result = ctx.json(manager.start(pid, user=user))
         except ValueError as exc:
             raise HttpFail(400, str(exc)) from None
         except AlreadyOnline as exc:
@@ -251,10 +331,10 @@ def build_app(manager: ProductManager, auth: Auth) -> MicroApp:
 
     @app.post("/api/products/<pid>/stop")
     def product_stop(ctx):
-        require_user(ctx)
+        user = require_role(ctx, "owner", "operator")
         pid = get_pid(ctx)
         try:
-            result = ctx.json(manager.stop(pid))
+            result = ctx.json(manager.stop(pid, user=user))
         except NotOurs as exc:
             raise HttpFail(409, str(exc)) from None
         _poke_monitor()
@@ -292,6 +372,8 @@ def build_server(*, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
                  data_dir: str | Path | None = None
                  ) -> tuple["StudioServer", ProductManager, Auth]:
     auth = Auth(data_dir or DATA_DIR)
+    data = Path(data_dir or DATA_DIR)
+    users = UserStore(data)
     manager = build_manager(linkbox_port, lab_port, simlab_port=simlab_port,
                             datascope_port=datascope_port,
                             cachekv_port=cachekv_port,
@@ -299,10 +381,10 @@ def build_server(*, host: str = "127.0.0.1", port: int = DEFAULT_PORT,
                             board_port=board_port,
                             courselab_port=courselab_port,
                             linkbox_memory=linkbox_memory,
-                            audit_path=Path(data_dir or DATA_DIR) / "audit.sqlite3")
+                            audit_path=data / "audit.sqlite3")
     monitor = UptimeMonitor(manager, interval=uptime_interval)
     manager.uptime = monitor            # 探活历史挂在管理器上，/api/history 可取
-    server = StudioServer(build_app(manager, auth), host=host, port=port)
+    server = StudioServer(build_app(manager, auth, users=users), host=host, port=port)
     server.monitor = monitor
     return server, manager, auth
 

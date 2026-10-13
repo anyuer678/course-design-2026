@@ -20,7 +20,7 @@ docker run -p 8017:8017 kcsuite-studio
 ## 运行
 
 ```
-run.bat                    # 自测（26 项）+ 四段演示（不占常驻端口、凭据用临时目录）
+run.bat                    # 自测（31 项）+ 四段演示（不占常驻端口、凭据用临时目录）
 server.py --port 8017      # 启动门户（浏览器打开 http://127.0.0.1:8017/）
 ```
 
@@ -61,11 +61,19 @@ server.py --port 8017      # 启动门户（浏览器打开 http://127.0.0.1:801
 | GET | /api/products/<id>/status | 单产品状态 |
 | POST | /api/products/<id>/start | 启动（需登录；已在线 409；已规划 400；启动后探活直到在线/超时） |
 | POST | /api/products/<id>/stop | 停止（需登录；离线幂等 200；非门户启动 409） |
-| GET | /api/audit | 操作审计（M2；需登录；启停含拒绝/失败的追加账） |
+| GET | /api/audit | 操作审计（M2；需登录；含 user 列记操作人） |
+| GET/POST | /api/users | 成员管理（RBAC，owner 专属；pbkdf2 哈希落盘） |
+| POST | /api/users/<n>/role、/reset、DELETE | 改角色 / 重置口令 / 删除成员 |
 | GET | / | 门户首页（webframe 静态管线 + `/static/*` 资产） |
 
-## 测试策略（26 项）
+## 测试策略（31 项）
 
+**RBAC 三角色（2026-10-13，+5）**：成员账号簿 pbkdf2 哈希落盘（明文不进
+users.json）+ 四道校验闸（坏名/短口令/坏角色/重名）；owner 建/列/改角色/
+重置/删成员（重删 404、重名 409）；start/stop 权限门——viewer 403（在业务
+校验之前）、operator 放行进业务层、成员管理对 operator/viewer 一律 403、
+/api/password 对成员 403（成员口令由 owner 重置）；审计 user 列记"谁动的"
+（operator 真启停 → 账上有名）；成员登录 me 带 role、登出回写。
 **WS 状态推送**（真套接字 RFC 6455：首包快照 → 无变化不推 → 启动产品触发推送、
 ping 即回最新快照；快照取自 UptimeMonitor 后台线程——探活不进事件循环）、
 认证流（未登录 me 空 → 错口令 401 统一话术 → 登录得会话 → 登出回写空会话）、

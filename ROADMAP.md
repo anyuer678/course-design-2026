@@ -1100,3 +1100,30 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   标签（overlay 像素取样 1009 点）、"●协同 2 人"、零 console 错误。级联
   15→16：run.bat/README/check_all；**坑回改：用 Python 写 run.bat 忘 CRLF——
   21 行全 LF，当场字节级复核修复（ASCII+CRLF 双纪律）**。check_runbat 对账过。
+- ✅ **轮四十：Studio RBAC 三角色——GAP P0 Studio 最后缺口清零（10-13）**：
+  owner/operator/viewer 三级权限。新模块 studio/users.py：成员账号簿
+  data/users.json（**pbkdf2_hmac 哈希落盘，明文不进册**——owner 仍走
+  password.txt 历史体系不入册，角色恒 owner）；成员口令由 owner 管理
+  （建号/重置），成员不自助改——门户没有"我的账号"页的必要，课设口径
+  如实从简。服务端：login 分流（owner 先验 password.txt，成员验 users 册，
+  统一话术不给猜测者喂信息）；会话签 {user, role, gen}；require_role 门——
+  start/stop 限 owner/operator，成员管理 CRUD 限 owner；新路由
+  GET/POST /api/users + role/reset/DELETE 五件套。**审计带操作人**：
+  AuditLog schema 加 user 列（旧库 ALTER try/except 自动迁移）、manager
+  start/stop 透传 user（6 处 _audit 调用点）——"谁动的，账上有名"。
+  前端：登录框加用户名输入；whoami 角色徽标（管理员/操作员/观察者）；
+  **viewer 卡片渲染"观察者只读"note 不画启停按钮**（服务端仍把门——前端
+  只是体验层）；owner 成员管理面板（表格 + 添加表单 + 改角色 select +
+  重置口令 prompt + 删除 confirm）；审计表加操作人列。测试 +5（账号簿
+  哈希与四道闸、owner 五件套 CRUD、角色门 403/放行矩阵、审计操作人、
+  成员登录登出）→ studio 26→31 双入口绿。三角色无头走查：徽标/成员按钮
+  可见性/只读标记（viewer 9 张卡全"观察者只读"零按钮、operator 零标记）
+  全对、零 console 错误。级联 26→31：run.bat/README（API 表+测试策略）/
+  check_all；check_all 21/21（311.7s）。**走查踩坑（复发性环境教训）**：
+  服务被回收后页面 DOM 冻结在登录前渲染（fetch 死、renderAuth 本地同步
+  跑——whoami 对而卡片旧），造成"时好时坏"假象——走查断言要轮询等待
+  渲染收敛而非死等固定时长，且发现可疑结果先 curl 服务探活再怀疑代码。
+  测试坑：TestRbac 别继承 PortalCase（父类用例会带着新 setUp 重跑一遍）；
+  recv 类断言的固定窗口会放大限流窗；类级共享 UserStore 跨测试污染成员册；
+  tail() 的 SELECT 忘加新列 → zip(_KEYS, row) 字段静默错位（"端口 18138"
+  跑进了 user 列）——schema 加列必须同步改全部 SELECT。

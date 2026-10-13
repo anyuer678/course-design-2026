@@ -74,22 +74,24 @@ class ProductManager:
         return [self.status(pid) for pid in self.order]
 
     # ------------------------------------------------ 启停
-    def _audit(self, action: str, pid: str, outcome: str, detail: str = "") -> None:
-        """M2 操作审计：拒绝/失败与成功一样入账。审计出任何问题都不许绊倒管理动作。"""
+    def _audit(self, action: str, pid: str, outcome: str, detail: str = "",
+               user: str = "") -> None:
+        """M2 操作审计：拒绝/失败与成功一样入账。审计出任何问题都不许绊倒管理动作。
+        RBAC（轮四十）起 user 记"谁动的"。"""
         if self.audit is None:
             return
         try:
-            self.audit.record(action, pid, outcome, detail)
+            self.audit.record(action, pid, outcome, detail, user=user)
         except Exception:
             pass
 
-    def start(self, pid: str) -> dict:
+    def start(self, pid: str, user: str = "") -> dict:
         p = self.by_id[pid]
         if not p.managed:
-            self._audit("start", pid, "refused", f"{p.name} 已规划，无实现")
+            self._audit("start", pid, "refused", f"{p.name} 已规划，无实现", user=user)
             raise ValueError(f"{p.name} 还是已规划状态，没有可启动的实现")
         if self.procs.get(pid) is not None or self.probe(p.port):
-            self._audit("start", pid, "refused", f"已在 127.0.0.1:{p.port} 运行")
+            self._audit("start", pid, "refused", f"已在 127.0.0.1:{p.port} 运行", user=user)
             raise AlreadyOnline(f"{p.name} 已在 127.0.0.1:{p.port} 运行")
         proc = subprocess.Popen(
             p.command, cwd=p.cwd,
@@ -103,23 +105,23 @@ class ProductManager:
             if proc.poll() is not None:
                 self.procs.pop(pid, None)
                 self._audit("start", pid, "failed",
-                            f"启动后立即退出（码 {proc.returncode}）")
+                            f"启动后立即退出（码 {proc.returncode}）", user=user)
                 raise ValueError(f"{p.name} 启动后立即退出（码 {proc.returncode}）")
             if self.probe(p.port):
-                self._audit("start", pid, "ok", f"端口 {p.port}")
+                self._audit("start", pid, "ok", f"端口 {p.port}", user=user)
                 return self.status(pid)
             time.sleep(0.15)
         budget = p.boot_timeout or self.boot_timeout
         self._audit("start", pid, "timeout",
-                    f"{budget:.0f}s 未探活（如实报 offline）")
+                    f"{budget:.0f}s 未探活（如实报 offline）", user=user)
         return self.status(pid)             # 超时仍未探活：如实报 offline
 
-    def stop(self, pid: str) -> dict:
+    def stop(self, pid: str, user: str = "") -> dict:
         p = self.by_id[pid]
         proc = self.procs.get(pid)
         if proc is None:
             if self.probe(p.port) if p.port else False:
-                self._audit("stop", pid, "refused", "在线但不是门户启动的")
+                self._audit("stop", pid, "refused", "在线但不是门户启动的", user=user)
                 raise NotOurs(f"{p.name} 在线但不是本门户启动的，请自行停止")
             return self.status(pid)         # 本来就离线：幂等，无事发生不记账
         proc.terminate()
@@ -129,5 +131,5 @@ class ProductManager:
             proc.kill()
             proc.wait(timeout=5)
         self.procs.pop(pid, None)
-        self._audit("stop", pid, "ok", f"端口 {p.port}")
+        self._audit("stop", pid, "ok", f"端口 {p.port}", user=user)
         return self.status(pid)

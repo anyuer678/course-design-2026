@@ -32,12 +32,16 @@
       <div id="authbox" class="authbox" style="display:flex;gap:.5rem;align-items:center">
         <span class="note" id="auth-msg"></span>
         <div id="auth-guest" style="display:flex;gap:.5rem;align-items:center">
-          <input id="login-pass" type="password" placeholder="口令（owner）" class="inp"
-                 style="width:11rem;flex:none">
+          <input id="login-user" value="owner" class="inp"
+                 style="width:6.5rem;flex:none" title="用户名（owner 或成员名）">
+          <input id="login-pass" type="password" placeholder="口令" class="inp"
+                 style="width:9rem;flex:none">
           <button id="btn-login" class="btn btn-sm">登录</button>
         </div>
         <div id="auth-user" style="display:flex;gap:.5rem;align-items:center" hidden>
           <span class="note" id="whoami"></span>
+          <button id="btn-users" class="btn btn-ghost btn-sm" hidden
+                  title="成员管理（仅管理员）">成员</button>
           <button id="btn-logout" class="btn btn-ghost btn-sm">登出</button>
         </div>
       </div>
@@ -69,12 +73,34 @@
       </div>
       <table class="kb">
         <thead><tr>
-          <th>时间</th><th>动作</th><th>产品</th><th>结果</th><th>说明</th>
+          <th>时间</th><th>动作</th><th>产品</th><th>结果</th><th>操作人</th><th>说明</th>
         </tr></thead>
         <tbody id="audit-rows">
-          <tr><td colspan="5" class="note">登录后可见。</td></tr>
+          <tr><td colspan="6" class="note">登录后可见。</td></tr>
         </tbody>
       </table>
+
+      <div class="overline">Team</div>
+      <h2 id="users">成员管理 <span class="note">（RBAC：owner 管理员 / operator 可启停 /
+        viewer 只读；仅管理员可见）</span></h2>
+      <div class="card" id="users-card" hidden>
+        <table class="kb">
+          <thead><tr><th>成员</th><th>角色</th><th>管理</th></tr></thead>
+          <tbody id="users-rows"></tbody>
+        </table>
+        <div class="toolbar" style="margin-top:.6rem">
+          <input id="new-user-name" placeholder="用户名（2-20 位字母数字）" class="inp"
+                 style="flex:none;width:13rem">
+          <input id="new-user-pass" type="password" placeholder="口令（至少 8 位）" class="inp"
+                 style="flex:none;width:11rem">
+          <select id="new-user-role" style="flex:none">
+            <option value="operator">operator（可启停）</option>
+            <option value="viewer">viewer（只读）</option>
+          </select>
+          <button id="btn-add-user" class="btn btn-ghost btn-sm">添加成员</button>
+        </div>
+        <p class="note" id="users-msg"></p>
+      </div>
 
       <div class="overline">Account</div>
       <h2 id="account">改口令</h2>

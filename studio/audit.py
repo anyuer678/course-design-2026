@@ -22,11 +22,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
     action  TEXT NOT NULL,
     pid     TEXT NOT NULL,
     outcome TEXT NOT NULL,
+    user    TEXT NOT NULL DEFAULT '',
     detail  TEXT NOT NULL DEFAULT ''
 );
 """
 
-_KEYS = ("ts", "action", "pid", "outcome", "detail")
+_KEYS = ("ts", "action", "pid", "outcome", "user", "detail")
 
 
 class AuditLog:
@@ -48,22 +49,29 @@ class AuditLog:
             # 跨线程（构造线程 vs 事件循环线程）只是换个人排队，不是并发。
             self._conn = sqlite3.connect(str(self.path), check_same_thread=False)
             self._conn.execute(SCHEMA)
+            try:                      # 旧账本（轮二十四前建）没有 user 列——补上
+                self._conn.execute("ALTER TABLE audit_log ADD COLUMN user "
+                                   "TEXT NOT NULL DEFAULT ''")
+            except sqlite3.OperationalError:
+                pass                  # 列已存在
             self._conn.commit()
         return self._conn
 
-    def record(self, action: str, pid: str, outcome: str, detail: str = "") -> None:
+    def record(self, action: str, pid: str, outcome: str, detail: str = "",
+               user: str = "") -> None:
         with self._lock:
             self._connection().execute(
-                "INSERT INTO audit_log (ts, action, pid, outcome, detail) "
-                "VALUES (?, ?, ?, ?, ?)",
-                (time.time(), action, pid, outcome, str(detail)[:300]))
+                "INSERT INTO audit_log (ts, action, pid, outcome, user, detail) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (time.time(), action, pid, outcome, str(user)[:40],
+                 str(detail)[:300]))
             self._conn.commit()
 
     def tail(self, limit: int = 200) -> list[dict]:
         limit = max(1, min(1000, int(limit)))
         with self._lock:
             rows = self._connection().execute(
-                "SELECT ts, action, pid, outcome, detail FROM audit_log "
+                "SELECT ts, action, pid, outcome, user, detail FROM audit_log "
                 "ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
         return [dict(zip(_KEYS, row)) for row in rows]
 
