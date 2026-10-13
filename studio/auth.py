@@ -109,6 +109,11 @@ class Auth:
             return None                           # 信封已拆（改口令后）
         return lines[-1]
 
+    @property
+    def envelope_active(self) -> bool:
+        """初始口令信封是否还没拆（true = 机主仍在用自动生成的初始口令）。"""
+        return self.password is not None
+
     def verify(self, password: str) -> bool:
         if not isinstance(password, str) or not password:
             return False

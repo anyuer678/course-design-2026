@@ -26,28 +26,30 @@
   }
 
   // ------------------------------------------------ 认证
-  function renderAuth() {
+  function renderAuth(envelopeActive) {
     $("auth-guest").hidden = !!user;
     $("auth-user").hidden = !user;
     // hidden 属性压不过内联 display:flex——display 一并切换
     // （2026-10-07 走查：登录后表单曾与"已登录"并排显示）
     $("auth-guest").style.display = user ? "none" : "flex";
     $("auth-user").style.display = user ? "flex" : "none";
+    // 正规认证卡（轮四十三）：未登录显示登录+注册并排卡，登录后收起
+    $("auth-hero").hidden = !!user;
+    $("envelope-hint").hidden = !!user || !envelopeActive;
     if (user) {
       $("whoami").textContent = user + " · " + (ROLE_LABEL[role] || role || "?");
       $("btn-users").hidden = role !== "owner";
       $("users-card").hidden = role !== "owner" ? true : $("users-card").hidden;
     }
-    $("nav-register").hidden = !!user;         // 注册入口只给未登录的人
-    $("register-card").hidden = !!user;        // 注册表单同理（登录后收起）
   }
 
   function authMsg(text) { $("auth-msg").textContent = text || ""; }
 
   function login() {
     var btn = $("btn-login");
-    btn.disabled = true; btn.textContent = "登录中…"; authMsg("");
-    postJSON("/api/login", { username: $("login-user").value.trim() || "owner",
+    var msg = $("login-msg");
+    btn.disabled = true; btn.textContent = "登录中…"; msg.textContent = "";
+    postJSON("/api/login", { username: $("login-user").value.trim(),
                              password: $("login-pass").value })
       .then(function (r) {
         if (r.status === 200) {
@@ -56,7 +58,7 @@
           renderAuth();
           refresh();
         } else {
-          authMsg(r.data.error || "登录失败");
+          msg.textContent = r.data.error || "登录失败";
         }
       })
       .finally(function () { btn.disabled = false; btn.textContent = "登录"; });
@@ -409,7 +411,7 @@
       last = data.products || [];
       user = (data.portal && data.portal.user) || null;
       role = (data.portal && data.portal.role) || null;
-      renderAuth();
+      renderAuth(!!(data.portal && data.portal.envelope_active));
       render(last);
       renderUptime();
       refreshAudit();

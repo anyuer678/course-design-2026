@@ -288,7 +288,8 @@ def build_app(manager: ProductManager, auth: Auth,
                          "portal": {"framework": "webframe", "port": app.port,
                                     "user": ctx.session.get("user"),
                                     "role": ctx.session.get("role"),
-                                    "username": USERNAME}})
+                                    "username": USERNAME,
+                                    "envelope_active": auth.envelope_active}})
 
     @app.get("/api/products/<pid>/status")
     def product_status(ctx):
