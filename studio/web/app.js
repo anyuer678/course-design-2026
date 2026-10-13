@@ -45,6 +45,19 @@
 
   function authMsg(text) { $("auth-msg").textContent = text || ""; }
 
+  // ------------------------------------------------ Toast（轮四十五：alert 退役）
+  function toast(text, type) {
+    var box = $("toast-box"), node = document.createElement("div");
+    node.className = "toast " + (type || "");
+    node.textContent = text;
+    box.appendChild(node);
+    requestAnimationFrame(function () { node.classList.add("in"); });
+    setTimeout(function () {
+      node.classList.remove("in");
+      setTimeout(function () { node.remove(); }, 300);
+    }, 3200);
+  }
+
   function login() {
     var btn = $("btn-login");
     var msg = $("login-msg");
@@ -94,8 +107,14 @@
   }
 
   $("btn-login").addEventListener("click", login);
-  $("login-pass").addEventListener("keydown", function (e) {
-    if (e.key === "Enter") login();
+  ["login-user", "login-pass"].forEach(function (id) {
+    $(id).addEventListener("keydown", function (e) { if (e.key === "Enter") login(); });
+  });
+  // 注册卡：任一栏 Enter 即提交（轮四十五交互补全）
+  ["reg-name", "reg-pass", "reg-pass2", "reg-invite"].forEach(function (id) {
+    $(id).addEventListener("keydown", function (e) {
+      if (e.key === "Enter") $("btn-register").click();
+    });
   });
   $("btn-logout").addEventListener("click", logout);
   $("btn-passwd").addEventListener("click", changePassword);
@@ -183,8 +202,15 @@
     var pw = $("reg-pass").value, pw2 = $("reg-pass2").value;
     var invite = $("reg-invite").value.trim();
     var msg = $("reg-msg");
-    if (!name || !pw) { msg.textContent = "用户名与口令必填。"; return; }
-    if (pw !== pw2) { msg.textContent = "两次输入的口令不一致。"; return; }
+    // 字段级预校验（与服务端同规则；服务端仍是权威）
+    var tips = [];
+    if (!/^[A-Za-z0-9_-]{2,20}$/.test(name))
+      tips.push("用户名须为 2-20 位字母/数字/下划线/连字符");
+    if (pw.length < 8)
+      tips.push("口令至少 8 位");
+    if (pw !== pw2)
+      tips.push("两次输入的口令不一致");
+    if (tips.length) { msg.textContent = tips.join("；") + "。"; return; }
     var btn = this;
     btn.disabled = true; btn.textContent = "注册中…"; msg.textContent = "";
     postJSON("/api/register", { name: name, password: pw, invite: invite || null })
@@ -330,9 +356,9 @@
   }
 
   function act(id, action) {
-    if (!user) { alert("管理动作需要先登录（右上角）"); return; }
+    if (!user) { toast("管理动作需要先登录", "err"); return; }
     if (role !== "owner" && role !== "operator") {
-      alert("当前角色（" + (ROLE_LABEL[role] || role) + "）无权启停产品");
+      toast("当前角色（" + (ROLE_LABEL[role] || role) + "）无权启停产品", "err");
       return;
     }
     busy[id] = action === "start" ? "启动中…" : "停止中…";
@@ -341,7 +367,8 @@
       .then(function (r) { return r.json(); })
       .then(function (data) {
         delete busy[id];
-        if (data.error) alert(data.error);
+        if (data.error) toast(action === "start" ? "启动失败：" + data.error
+                                                 : "停止失败：" + data.error, "err");
         refresh();
       })
       .catch(function () { delete busy[id]; refresh(); });
