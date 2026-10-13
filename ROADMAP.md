@@ -1054,3 +1054,19 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   踩坑记录：走查脚本第一版选择器 `.card .pill` 与 DOM 不符（pill 只在审计区）——
   在线状态看 `.card.online` 类串更稳；pageerror 只报 JS 异常，响应断言要单独挂
   response 监听。
+- ✅ **轮三十七：BoardWeb 图形库——箭头/三角/菱形/文字/便利贴五类新形状（10-13，GAP P7 旗舰候选② 第一阶段）**：
+  GAP 指的"图形库"是市面白板（excalidraw 类）的标配形状。纯前端一轮：arrow 复用
+  line 数据结构（x1y1x2y2）+ 端点箭头两翼（atan2 回张 25°，翼长 max(10, 线宽×3)）；
+  triangle/diamond 是 bbox 内几何描边；text 点击落字（ctx.measureText 实测宽度存
+  w/h，字号复用 width 字段 4–40px，属性面板标签改"线宽/字号"）；sticky 160×100
+  黄底圆角（#fef08a），文字按宽度折行（\n 硬换也可）、双击可改。**既有机制全复用
+  零改动**：拖拽三兄弟（arrow/triangle/diamond）直接吃到现有 drawing 管线（tool 名
+  即 type）；命中测试 arrow 归入 line 线距精确命中；undo/属性微调/Delete/方向键/
+  协同 add/sync/持久化全部自动生效——服务端本就不校验 shape 内部结构，WS 原样
+  转发即契约。text/sticky 是"点击创建"而非拖拽：pointerdown 记落点、pointerup 弹
+  prompt（取消则不入栈），双击编辑（取消不动）。测试 +2（五形状逐字段持久化
+  往返；WS 新形状原样广播+不回显）→ 15 双入口绿。无头 Edge 走查（隔离 data
+  目录）：五形状 prompt 注入→自动保存→GET /api/doc 逐类在册、双击编辑无异常、
+  第二页面"●协同 2 人"+收到推送 markDirty、零 console 错误；截图确认视觉渲染
+  （箭头带头/便利贴折行）。数字级联 run.bat/README（根+产品）/check_all 13→15；
+  check_all 21/21 全绿。协同编辑（同房间 WebSocket 深度同步）留下一阶段。

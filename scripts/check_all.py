@@ -17,7 +17,7 @@
       × pytest 实况收集，轮二十五新增——boardweb 加测试后 run.bat 还写 8 的漂移固化）
   8. 产品层：webframe（36，含静态路径安全专项）/ studio（26，八产品真启停+审计+探活历史+WS 状态推送）/ linkbox（76）/ simlab（37）
      / datascope（45）/ cachekv（19）/ sensorhub（28）/ board（12）
-     / courselab（154 项端到端自检）/ boardweb（13）
+     / courselab（154 项端到端自检）/ boardweb（15，含图形库五形状）
 --deep 追加：33 个项目的展示页测试套件（各项目 tests/test_showcase.py）。
 
 不覆盖（如实声明）：各项目核心测试套件（Python/C++/Java，见各项目 run.bat）、
@@ -62,7 +62,7 @@ def steps(deep: bool) -> list:
         ("产品层：SensorHub 物联网监测（28 项：MQTT 链路+对账+告警确认+阈值页面化+曲线限流+WS 实时）", [PY, "-m", "pytest", "sensorhub/tests", "-q"]),
         ("产品层：board 画板（12 项：B14 自检 7106+备份+守护+启动器契约+画笔微调）", [PY, "-m", "pytest", "board/tests", "-q"]),
         ("产品层：CourseLab 课程工坊（154 项端到端自检）", [PY, "courselab/server.py", "--selftest"]),
-        ("产品层：画板 Web 版（13 项：文档+备份轮转+贴图+安全+WS 协同）", [PY, "-m", "pytest", "boardweb/tests", "-q"]),
+        ("产品层：画板 Web 版（15 项：文档+备份轮转+贴图+安全+图形库五形状+WS 协同）", [PY, "-m", "pytest", "boardweb/tests", "-q"]),
     ]
     if deep:
         for g in sorted((ROOT / "projects").glob("*/")):

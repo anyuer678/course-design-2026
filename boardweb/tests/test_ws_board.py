@@ -154,6 +154,23 @@ class TestWsBoard(unittest.TestCase):
         self.assertEqual(got, {"type": "add", "shape": shape})
         self.assertTrue(a.recv_none())                   # 不回显发送方
 
+    def test_add_broadcasts_graphic_shapes(self):
+        """轮三十七图形库：text/sticky 新形状经 /ws/board 原样增量广播
+        （服务端不感知形状类型——原样转发就是契约）。"""
+        a, b = self._connect(), self._connect()
+        a.recv_json()                                    # hello
+        b.recv_json()                                    # hello(peers=2)
+        a.recv_json()                                    # peers=2
+        for shape in (
+            {"type": "text", "x": 1, "y": 2, "text": "协同标注",
+             "w": 64, "h": 24, "color": "#000", "width": 18},
+            {"type": "sticky", "x": 9, "y": 9, "text": "便利贴",
+             "w": 160, "h": 100, "color": "#171717", "width": 14},
+        ):
+            a.send_json({"type": "add", "shape": shape})
+            self.assertEqual(b.recv_json(), {"type": "add", "shape": shape})
+        self.assertTrue(a.recv_none())                   # 不回显发送方
+
     def test_sync_and_clear(self):
         a, b = self._connect(), self._connect()
         a.recv_json(); b.recv_json()                     # 两份 hello

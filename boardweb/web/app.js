@@ -40,6 +40,34 @@
   function setShapes(arr) { shapes = arr; selected = -1; render(); markDirty(); }
 
   // ------------------------------------------------ 渲染
+  function rr(x, y, w, h, r) {           // 圆角矩形路径（便利贴底）
+    ctx.beginPath(); ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+  }
+  function drawArrowHead(s) {            // 箭头两翼：终点向回张 25°
+    var ang = Math.atan2(s.y2 - s.y1, s.x2 - s.x1);
+    var len = Math.max(10, s.width * 3);
+    ctx.beginPath();
+    ctx.moveTo(s.x2, s.y2);
+    ctx.lineTo(s.x2 - len * Math.cos(ang - 0.45), s.y2 - len * Math.sin(ang - 0.45));
+    ctx.moveTo(s.x2, s.y2);
+    ctx.lineTo(s.x2 - len * Math.cos(ang + 0.45), s.y2 - len * Math.sin(ang + 0.45));
+    ctx.stroke();
+  }
+  function wrapLines(text, maxW) {       // 便利贴文字按宽度折行（\n 也可硬换）
+    var lines = [];
+    (text || "").split("\n").forEach(function (line) {
+      var cur = "";
+      for (var i = 0; i < line.length; i++) {
+        var test = cur + line[i];
+        if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = line[i]; }
+        else cur = test;
+      }
+      lines.push(cur);
+    });
+    return lines;
+  }
   function drawShape(s) {
     ctx.strokeStyle = s.color; ctx.fillStyle = s.color; ctx.lineWidth = s.width;
     ctx.lineCap = "round"; ctx.lineJoin = "round";
@@ -49,12 +77,39 @@
       ctx.stroke();
     } else if (s.type === "line") {
       ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+    } else if (s.type === "arrow") {
+      ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+      drawArrowHead(s);
     } else if (s.type === "rect") {
       ctx.strokeRect(s.x, s.y, s.w, s.h);
     } else if (s.type === "ellipse") {
       ctx.beginPath();
       ctx.ellipse(s.x + s.w / 2, s.y + s.h / 2, Math.abs(s.w / 2), Math.abs(s.h / 2), 0, 0, 7);
       ctx.stroke();
+    } else if (s.type === "triangle") {
+      ctx.beginPath();
+      ctx.moveTo(s.x + s.w / 2, s.y);
+      ctx.lineTo(s.x + s.w, s.y + s.h); ctx.lineTo(s.x, s.y + s.h);
+      ctx.closePath(); ctx.stroke();
+    } else if (s.type === "diamond") {
+      ctx.beginPath();
+      ctx.moveTo(s.x + s.w / 2, s.y); ctx.lineTo(s.x + s.w, s.y + s.h / 2);
+      ctx.lineTo(s.x + s.w / 2, s.y + s.h); ctx.lineTo(s.x, s.y + s.h / 2);
+      ctx.closePath(); ctx.stroke();
+    } else if (s.type === "text") {
+      ctx.font = s.width + "px system-ui, 'Microsoft YaHei', sans-serif";
+      ctx.textBaseline = "top";
+      ctx.fillText(s.text, s.x, s.y);
+    } else if (s.type === "sticky") {
+      rr(s.x, s.y, s.w, s.h, 8);
+      ctx.fillStyle = "#fef08a"; ctx.fill();
+      ctx.strokeStyle = "#eab308"; ctx.lineWidth = 1; ctx.stroke();
+      ctx.fillStyle = s.color;
+      ctx.font = s.width + "px system-ui, 'Microsoft YaHei', sans-serif";
+      ctx.textBaseline = "top";
+      wrapLines(s.text, s.w - 16).forEach(function (line, i) {
+        ctx.fillText(line, s.x + 8, s.y + 8 + i * s.width * 1.4);
+      });
     } else if (s.type === "image") {
       var im = imgCache[s.img];
       if (im && im.complete) ctx.drawImage(im, s.x, s.y, s.w, s.h);
@@ -68,8 +123,10 @@
                w: Math.max.apply(null, xs) - Math.min.apply(null, xs),
                h: Math.max.apply(null, ys) - Math.min.apply(null, ys) };
     }
-    if (s.type === "line") return { x: Math.min(s.x1, s.x2), y: Math.min(s.y1, s.y2),
-                                    w: Math.abs(s.x2 - s.x1), h: Math.abs(s.y2 - s.y1) };
+    if (s.type === "line" || s.type === "arrow") {
+      return { x: Math.min(s.x1, s.x2), y: Math.min(s.y1, s.y2),
+               w: Math.abs(s.x2 - s.x1), h: Math.abs(s.y2 - s.y1) };
+    }
     return { x: s.x, y: s.y, w: s.w, h: s.h };
   }
   function render() {
@@ -103,19 +160,31 @@
     if (selected < 0) return;
     var s = shapes[selected], b = bbox(s);
     pushUndo();
-    if (s.type === "pen" || s.type === "image" || s.type === "rect" || s.type === "ellipse") {
+    if (s.type === "pen" || s.type === "image" || s.type === "rect"
+        || s.type === "ellipse" || s.type === "triangle"
+        || s.type === "diamond" || s.type === "sticky" || s.type === "text") {
       moveShape(s, Number($("p-x").value) - b.x, Number($("p-y").value) - b.y);
     }
-    if (s.type === "rect" || s.type === "ellipse" || s.type === "image") {
+    if (s.type === "rect" || s.type === "ellipse" || s.type === "image"
+        || s.type === "triangle" || s.type === "diamond" || s.type === "sticky") {
       s.w = Math.max(1, Number($("p-w").value)); s.h = Math.max(1, Number($("p-h").value));
     }
-    s.color = $("p-color").value; s.width = Number($("p-width").value) || s.width;
+    if (s.type === "text") {           // 字号变了文字盒跟着重测
+      s.width = Math.max(4, Math.min(40, Number($("p-width").value) || s.width));
+      ctx.font = s.width + "px system-ui, 'Microsoft YaHei', sans-serif";
+      s.w = Math.max(8, Math.ceil(ctx.measureText(s.text).width));
+      s.h = Math.round(s.width * 1.35);
+    }
+    s.color = $("p-color").value;
+    if (s.type !== "text") s.width = Number($("p-width").value) || s.width;
     render(); markDirty();
     wsSend({ type: "sync", shapes: shapes });
   }
   function moveShape(s, dx, dy) {
     if (s.type === "pen") s.pts.forEach(function (p) { p[0] += dx; p[1] += dy; });
-    else if (s.type === "line") { s.x1 += dx; s.y1 += dy; s.x2 += dx; s.y2 += dy; }
+    else if (s.type === "line" || s.type === "arrow") {
+      s.x1 += dx; s.y1 += dy; s.x2 += dx; s.y2 += dy;
+    }
     else { s.x += dx; s.y += dy; }
   }
   propIds.forEach(function (id) {
@@ -126,7 +195,7 @@
   function hit(x, y) {
     for (var i = shapes.length - 1; i >= 0; i--) {
       var s = shapes[i], b = bbox(s);
-      if (s.type === "line") {
+      if (s.type === "line" || s.type === "arrow") {
         var dx = s.x2 - s.x1, dy = s.y2 - s.y1, len2 = dx * dx + dy * dy || 1;
         var t = Math.max(0, Math.min(1, ((x - s.x1) * dx + (y - s.y1) * dy) / len2));
         var px = s.x1 + t * dx, py = s.y1 + t * dy;
@@ -143,10 +212,12 @@
     var r = canvas.getBoundingClientRect();
     return [Math.round(ev.clientX - r.left), Math.round(ev.clientY - r.top)];
   }
+  var pendingText = null;            // text/sticky 工具：按下记落点，抬起弹输入
   canvas.addEventListener("pointerdown", function (ev) {
     if (ev.button !== 0) return;
     canvas.setPointerCapture(ev.pointerId);
     var p = pos(ev);
+    if (tool === "text" || tool === "sticky") { pendingText = p; return; }
     if (tool === "select") {
       selected = hit(p[0], p[1]);
       if (selected >= 0) {
@@ -176,7 +247,37 @@
       dragOff.last = p;
     }
   });
-  canvas.addEventListener("pointerup", function () {
+  function measureTextBox(text, size) {
+    ctx.font = size + "px system-ui, 'Microsoft YaHei', sans-serif";
+    return { w: Math.max(8, Math.ceil(ctx.measureText(text).width)),
+             h: Math.round(size * 1.35) };
+  }
+  canvas.addEventListener("pointerup", function (ev) {
+    if (pendingText) {
+      var pt = pendingText; pendingText = null;
+      var s = null;
+      if (tool === "text") {
+        var t = window.prompt("输入文字：", "");
+        if (t && t.trim()) {
+          var box = measureTextBox(t, 18);
+          s = { type: "text", x: pt[0], y: pt[1], text: t,
+                w: box.w, h: box.h, color: color, width: 18 };
+        }
+      } else if (tool === "sticky") {
+        var t2 = window.prompt("便利贴文字（可留空）：", "");
+        if (t2 !== null) {
+          s = { type: "sticky", x: pt[0], y: pt[1], text: t2,
+                w: 160, h: 100, color: "#171717", width: 14 };
+        }
+      }
+      if (s) {
+        pushUndo();
+        shapes.push(s); selected = shapes.length - 1;
+        wsSend({ type: "add", shape: s });
+        render(); markDirty();
+      }
+      return;
+    }
     if (drawing) {
       var s = drawing;
       var keep = s.type !== "pen" || s.pts.length > 1;
@@ -211,6 +312,25 @@
     var step = ev.shiftKey ? 10 : 1, d = { ArrowLeft: [-step, 0], ArrowRight: [step, 0],
       ArrowUp: [0, -step], ArrowDown: [0, step] }[ev.key];
     if (d && selected >= 0) { ev.preventDefault(); moveSel(d[0], d[1]); }
+  });
+
+  // ------------------------------------------------ 双击编辑文字 / 便利贴
+  canvas.addEventListener("dblclick", function (ev) {
+    var p = pos(ev), i = hit(p[0], p[1]);
+    if (i < 0) return;
+    var s = shapes[i];
+    if (s.type !== "text" && s.type !== "sticky") return;
+    var t = window.prompt("编辑文字：", s.text || "");
+    if (t === null) return;                    // 取消不改动
+    pushUndo();
+    s.text = t;
+    if (s.type === "text") {
+      var box = measureTextBox(t, s.width);
+      s.w = box.w; s.h = box.h;
+    }
+    selected = i;
+    render(); markDirty();
+    wsSend({ type: "sync", shapes: shapes });
   });
 
   // ------------------------------------------------ 撤销 / 重做 / 清空

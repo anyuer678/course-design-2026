@@ -54,6 +54,31 @@ class TestBoardWeb(unittest.TestCase):
         status, _, body = self.handle("GET", "/api/doc")
         self.assertEqual(json.loads(body)["shapes"], shapes)
 
+    def test_doc_graphic_library_roundtrip(self):
+        """轮三十七图形库：arrow/triangle/diamond/text/sticky 五类新形状
+        逐字段持久化往返（服务端不校验 shape 内部结构——前端契约，测试钉形状）。"""
+        shapes = [
+            {"type": "arrow", "x1": 10, "y1": 10, "x2": 90, "y2": 60,
+             "color": "#171717", "width": 4},
+            {"type": "triangle", "x": 5, "y": 5, "w": 40, "h": 30,
+             "color": "#f00", "width": 2},
+            {"type": "diamond", "x": 120, "y": 8, "w": 60, "h": 36,
+             "color": "#2563eb", "width": 2},
+            {"type": "text", "x": 200, "y": 15, "text": "标注：Raft 复制",
+             "w": 96, "h": 24, "color": "#171717", "width": 18},
+            {"type": "sticky", "x": 30, "y": 200, "text": "待办：补图",
+             "w": 160, "h": 100, "color": "#171717", "width": 14},
+        ]
+        status, _, body = self.handle(
+            "PUT", "/api/doc", json.dumps({"shapes": shapes}).encode(),
+            [("Content-Type", "application/json")])
+        self.assertEqual(status, 200)
+        self.assertEqual(json.loads(body)["version"], 1)
+        status, _, body = self.handle("GET", "/api/doc")
+        self.assertEqual(json.loads(body)["shapes"], shapes)   # 逐字段一致
+        self.assertEqual({s["type"] for s in json.loads(body)["shapes"]},
+                         {"arrow", "triangle", "diamond", "text", "sticky"})
+
     def test_doc_bad_body_400(self):
         status, _, _ = self.handle("PUT", "/api/doc", b"not json",
                                    [("Content-Type", "application/json")])
