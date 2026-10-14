@@ -280,6 +280,7 @@ def main(argv=None) -> int:
         except OSError:
             ip = "<本机局域网 IP>"
         print(f"  局域网演示模式：同 WiFi 设备打开 http://{ip}:{port}/ 即可协同")
+        print("  ⚠ 局域网内任何设备都可读写画板——仅限可信网络演示")
     try:
         threading.Event().wait()
     except KeyboardInterrupt:

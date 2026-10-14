@@ -78,6 +78,7 @@ def main(argv=None) -> int:
             ip = "<本机局域网 IP>"
         print(f"  局域网演示模式：同 WiFi 设备打开 http://{ip}:{port}/ 互传文件/短链"
               "（首页有二维码可扫）")
+        print("  ⚠ 局域网内任何设备都可上传/读取（口令保护的暂存除外）——仅限可信网络")
     print(f"过期清扫： 每 {server.sweeper.interval:.0f} 秒一轮")
     if not args.memory:
         print(f"数据目录： {DATA_DIR}")

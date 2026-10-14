@@ -108,12 +108,18 @@ def register(db, username: str, display_name: str, password: str, status: str = 
     return _user_public(db.one("SELECT * FROM users WHERE id = ?", (cur.lastrowid,)))
 
 
+def _token_hash(token: str) -> str:
+    """会话 token 只落哈希（轮五十九安全审查）：库文件泄露≠会话被劫持。"""
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
 def create_session(db, user_id: int, ip: str = "", ua: str = "",
                    hours: float = SESSION_HOURS) -> str:
     token = secrets.token_urlsafe(32)
     expires = datetime.now() + timedelta(hours=hours)
     db.execute("INSERT INTO sessions(token, user_id, created_at, expires_at, ip, ua) VALUES(?,?,?,?,?,?)",
-               (token, user_id, now_str(), expires.strftime("%Y-%m-%d %H:%M:%S"), ip, (ua or "")[:200]))
+               (_token_hash(token), user_id, now_str(),
+                expires.strftime("%Y-%m-%d %H:%M:%S"), ip, (ua or "")[:200]))
     return token
 
 
@@ -148,13 +154,14 @@ def change_password(db, user_id: int, old_password: str, new_password: str,
     salt, hsh, it = hash_password(new_password)
     db.execute("UPDATE users SET pwd_salt = ?, pwd_hash = ?, pwd_iter = ? WHERE id = ?",
                (salt, hsh, it, user_id))
-    db.execute("DELETE FROM sessions WHERE user_id = ? AND token != ?", (user_id, keep_token or ""))
+    db.execute("DELETE FROM sessions WHERE user_id = ? AND token != ?",
+               (user_id, _token_hash(keep_token) if keep_token else ""))
     clear_failures(row["username"], ip)
 
 
 def logout(db, token: str) -> None:
     if token:
-        db.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        db.execute("DELETE FROM sessions WHERE token = ?", (_token_hash(token),))
 
 
 def sweep_sessions(db) -> int:
@@ -168,10 +175,10 @@ def user_by_session(db, token: str):
         return None
     row = db.one(
         "SELECT u.id, u.username, u.display_name, u.role, u.status, u.created_at, u.last_login,"
-        " s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?", (token,))
+        " s.expires_at FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token = ?", (_token_hash(token),))
     if row is None:
         return None
     if row["expires_at"] <= now_str() or row["status"] != "active":
-        db.execute("DELETE FROM sessions WHERE token = ?", (token,))
+        db.execute("DELETE FROM sessions WHERE token = ?", (_token_hash(token),))
         return None
     return _user_public(row)

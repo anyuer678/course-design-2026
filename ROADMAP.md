@@ -1346,3 +1346,12 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   同 WiFi 设备打开提示的 `http://<局域网IP>:8018/` 即可互传文件/短链（首页自带二维码
   可扫，二维码基于访问 Host 天生指向正确地址）。实测：--lan 实例绑定成功首页 200。
   netlab 白名单上一轮已放行 0.0.0.0（默认仍回环）。linkbox 76 项全绿。
+
+- ✅ **轮五十九：安全与隐私审查（10-14，用户"审查项目，注意安全性和隐私性"）**：
+  静态扫描（危险调用/SQL 拼接/innerHTML/凭据追踪）+ 定向审查（认证/上传/会话/路径）。
+  **P0 无；P1 两项当场修复**——① CourseLab 会话 token 明文落库（改 SHA-256 哈希，
+  四处同步，自检 PASS）；② LinkBox SVG inline 预览存储型 XSS 面（移出 inline 白名单，
+  仍可下载）。**P2 四项记录**（Cookie 无 Secure=http 定位使然/PBKDF2 10 万迭代=性能
+  取舍/ip-ua 记录=数据不出机器/--lan 无认证=横幅加 ⚠ 警示）。确认清单：零依赖、
+  pbkdf2+盐、SQL 参数化、textContent、上传路径分离、路径穿越用例、权限矩阵测试、
+  凭据 gitignore。报告落 SECURITY-REVIEW.md。回归：courselab 自检 PASS + linkbox 76 绿。

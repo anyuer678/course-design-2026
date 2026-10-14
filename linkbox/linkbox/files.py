@@ -72,7 +72,9 @@ def content_disposition_inline(name: str) -> str:
 PREVIEW_CONTENT_TYPES = {
     ".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg",
     ".gif": "image/gif", ".webp": "image/webp", ".bmp": "image/bmp",
-    ".svg": "image/svg+xml", ".pdf": "application/pdf",
+    # .svg 不进 inline 白名单（轮五十九）：SVG 可嵌 <script>，inline 预览=同源
+    # 存储型 XSS 面；仍可下载（attachment）后本地打开。
+    ".pdf": "application/pdf",
     ".txt": "text/plain; charset=utf-8", ".md": "text/plain; charset=utf-8",
     ".csv": "text/plain; charset=utf-8", ".log": "text/plain; charset=utf-8",
 }
