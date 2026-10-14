@@ -54,7 +54,7 @@ def steps(deep: bool) -> list:
         ("新鲜空数据起服（8 产品：容器空卷/新克隆等价冒烟）", [PY, "scripts/check_fresh_boot.py"]),
         ("产品层：webframe 微框架（36 项双入口，含静态路径安全专项）", [PY, "-m", "pytest", "webframe/tests", "-q"]),
         ("run.bat 测试数声明对账（声明 × pytest 收集，8 产品）", [PY, "scripts/check_runbat_claims.py"]),
-        ("产品层：Studio 门户（36 项：认证哈希化+RBAC 权限矩阵+自助注册+邀请码+矩阵+探活历史+WS 状态推送+八产品真启停+操作审计）", [PY, "-m", "pytest", "studio/tests", "-q"]),
+        ("产品层：Studio 门户（35 项：认证哈希化+RBAC 权限矩阵+自助注册+邀请码+矩阵+探活历史+WS 状态推送+八产品真启停+操作审计）", [PY, "-m", "pytest", "studio/tests", "-q"]),
         ("产品层：LinkBox（76 项双入口）", [PY, "-m", "pytest", "linkbox/tests", "-q"]),
         ("产品层：SimLab 仿真馆（37 项：记录+引擎+播放器+实时重算）", [PY, "-m", "pytest", "simlab/tests", "-q"]),
         ("产品层：DataScope 工作台（45 项：清洗+挖掘+报告+配方+xlsx 导入+服务）", [PY, "-m", "pytest", "datascope/tests", "-q"]),
