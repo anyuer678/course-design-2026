@@ -15,7 +15,7 @@ const { chromium } = require("playwright-core");
     await actions(page);
     await page.waitForTimeout(2500);
     const canvasCount = await page.evaluate(() => document.querySelectorAll("canvas").length);
-    await page.screenshot({ path: `C:/Users/30816/Desktop/课设/p-验收/echarts-${name}.png`, fullPage: false });
+    await page.screenshot({ path: `p-验收/echarts-${name}.png`, fullPage: false });
     report.push({ name, url, canvasCount, errors });
     await page.close();
   }

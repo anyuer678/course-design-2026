@@ -45,7 +45,11 @@ def main() -> int:
     session.ensure_python_env()               # 先落实，再展示——不然显示的是"未设"
     env = session.python_worker_env()
     show("pyspark 版本", pyspark.__version__)
-    show("worker 解释器（已落实）", env["PYSPARK_PYTHON"])
+    # 路径脱敏（公开仓）：运行时解释器路径含 Windows 用户名，展示层打掉
+    import re as _re
+    show("worker 解释器（已落实）",
+         _re.sub(r"^[A-Za-z]:\\Users\\[^\\]+", "<用户目录>",
+                 str(env["PYSPARK_PYTHON"])))
     show("为什么必须显式设它", "本机 python3 是 Microsoft Store 占位桩，worker 会起不来")
     show("  与当前解释器一致", env["PYSPARK_PYTHON"] == env["当前解释器"])
 

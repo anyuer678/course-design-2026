@@ -13,7 +13,7 @@ const { chromium } = require("playwright-core");
   await page.waitForTimeout(2000);
   await page.locator("#chartbox").scrollIntoViewIfNeeded();
   await page.waitForTimeout(1200);                      // 等一次 2s 自刷新重绘
-  await page.locator("#chartbox").screenshot({ path: "C:/Users/30816/Desktop/课设/p-验收/echarts-sensorhub-curve.png" });
+  await page.locator("#chartbox").screenshot({ path: "p-验收/echarts-sensorhub-curve.png" });
   const curveInfo = await page.evaluate(() => {
     const c = document.querySelector("#chart canvas");
     return c ? { w: c.width, h: c.height } : null;
@@ -29,7 +29,7 @@ const { chromium } = require("playwright-core");
   await page.waitForTimeout(1500);
   await page.locator("#ttl-dist").scrollIntoViewIfNeeded();
   await page.waitForTimeout(800);
-  await page.locator("#keys").screenshot({ path: "C:/Users/30816/Desktop/课设/p-验收/echarts-cachekv-ttl.png" });
+  await page.locator("#keys").screenshot({ path: "p-验收/echarts-cachekv-ttl.png" });
   await page.close();
 
   console.log(JSON.stringify({ curveInfo, errors }, null, 2));

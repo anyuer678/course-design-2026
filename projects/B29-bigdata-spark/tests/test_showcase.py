@@ -57,7 +57,7 @@ class TestNormalization(unittest.TestCase):
         self.assertNotIn("157 ms", masked)
         self.assertNotIn("PID 10312", masked)
         self.assertIn("<当场>", masked)
-        self.assertIn("已按规则移除", masked)
+        self.assertIn("已按规则整行移除", masked)   # 与实现同步（CI SKIP 协议下从未在本机跑过）
 
 
 class TestPayload(unittest.TestCase):
