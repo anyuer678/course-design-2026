@@ -216,6 +216,46 @@
     var r = canvas.getBoundingClientRect();
     return [Math.round(ev.clientX - r.left), Math.round(ev.clientY - r.top)];
   }
+  // ------------------------------------------------ 页内编辑层（轮五十四）
+  // 跨源 iframe 里 Chrome 会静默丢弃 window.prompt（门户内嵌实测：文字/便利贴
+  // 双击无反应）——改为画布上的行内 textarea：Enter/Ctrl+Enter 确认，Esc 取消。
+  var editorBox = null;
+  function closeEditor(commit) {
+    if (!editorBox) return;
+    var box = editorBox; editorBox = null;
+    var t = box.value;
+    box.remove();
+    if (commit && box._onOk) box._onOk(t);
+  }
+  function openEditor(initial, px, py, tall, onOk) {
+    closeEditor(false);
+    var wrap = document.getElementById("board-wrap");
+    var box = document.createElement("textarea");
+    box.id = "shape-editor";
+    box.value = initial || "";
+    box.style.cssText = "position:absolute;z-index:30;box-sizing:border-box;"
+      + "left:" + Math.max(2, px - 80) + "px;top:" + Math.max(2, py - (tall ? 45 : 14)) + "px;"
+      + "width:160px;height:" + (tall ? 90 : 28) + "px;"
+      + "font:13px system-ui,'Microsoft YaHei',sans-serif;"
+      + "border:2px solid #2563eb;border-radius:6px;padding:4px;resize:none;"
+      + "background:" + (tall ? "#fef9c3" : "#fff") + ";box-shadow:0 4px 14px rgba(0,0,0,.18)";
+    box._onOk = onOk;
+    box.addEventListener("keydown", function (ev) {
+      if (ev.key === "Escape") { ev.stopPropagation(); closeEditor(false); }
+      else if (ev.key === "Enter" && (!tall || ev.ctrlKey)) { ev.stopPropagation(); closeEditor(true); }
+      ev.stopPropagation();                    // 别让 Delete/箭头落到画布快捷键
+    });
+    box.addEventListener("blur", function () {
+      // 防抖 150ms：抖动场景若焦点实际回到 box 则豁免；真失焦才关闭
+      setTimeout(function () {
+        if (document.activeElement !== box && editorBox === box) closeEditor(true);
+      }, 150);
+    });
+    wrap.appendChild(box);
+    editorBox = box;
+    box.focus();
+    if (initial) box.select();
+  }
   var pendingText = null;            // text/sticky 工具：按下记落点，抬起弹输入
   canvas.addEventListener("pointerdown", function (ev) {
     if (ev.button !== 0) return;
@@ -262,18 +302,28 @@
       var pt = pendingText; pendingText = null;
       var s = null;
       if (tool === "text") {
-        var t = window.prompt("输入文字：", "");
-        if (t && t.trim()) {
-          var box = measureTextBox(t, 18);
-          s = { type: "text", x: pt[0], y: pt[1], text: t,
-                w: box.w, h: box.h, color: color, width: 18 };
-        }
+        openEditor("", pt[0], pt[1], false, function (t) {
+          if (t && t.trim()) {
+            var box = measureTextBox(t, 18);
+            var sh = { type: "text", x: pt[0], y: pt[1], text: t,
+                       w: box.w, h: box.h, color: color, width: 18 };
+            pushUndo();
+            shapes.push(sh); selected = shapes.length - 1;
+            wsSend({ type: "add", shape: sh });
+            render(); markDirty();
+          }
+        });
+        return;
       } else if (tool === "sticky") {
-        var t2 = window.prompt("便利贴文字（可留空）：", "");
-        if (t2 !== null) {
-          s = { type: "sticky", x: pt[0], y: pt[1], text: t2,
-                w: 160, h: 100, color: "#171717", width: 14 };
-        }
+        openEditor("", pt[0], pt[1], true, function (t) {
+          var sh = { type: "sticky", x: pt[0], y: pt[1], text: t,
+                     w: 160, h: 100, color: "#171717", width: 14 };
+          pushUndo();
+          shapes.push(sh); selected = shapes.length - 1;
+          wsSend({ type: "add", shape: sh });
+          render(); markDirty();
+        });
+        return;
       }
       if (s) {
         pushUndo();
@@ -325,17 +375,17 @@
     if (i < 0) return;
     var s = shapes[i];
     if (s.type !== "text" && s.type !== "sticky") return;
-    var t = window.prompt("编辑文字：", s.text || "");
-    if (t === null) return;                    // 取消不改动
-    pushUndo();
-    s.text = t;
-    if (s.type === "text") {
-      var box = measureTextBox(t, s.width);
-      s.w = box.w; s.h = box.h;
-    }
-    selected = i;
-    render(); markDirty();
-    wsSend({ type: "sync", shapes: shapes });
+    openEditor(s.text || "", p[0], p[1], s.type === "sticky", function (t) {
+      pushUndo();
+      s.text = t;
+      if (s.type === "text") {
+        var box = measureTextBox(t, s.width);
+        s.w = box.w; s.h = box.h;
+      }
+      selected = i;
+      render(); markDirty();
+      wsSend({ type: "sync", shapes: shapes });
+    });
   });
 
   // ------------------------------------------------ 撤销 / 重做 / 清空

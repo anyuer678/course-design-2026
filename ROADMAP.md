@@ -1281,3 +1281,16 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   （test_ws_live::test_snapshot_then_append 实录）。修法保守不改语义：
   超时后再 join(timeout×4) 宽限一次，**真死锁最终仍 raise**。
   回归：B11 + sensorhub **144 项全绿**（62 subtests）。
+
+- ✅ **轮五十四：上手引导 + 画板 iframe 修复 + 入口去重（10-14，用户"不知道怎么用/画板部分功能不能用/界面元素重复"）**：
+  ① **不知道怎么用** → 门户首页「Quick Start 三步上手」卡（①注册/登录 → ②进控制台 →
+  ③学习与画图）；② **画板便利贴/文字不能用** → **根因**：文字/便利贴用 window.prompt，
+  **Chrome 默认静默丢弃跨源 iframe 里的 JS 对话框**（门户 8017 嵌 8025 跨源）→ prompt
+  不弹=功能死。修法：**页内编辑层**替代 prompt（board-wrap 内绝对定位 textarea，
+  Enter 确认/Ctrl+Enter 多行确认/Esc 取消，blur 防抖 150ms 查 activeElement）——
+  文字/便利贴创建、双击编辑三处全部替换。端到端实证：**门户 iframe 内便利贴
+  「轮五十四便利贴」成功入画（截图）**、直连文字工具建字+双击回填编辑全通。
+  ③ **界面元素重复** → 未登录"登录/注册"入口出现三处（顶栏+侧栏+hero 卡）：
+  hero 卡删除（换 Quick Start），顶栏只留侧栏+顶栏两处。④ **board 卡直达**：
+  P7 画板卡（后台引擎无窗口）加「打开 BoardWeb 画板」按钮直达控制台——用户点
+  board 启动等窗口的困惑消除。回归：boardweb 16 项全绿。

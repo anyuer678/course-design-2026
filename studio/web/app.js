@@ -172,7 +172,9 @@
           row.appendChild(el("span", "note", user ? "观察者只读" : "登录后可启停"));
         } else if (p.online) {
           if (p.kind === "desktop") {
-            row.appendChild(el("span", "badge", "桌面应用 · 后台运行，画图走 BoardWeb"));
+            var toBoardweb = el("a", "btn", "打开 BoardWeb 画板");
+            toBoardweb.href = "/console.html?pid=boardweb";
+            row.appendChild(toBoardweb);
           }
           var stop = el("button", "btn ghost", "停止");
           stop.addEventListener("click", function () { act(p.id, "stop"); });
