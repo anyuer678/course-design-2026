@@ -1300,3 +1300,13 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   九产品，PBKDF2 吞吐跨过位数边界 → 空格差 1）。修法照家族处方"现算内容确定性化"：
   `_mask_live_measurements` 四条正则连同前导对齐空格一起吞（`\s*数字` → ` [现场]`），
   对齐列不再依赖机器速度。重写展示页 + --check 逐字一致 + B32 60 项全绿。
+
+- ✅ **轮五十五：课程演示移出矩阵 + 归档备份（10-14，用户"把课程演示去掉，只留成品项目以及课程演示的小型演示项目，和我课程相关的部分归档备份"）**：
+  ① **showcase lab（:7788 展示层实验台）移出产品矩阵**——manager 产品表移除、
+  start_all 清单同步、遗留 7788 进程精确停掉（netstat+taskkill）；② **归档备份**：
+  `archive/课程讲解层归档-20261014.zip`（showcase + projects + g2，793 文件 11.4MB，
+  排除 __pycache__；archive/ 进 gitignore）——**源文件保留仓库内**：CourseLab 课程页
+  数据源（g2/cards.json + showcase/manifest.json）不可物理移动；③ 首页 Guides 区改
+  「课程讲解层（已归档）」；④ 测试同步：ids/managed 断言、探活替身 lab→simlab、
+  lab lifecycle 测试删除 → studio **36→35 项**双入口绿；⑤ run.bat/check_all/README
+  级联 35 + PRODUCTS.md 决策记录。矩阵定格 **9 产品（8 managed）+ 1 门户**。

@@ -3,7 +3,7 @@
 关键事实：**门户自己就跑在 webframe 微框架上**——路由装饰器、静态文件、
 JSON 体校验、签名会话全是框架能力，这是"框架是真交付物"的现场证明。
 鉴权口径：单用户（owner），目录与状态只读公开；**启停等管理动作要求登录**
-（401）；实验台（showcase lab）并入门户托管，启停同权。
+（401）；课程演示实验台（showcase lab）已于轮五十五移出矩阵并归档。
 2026-10-12：GET /ws/status WebSocket 实时推送产品状态（首包快照 + 2s 变化检测）。
 产品矩阵数据来自根 PRODUCTS.md：已实现的给启停，已规划如实标"已规划"。
 只绑回环：门户和被管理的产品一样，是本机自托管。
@@ -65,11 +65,6 @@ def build_manager(linkbox_port: int = 8018, lab_port: int = 7788, *,
         Product("linkbox", "LinkBox 工具站",
                 "短链 / 文本暂存 / 二维码 / 访问口令（引擎桥接 B31/B11）",
                 port=linkbox_port, command=cmd, cwd=str(REPO / "linkbox")),
-        Product("lab", "展示层实验台",
-                "33 页展示页的本地后端控制台：起停项目服务、发原始请求（showcase/lab.py）",
-                port=lab_port,
-                command=[sys.executable, "lab.py", "--port", str(lab_port)],
-                cwd=str(REPO / "showcase")),
         Product("simlab", "SimLab 仿真馆",
                 "真实引擎的运行记录回放：帧全来自引擎现算，不是画出来的演示",
                 port=simlab_port,

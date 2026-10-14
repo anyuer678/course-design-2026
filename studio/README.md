@@ -20,7 +20,7 @@ docker run -p 8017:8017 kcsuite-studio
 ## 运行
 
 ```
-run.bat                    # 自测（36 项）+ 四段演示（不占常驻端口、凭据用临时目录）
+run.bat                    # 自测（35 项）+ 四段演示（不占常驻端口、凭据用临时目录）
 server.py --port 8017      # 启动门户（浏览器打开 http://127.0.0.1:8017/）
 ```
 
@@ -80,7 +80,7 @@ server.py --port 8017      # 启动门户（浏览器打开 http://127.0.0.1:801
 矩阵一处定义（`users.py` 的 `PERMISSIONS`）：服务端 `require_perm` 按点把门、
 `/api/me` 下发 `permissions` 供账户页渲染、测试逐格钉住——三处同源。
 
-## 测试策略（36 项）
+## 测试策略（35 项）
 
 **认证哈希化 + 自助注册（2026-10-13，+3）**：owner 口令 pbkdf2 哈希入 owner.json（password.txt 降级一次性信封——改口令即拆封，磁盘无长期明文；忘口令删 owner.json 重启重新生成）；自助注册（无码 viewer / 凭码 operator、owner 保留名、重名 409、码一次性用后即焚、邀请码管理 owner 专属）。
 **RBAC 三角色（2026-10-13，+5）**：成员账号簿 pbkdf2 哈希落盘（明文不进

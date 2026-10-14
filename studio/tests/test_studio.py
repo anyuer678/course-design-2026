@@ -179,10 +179,10 @@ class PortalCase(unittest.TestCase):
         data = json.loads(body)
         ids = [p["id"] for p in data["products"]]
         # PRODUCTS.md §二矩阵：门户 + 九个 managed（boardweb 2026-10-07 加入）——矩阵全兑现
-        self.assertEqual(ids, ["studio", "linkbox", "lab", "simlab", "datascope",
+        self.assertEqual(ids, ["studio", "linkbox", "simlab", "datascope",
                                "cachekv", "sensorhub", "courselab", "board", "boardweb"])
         by_id = {p["id"]: p for p in data["products"]}
-        for managed in ("linkbox", "lab", "simlab", "datascope", "cachekv",
+        for managed in ("linkbox", "simlab", "datascope", "cachekv",
                         "sensorhub", "courselab", "board", "boardweb"):
             self.assertTrue(by_id[managed]["managed"], msg=managed)
         self.assertTrue(all(p["managed"] for p in data["products"] if p["id"] != "studio"),
@@ -267,18 +267,6 @@ class PortalCase(unittest.TestCase):
             orphan.terminate()                        # 测试自清理：句柄还在手里
             orphan.wait(timeout=5)
         self.assertFalse(self.manager.probe(LINKBOX_PORT))
-
-    def test_lab_lifecycle(self):
-        """实验台并入：真起 showcase/lab.py 子进程 → 探活 → 停止。"""
-        cookie = self.login()
-        status, _, body = self.authed("POST", "/api/products/lab/start", cookie)
-        self.assertEqual(status, 200, body)
-        data = json.loads(body)
-        self.assertTrue(data["online"], "lab 启动后必须在线（端口探活）")
-        status, _, _ = self.authed("POST", "/api/products/lab/stop", cookie)
-        self.assertEqual(status, 200)
-        status, _, body = self.authed("GET", "/api/products/lab/status", cookie)
-        self.assertFalse(json.loads(body)["online"])
 
     def test_simlab_lifecycle(self):
         """SimLab 播放器并入：managed 模式泛化到第三个产品。"""
@@ -451,14 +439,15 @@ class TestUptimeMonitor(unittest.TestCase):
         t = [1000.0]
         m = self._manager()
         mon = UptimeMonitor(m, clock=lambda: t[0])
-        # lab 端口起一个真 HTTP 监听 → 在线；linkbox 端口空着 → 离线
+        # simlab 端口起一个真 HTTP 监听 → 在线；linkbox 端口空着 → 离线
+        # （轮五十五：lab 移出矩阵归档，探活替身换 simlab）
         srv = socket.socket()
-        srv.bind(("127.0.0.1", LAB_PORT))
+        srv.bind(("127.0.0.1", SIMLAB_PORT))
         srv.listen(1)
         try:
             mon.sample_once()
             t[0] += 10.0
-            srv.close()                       # 第二轮 lab 掉线
+            srv.close()                       # 第二轮 simlab 掉线
             mon.sample_once()
         finally:
             srv.close()
@@ -466,12 +455,12 @@ class TestUptimeMonitor(unittest.TestCase):
         self.assertEqual(h["interval"], 10.0)
         self.assertEqual(len(h["samples"]), 2)
         self.assertNotIn("studio", h["products"])      # 本体不采样
-        lab_i = h["products"].index("lab")
+        sim_i = h["products"].index("simlab")
         link_i = h["products"].index("linkbox")
         s1, s2 = h["samples"]
-        self.assertEqual((s1[1] >> lab_i) & 1, 1)      # 第一轮 lab 在线
+        self.assertEqual((s1[1] >> sim_i) & 1, 1)      # 第一轮 simlab 在线
         self.assertEqual((s1[1] >> link_i) & 1, 0)     # linkbox 空端口离线
-        self.assertEqual((s2[1] >> lab_i) & 1, 0)      # 第二轮 lab 掉线
+        self.assertEqual((s2[1] >> sim_i) & 1, 0)      # 第二轮 simlab 掉线
         self.assertEqual(s1[0], 1000.0)                # 注入时钟生效
 
     def test_ring_buffer_trims_to_capacity(self):
@@ -620,7 +609,7 @@ class TestWsStatus(unittest.TestCase):
         again = self._recv_json(sock, buf)
         self.assertIsNotNone(again)
         self.assertEqual(again["type"], "status")
-        self.assertIn("lab", [p["id"] for p in again["products"]])
+        self.assertIn("simlab", [p["id"] for p in again["products"]])
 
 
 class TestOverRealSocket(unittest.TestCase):
@@ -648,7 +637,7 @@ class TestOverRealSocket(unittest.TestCase):
         resp = conn.getresponse()
         self.assertEqual(resp.status, 200)
         data = json.loads(resp.read())
-        self.assertIn("lab", [p["id"] for p in data["products"]])
+        self.assertIn("simlab", [p["id"] for p in data["products"]])
         self.assertIsNone(data["portal"]["user"])    # 未登录
         conn.request("GET", "/")
         resp = conn.getresponse()

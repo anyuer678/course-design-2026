@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
-PRODUCTS = ["linkbox", "lab", "simlab", "datascope",
+PRODUCTS = ["linkbox", "simlab", "datascope",
             "cachekv", "sensorhub", "courselab", "board", "boardweb"]
 
 

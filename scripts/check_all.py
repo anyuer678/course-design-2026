@@ -15,7 +15,7 @@
       轮二十四新增——compose 命名卷首挂是空目录，此前从未验证过）
   7.7 run.bat 测试数声明对账：check_runbat_claims.py（活文档里的 "N tests"
       × pytest 实况收集，轮二十五新增——boardweb 加测试后 run.bat 还写 8 的漂移固化）
-  8. 产品层：webframe（36，含静态路径安全专项）/ studio（36，八产品真启停+审计+探活历史+WS 状态推送+RBAC 权限矩阵+自助注册）/ linkbox（76）/ simlab（37）
+  8. 产品层：webframe（36，含静态路径安全专项）/ studio（35，八产品真启停+审计+探活历史+WS 状态推送+RBAC 权限矩阵+自助注册）/ linkbox（76）/ simlab（37）
      / datascope（45）/ cachekv（19）/ sensorhub（28）/ board（12）
      / courselab（154 项端到端自检）/ boardweb（16，图形库五形状+光标 presence）
 --deep 追加：33 个项目的展示页测试套件（各项目 tests/test_showcase.py）。
