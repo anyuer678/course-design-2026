@@ -62,6 +62,35 @@ def grade(db, user_id: int | None, cid: str, answers) -> dict | None:
     return {"score": score, "total": total, "detail": detail}
 
 
+def stats(db, user_id: int) -> dict:
+    """成绩分析（轮五十一）：按课程聚合 + 时间线。成绩 ECharts 的数据源。"""
+    rows = [dict(zip(("cid", "score", "total", "created"), row))
+            for row in db.execute(
+                "SELECT cid, score, total, created FROM quiz_attempts "
+                "WHERE user_id = ? ORDER BY id", (user_id,)).fetchall()]
+    by_course: dict = {}
+    timeline = []
+    for r in rows:
+        pct = round(r["score"] / r["total"] * 100) if r["total"] else 0
+        agg = by_course.setdefault(r["cid"], {"count": 0, "best": 0, "last": 0})
+        agg["count"] += 1
+        agg["best"] = max(agg["best"], pct)
+        agg["last"] = pct
+        timeline.append({"cid": r["cid"], "pct": pct, "created": r["created"]})
+    # 课程名映射（courses.catalog 现算自仓库）
+    names = {}
+    try:
+        from app import courses
+        for p in courses.catalog()["projects"]:
+            names[p["id"]] = p["course"]
+    except OSError:
+        pass
+    per_course = [{"cid": cid, "course": names.get(cid, cid), **agg}
+                  for cid, agg in by_course.items()]
+    per_course.sort(key=lambda x: -x["best"])
+    return {"count": len(rows), "per_course": per_course, "timeline": timeline}
+
+
 def my_attempts(db, user_id: int, cid: str | None = None, limit: int = 20) -> list[dict]:
     """我的测验记录（成绩分析图的数据源，下一轮）。"""
     sql = ("SELECT cid, score, total, created FROM quiz_attempts "

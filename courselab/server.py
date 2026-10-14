@@ -264,6 +264,11 @@ class Handler(SimpleHTTPRequestHandler):
                 return self.send_json(
                     {"ok": True,
                      "attempts": quiz.my_attempts(self.db, user["id"])})
+            if rest == "stats":
+                if not user:
+                    return self.send_error_json(401, "登录后可见", "AUTH_REQUIRED")
+                return self.send_json({"ok": True,
+                                       "stats": quiz.stats(self.db, user["id"])})
             cid = unquote(rest).strip("/")
             if courses.course_detail(cid) is None:
                 return self.send_error_json(404, "课程不存在", "NO_COURSE")

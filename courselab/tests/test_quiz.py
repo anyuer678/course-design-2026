@@ -67,6 +67,29 @@ class QuizLogicTest(unittest.TestCase):
         self.assertEqual(len(rows), 1)                # 游客那次不落库
         self.assertEqual(rows[0]["score"], 3)
 
+    def test_stats_aggregation(self):
+        cid = "B10-minidb"
+        bank = quiz.load_bank()[cid]
+        right = {str(i): qz["answer"] for i, qz in enumerate(bank)}
+        wrong = {str(i): (qz["answer"] + 1) % 4 for i, qz in enumerate(bank)}
+        quiz.grade(self.db, self.uid, cid, wrong)   # 先差后好：last/best 分开
+        quiz.grade(self.db, self.uid, cid, right)
+        st = quiz.stats(self.db, self.uid)
+        self.assertEqual(st["count"], 2)
+        self.assertEqual(len(st["per_course"]), 1)
+        pc = st["per_course"][0]
+        self.assertEqual((pc["best"], pc["last"], pc["count"]), (100, 100, 2))
+        self.assertTrue(pc["course"])               # 课程名映射成功
+        self.assertEqual(len(st["timeline"]), 2)
+        # 无记录用户：空分析不报错
+        self.db.execute(
+            "INSERT INTO users (username, display_name, pwd_salt, pwd_hash, "
+            "pwd_iter, role, status, created_at) VALUES "
+            "('nobody','乙','s','h',1000,'student','active','now')")
+        row = self.db.one("SELECT id FROM users WHERE username='nobody'")
+        st2 = quiz.stats(self.db, row["id"])
+        self.assertEqual(st2, {"count": 0, "per_course": [], "timeline": []})
+
     def test_unknown_course(self):
         self.assertIsNone(quiz.quiz_for("no-such-course"))
         self.assertIsNone(quiz.grade(self.db, self.uid, "no-such-course", {}))

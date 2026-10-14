@@ -1256,3 +1256,13 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   禁用。测试 +4（剥答案/全对全错部分/落库与游客不计分/未知课程）；courselab 自检
   PASS；端到端走查：3 题 3/3 得分、解析渲染、无测验课静默隐藏（404 NO_QUIZ 前端
   不弹错）、游客提交不计分。成绩 ECharts 分析留下一轮（quiz_attempts 已是数据源）。
+
+- ✅ **轮五十一：测验成绩 ECharts 分析——GAP 内容层第二轮收口（10-14，用户"继续"）**：
+  quiz_attempts 数据源就位后补可视化：① `quiz.stats()`——按课程聚合（best/last/count）
+  + 作答时间线，课程名由 courses.catalog 映射；② GET `/api/quiz/stats`（登录必须）；
+  ③ me.html「测验成绩分析」卡（没做过题不出卡）：左图各课**最佳 vs 最近**得分率条形、
+  右图作答时间线散点（≥60% 绿 / <60% 红），tooltip 出课程名/时间/得分率。
+  测试 +1（聚合 best/last/count、课程名映射、空用户空分析不报错）→ quiz 5 项绿 +
+  courselab 自检 PASS。端到端走查：注册→两课各答一次（一好一差）→me 页双图渲染
+  实证（条形 100% vs 0%、时间线绿点红点）零错误。**至此 GAP 内容层（知识点/测验/
+  成绩分析）三项全部落地**，CourseLab 教学叙事闭环。

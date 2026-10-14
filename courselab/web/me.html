@@ -15,11 +15,75 @@
 <div id="box"></div>
 </main>
 <footer>会话为服务端会话表 + HttpOnly Cookie；登出即失效。</footer>
+<script src="/assets/echarts.min.js"></script>
 <script src="/assets/app.js"></script>
 <script>
 "use strict";
 CL.navbar();
 var box = document.getElementById("box");
+
+function initQuizStats() {
+  CL.api("/api/quiz/stats").then(function (res) {
+    if (!res.data || !res.data.ok) return;
+    var st = res.data.stats;
+    if (!st.count) return;                          // 没做过题：不出分析卡
+    var wrap = CL.el("div", "card");
+    var h = CL.el("h2", null, "测验成绩分析");
+    wrap.appendChild(h);
+    var note = CL.el("p", "note", "共 " + st.count + " 次作答 · "
+      + st.per_course.length + " 门课。左：各课最佳/最近得分率；右：作答时间线。");
+    wrap.appendChild(note);
+    var grid = CL.el("div");
+    grid.style.display = "grid";
+    grid.style.gridTemplateColumns = "1.4fr 1fr";
+    grid.style.gap = ".8rem";
+    var c1 = CL.el("div"); c1.style.height = "260px";
+    var c2 = CL.el("div"); c2.style.height = "260px";
+    grid.appendChild(c1); grid.appendChild(c2);
+    wrap.appendChild(grid);
+    box.appendChild(wrap);
+    if (!window.echarts) return;
+    var names = {};
+    st.per_course.forEach(function (pc) { names[pc.cid] = pc.course; });
+    // 左：各课 最佳 vs 最近（条形）
+    var chart1 = echarts.init(c1);
+    chart1.setOption({
+      tooltip: { trigger: "axis" },
+      legend: { top: 4 },
+      grid: { left: 120, right: 20, top: 34, bottom: 26 },
+      xAxis: { type: "value", max: 100, name: "%" },
+      yAxis: { type: "category",
+               data: st.per_course.map(function (pc) { return pc.course; }),
+               inverse: true, axisLabel: { fontSize: 11 } },
+      series: [
+        { name: "最佳", type: "bar", data: st.per_course.map(function (pc) { return pc.best; }),
+          itemStyle: { color: "#2563eb" }, barMaxWidth: 16 },
+        { name: "最近", type: "bar", data: st.per_course.map(function (pc) { return pc.last; }),
+          itemStyle: { color: "#94a3b8" }, barMaxWidth: 16 }
+      ]
+    });
+    // 右：作答时间线（散点，颜色按及格与否）
+    var chart2 = echarts.init(c2);
+    var pts = st.timeline.map(function (t, i) {
+      return { value: [i, t.pct], cid: names[t.cid] || t.cid, created: t.created };
+    });
+    chart2.setOption({
+      tooltip: { formatter: function (p) {
+        var d = p.data;
+        return d.cid + "<br>" + d.created + "<br>得分率 " + d.value[1] + "%"; } },
+      grid: { left: 44, right: 16, top: 20, bottom: 40 },
+      xAxis: { type: "value", name: "次序", minInterval: 1, axisLabel: { fontSize: 10 } },
+      yAxis: { type: "value", max: 100, name: "%" },
+      series: [{ type: "scatter", symbolSize: 12,
+        data: pts,
+        itemStyle: { color: function (p) { return p.value[1] >= 60 ? "#10b981" : "#f43f5e"; } } }]
+    });
+    window.addEventListener("resize", function () {
+      chart1.resize(); chart2.resize();
+    });
+  });
+}
+setTimeout(initQuizStats, 0);
 
 CL.api("/api/me").then(function (res) {
   var user = res.data && res.data.user;
