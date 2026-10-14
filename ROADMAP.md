@@ -1331,3 +1331,12 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
 - ✅ **轮五十六补二：start_all 门户 DETACHED 启动（10-14）**：Popen 加
   CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS——脚本退出后门户独立存活
   （AI 沙箱内无法终验跨进程存活，属工具环境限制；用户终端正常）。
+
+- ✅ **轮五十七：BoardWeb 局域网演示模式（10-14，用户"多人协同能联网吗？能多设备吗"）**：
+  答复+落地——现状协同=同机多窗口（全产品只绑 127.0.0.1 是仓库红线）；**加 `--lan`
+  显式开关**：boardweb 以 `python boardweb/server.py --port 8025 --lan` 启动 → 绑
+  0.0.0.0（netlab 回环白名单显式放行 0.0.0.0，默认仍回环不破红线）→ 同 WiFi 设备
+  浏览器打开提示的 `http://<局域网IP>:8025/` 即加入协同；`/api/lan` 端点 +
+  首页自动显示协同地址条（默认模式不出）。实测：--lan 实例 /api/lan 返回
+  lan=true + 局域网 IP。范围决策：仅 BoardWeb 开局域网（协同主场景），其余八产品
+  保持回环。B11+boardweb 132 项绿。

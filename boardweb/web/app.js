@@ -421,6 +421,18 @@
     });
   });
   $("color").addEventListener("input", function () { color = this.value; });
+
+  // ------------------------------------------------ 局域网协同提示（轮五十七）
+  fetch("/api/lan").then(function (r) { return r.json(); }).then(function (d) {
+    if (!d.lan || !d.ip) return;
+    var bar = document.createElement("div");
+    bar.style.cssText = "margin:0 0 .6rem;padding:.5rem .9rem;border:1px solid var(--line);"
+      + "border-left:4px solid #2563eb;border-radius:8px;background:var(--card);font-size:.88rem";
+    bar.innerHTML = "局域网演示中——同 WiFi 的手机/电脑打开 <b>http://" + d.ip
+      + ":" + location.port + "/</b> 即可加入协同";
+    var wrap = document.getElementById("board-wrap");
+    wrap.parentNode.insertBefore(bar, wrap);
+  }).catch(function () {});
   $("width").addEventListener("change", function () { width = Number(this.value); });
 
   // ------------------------------------------------ 贴图（文件 + Ctrl+V 粘贴）

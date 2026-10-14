@@ -67,6 +67,9 @@ def _save_doc_atomic(text: str) -> None:
     os.replace(tmp, DOC_PATH)
 
 
+LAN_STATE = {"lan": False, "ip": ""}       # --lan 启动时由 main 填充
+
+
 def build_app(data_dir: Path | None = None) -> MicroApp:
     global DOC_PATH, BACKUPS_DIR, IMG_DIR
     if data_dir is not None:
@@ -82,6 +85,11 @@ def build_app(data_dir: Path | None = None) -> MicroApp:
                         content_type="text/html; charset=utf-8")
 
     app.static("/static", WEB_ROOT)
+
+    @app.get("/api/lan")
+    def lan(ctx):
+        """局域网演示模式状态（轮五十七）：--lan 启动时前端显示协同入口。"""
+        return ctx.json({"lan": LAN_STATE["lan"], "ip": LAN_STATE["ip"]})
 
     @app.get("/api/doc")
     def doc_get(ctx):
@@ -241,13 +249,37 @@ def build_app(data_dir: Path | None = None) -> MicroApp:
 
 def main(argv=None) -> int:
     import argparse
-    ap = argparse.ArgumentParser(description="画板 Web 版（只绑回环）")
+    ap = argparse.ArgumentParser(description="画板 Web 版（默认只绑回环）")
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--port", type=int, default=DEFAULT_PORT)
+    ap.add_argument("--lan", action="store_true",
+                    help="局域网演示模式：监听全部网卡，同 WiFi 设备可协同"
+                         "（默认只绑 127.0.0.1）")
     args = ap.parse_args(argv)
-    server = MicroServer(build_app(), host=args.host, port=args.port)
+    host = "0.0.0.0" if args.lan else args.host
+    if args.lan:
+        import socket as _s
+        try:
+            _sk = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+            _sk.connect(("8.8.8.8", 80))
+            LAN_STATE["ip"] = _sk.getsockname()[0]
+            _sk.close()
+        except OSError:
+            pass
+        LAN_STATE["lan"] = True
+    server = MicroServer(build_app(), host=host, port=args.port)
     port = server.start()
     print(f"画板 Web 版已启动：http://127.0.0.1:{port}/   （Ctrl+C 退出）")
+    if args.lan:
+        import socket as _s
+        try:
+            _sk = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+            _sk.connect(("8.8.8.8", 80))          # 不发包，只为取本机局域网出口 IP
+            ip = _sk.getsockname()[0]
+            _sk.close()
+        except OSError:
+            ip = "<本机局域网 IP>"
+        print(f"  局域网演示模式：同 WiFi 设备打开 http://{ip}:{port}/ 即可协同")
     try:
         threading.Event().wait()
     except KeyboardInterrupt:

@@ -68,9 +68,11 @@ class Server:
     def __init__(self, host: str = "127.0.0.1", port: int = 0, *,
                  max_conn: int = 64, idle_timeout: float = 5.0,
                  max_body: int = DEFAULT_MAX_BODY, verbose: bool = False):
-        if host not in ("127.0.0.1", "localhost", "::1"):
+        # 回环白名单（仓库红线）；"0.0.0.0" 仅允许显式传入——局域网演示模式
+        # （轮五十七：BoardWeb --lan），默认值永远是回环。
+        if host not in ("127.0.0.1", "localhost", "::1", "0.0.0.0"):
             # 这是教学实验，不是给外人用的服务：绑到非回环地址要先显式打开开关。
-            raise ValueError(f"只允许绑定回环地址，收到 {host!r}")
+            raise ValueError(f"只允许绑定回环地址（或显式 0.0.0.0 局域网演示），收到 {host!r}")
         self.host, self.port = host, port
         self.max_conn, self.idle_timeout, self.max_body = max_conn, idle_timeout, max_body
         self.verbose = verbose
