@@ -50,19 +50,34 @@ def build_server(*, host: str = "127.0.0.1", port: int = 8018,
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser(description="LinkBox 自托管工具站（只绑回环）")
+    ap = argparse.ArgumentParser(description="LinkBox 自托管工具站（默认只绑回环）")
     ap.add_argument("--port", type=int, default=8018)
     ap.add_argument("--host", default="127.0.0.1")
     ap.add_argument("--memory", action="store_true", help="不落盘，退出即忘")
+    ap.add_argument("--lan", action="store_true",
+                    help="局域网演示模式：监听全部网卡，同 WiFi 设备扫码/输网址"
+                         "即可互传文件（默认只绑 127.0.0.1）")
     args = ap.parse_args(argv)
+    host = "0.0.0.0" if args.lan else args.host
 
-    server = build_server(host=args.host, port=args.port,
+    server = build_server(host=host, port=args.port,
                           db_path=":memory:" if args.memory else None,
                           stash_path=":memory:" if args.memory else None,
                           files_path=":memory:" if args.memory else None)
     port = server.start()
     server.sweeper.start()                          # M3：后台清扫过期暂存
     print(f"LinkBox 已启动： http://127.0.0.1:{port}/   （Ctrl+C 退出）")
+    if args.lan:
+        import socket as _s
+        try:
+            _sk = _s.socket(_s.AF_INET, _s.SOCK_DGRAM)
+            _sk.connect(("8.8.8.8", 80))
+            ip = _sk.getsockname()[0]
+            _sk.close()
+        except OSError:
+            ip = "<本机局域网 IP>"
+        print(f"  局域网演示模式：同 WiFi 设备打开 http://{ip}:{port}/ 互传文件/短链"
+              "（首页有二维码可扫）")
     print(f"过期清扫： 每 {server.sweeper.interval:.0f} 秒一轮")
     if not args.memory:
         print(f"数据目录： {DATA_DIR}")

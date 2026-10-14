@@ -1340,3 +1340,9 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   首页自动显示协同地址条（默认模式不出）。实测：--lan 实例 /api/lan 返回
   lan=true + 局域网 IP。范围决策：仅 BoardWeb 开局域网（协同主场景），其余八产品
   保持回环。B11+boardweb 132 项绿。
+
+- ✅ **轮五十八：LinkBox 局域网演示模式（10-14，用户"还有文件共享"）**：与 BoardWeb 同款
+  `--lan` 显式开关——`python linkbox/server.py --port 8018 --lan` 启动 → 绑 0.0.0.0 →
+  同 WiFi 设备打开提示的 `http://<局域网IP>:8018/` 即可互传文件/短链（首页自带二维码
+  可扫，二维码基于访问 Host 天生指向正确地址）。实测：--lan 实例绑定成功首页 200。
+  netlab 白名单上一轮已放行 0.0.0.0（默认仍回环）。linkbox 76 项全绿。
