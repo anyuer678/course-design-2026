@@ -29,20 +29,21 @@ def req(port: int, method: str, path: str, body=None, headers=None, timeout=30):
 
 
 def main() -> int:
-    busy = [p for p in (8017,) if _port_open(p)]
-    if busy:
-        print("门户已在运行（:8017）——直接使用即可；如需重启先跑 stop_all.py")
-        return 0
-    studio = subprocess.Popen([sys.executable, str(REPO / "studio" / "server.py"),
-                               "--port", "8017"],
-                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    studio = None
+    if _port_open(8017):
+        print("门户已在运行（:8017）——跳过起门户，直接拉起产品；如需完全重启先跑 stop_all.py")
+    else:
+        studio = subprocess.Popen([sys.executable, str(REPO / "studio" / "server.py"),
+                                   "--port", "8017"],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     for _ in range(50):
         if _port_open(8017):
             break
         time.sleep(0.2)
     if not _port_open(8017):
         # 探活失败不许裸栈 + 不许把半启动的门户留在机上（2026-10-07 审查收口）
-        studio.terminate()
+        if studio:
+            studio.terminate()
         print("门户 10s 未就绪——已回收进程；可手动 python studio/server.py --port 8017 看报错")
         return 1
     pw_lines = [ln.strip() for ln in (REPO / "studio" / "data" / "password.txt")
@@ -53,7 +54,8 @@ def main() -> int:
                                             "password": pw_lines[-1]}).encode(),
                                 [("Content-Type", "application/json")])
     if status != 200:
-        studio.terminate()
+        if studio:
+            studio.terminate()
         print(f"登录失败：HTTP {status}——已回收门户进程")
         return 1
     auth = {"Cookie": headers.get("set-cookie", "").split(";")[0],

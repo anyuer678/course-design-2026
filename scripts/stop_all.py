@@ -10,7 +10,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
 PRODUCTS = ["board", "boardweb", "courselab", "sensorhub", "cachekv",
-            "datascope", "simlab", "lab", "linkbox"]
+            "datascope", "simlab", "linkbox"]   # lab 已归档（轮五十五）
 
 
 def req(port: int, method: str, path: str, body=None, headers=None):
@@ -48,8 +48,17 @@ def main() -> int:
         return 2
     auth = {"Cookie": headers.get("set-cookie", "").split(";")[0]}
     for pid in PRODUCTS:
-        status, _, _ = req(8017, "POST", f"/api/products/{pid}/stop", headers=auth)
-        print(f"{'✅' if status == 200 else '❌'} stop {pid}")
+        status, body, _ = req(8017, "POST", f"/api/products/{pid}/stop", headers=auth)
+        if status == 200:
+            print(f"✅ stop {pid}")
+        else:
+            try:
+                err = json.loads(body).get("error", "")
+            except ValueError:
+                err = ""
+            # 404 = 产品不在矩阵（如已归档的 lab）：提示而非报错
+            print(f"{'⏭' if status == 404 else '❌'} stop {pid}"
+                  + (f"（{err}）" if err and status != 404 else ""))
     time.sleep(1.5)
     still = [p for p in (8018, 7788, 8019, 8020, 8021, 8022, 8023, 8024, 8025)
              if port_open(p)]
@@ -63,7 +72,7 @@ def main() -> int:
     ps = subprocess.run(
         ["powershell", "-NoProfile", "-Command",
          "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | "
-         "Where-Object { $_.CommandLine -match 'studio[\\\\/]+server\\.py' } | "
+         "Where-Object { $_.CommandLine -match 'server\\.py --port 8017' } | "
          "Select-Object -ExpandProperty ProcessId"],
         capture_output=True, text=True, encoding="utf-8", errors="replace")
     killed = [int(tok.strip()) for tok in (ps.stdout or "").split()

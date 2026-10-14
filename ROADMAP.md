@@ -1320,3 +1320,10 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   缺 id——renderAuth 的 owner/guest 显隐逻辑从未生效（成员与邀请未登录也显示、
   登录链接登录后不消失），补 id 后显隐恢复。度量：note 35→23、overline 4→0、
   页高 2168→1717。studio 35 项绿。
+
+- ✅ **轮五十六补：start_all/stop_all 启停脚本修复（10-14，用户"重启门户。脚本怎么有报错"）**：
+  三个问题全修——① stop_all 清单残留已归档的 lab → `❌ stop lab`（移出，404 提示跳过
+  不报错）；② stop_all 停门户按命令行匹配 `studio[/]server.py`，**cwd 方式启动的门户
+  命令行里没有该字样 → 匹配失败门户残留**（改锚定专属端口 `server.py --port 8017`，
+  不误杀）；③ start_all 见门户在跑就**直接退出不拉产品**（改为跳过起门户但仍逐个拉
+  起八产品）。全链实测：stop 8 产品 ✅ + 门户已停 + 端口无残留；start 8/8 ✅ 全在线。
