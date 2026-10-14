@@ -1355,3 +1355,9 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   取舍/ip-ua 记录=数据不出机器/--lan 无认证=横幅加 ⚠ 警示）。确认清单：零依赖、
   pbkdf2+盐、SQL 参数化、textContent、上传路径分离、路径穿越用例、权限矩阵测试、
   凭据 gitignore。报告落 SECURITY-REVIEW.md。回归：courselab 自检 PASS + linkbox 76 绿。
+
+- ✅ **轮六十补：G2/B27/courselab 三处连带同步（10-14）**：G2 练习卡收敛 40→37
+  （EXPECTED_IDS B1–B38，B36/B39/40/41 缺位；B39/40/41.md 多余产物删除；重渲染
+  README+B5/B8/B15）；B27 测试数字 41→38 全量同步（拓扑/节点/渲染嵌入）；courselab
+  自检断言 30 门/≥18 摘要。三处回归全绿（G2 --check / B27 21 项 / courselab
+  154 项 PASS）。
