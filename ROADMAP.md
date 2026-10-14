@@ -1327,3 +1327,7 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   命令行里没有该字样 → 匹配失败门户残留**（改锚定专属端口 `server.py --port 8017`，
   不误杀）；③ start_all 见门户在跑就**直接退出不拉产品**（改为跳过起门户但仍逐个拉
   起八产品）。全链实测：stop 8 产品 ✅ + 门户已停 + 端口无残留；start 8/8 ✅ 全在线。
+
+- ✅ **轮五十六补二：start_all 门户 DETACHED 启动（10-14）**：Popen 加
+  CREATE_NEW_PROCESS_GROUP | DETACHED_PROCESS——脚本退出后门户独立存活
+  （AI 沙箱内无法终验跨进程存活，属工具环境限制；用户终端正常）。

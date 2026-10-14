@@ -33,9 +33,12 @@ def main() -> int:
     if _port_open(8017):
         print("门户已在运行（:8017）——跳过起门户，直接拉起产品；如需完全重启先跑 stop_all.py")
     else:
+        # DETACHED：脚本退出后门户必须存活（轮五十六实测：子进程形态被连带回收）
         studio = subprocess.Popen([sys.executable, str(REPO / "studio" / "server.py"),
                                    "--port", "8017"],
-                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                  creationflags=subprocess.CREATE_NEW_PROCESS_GROUP
+                                  | subprocess.DETACHED_PROCESS)
     for _ in range(50):
         if _port_open(8017):
             break
