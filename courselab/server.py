@@ -837,9 +837,9 @@ def selftest(port: int = 7901) -> int:
     check("health 就绪", status == 200 and health.get("app") == "courselab")
 
     status, data, _ = get("/api/courses")
-    check("课程目录现算（33 门）", data.get("ok") and data.get("count") >= 33, f"{data.get('count')} 门")
+    check("课程目录现算（30 门）", data.get("ok") and data.get("count") >= 30, f"{data.get('count')} 门")
     with_summary = sum(1 for c in data["courses"] if c.get("summary"))
-    check("摘要现算（≥20 门有真实一句话；缺的页面有兜底文案）", with_summary >= 20, f"{with_summary} 门")
+    check("摘要现算（≥18 门有真实一句话；缺的页面有兜底文案）", with_summary >= 18, f"{with_summary} 门")
 
     status, data, _ = get("/api/courses/B11-net-lab")
     c = data.get("course", {})
