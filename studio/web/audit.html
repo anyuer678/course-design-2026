@@ -14,16 +14,17 @@
 <div class="shell">
   <aside class="sidebar">
     <div class="side-brand"><span class="logo">ST</span>Studio</div>
-    <div class="side-section">门户</div>
+    <div class="side-section">产品</div>
     <a class="side-link" href="/">产品矩阵</a>
     <a class="side-link active" href="/audit.html">操作审计</a>
-    <a class="side-link" href="/team.html">成员与邀请</a>
+    <a class="side-link" href="/team.html" id="nav-team" hidden>成员与邀请</a>
+    <div class="side-section">账号</div>
+    <a class="side-link" href="/team.html" id="nav-team" hidden>成员与邀请</a>
     <a class="side-link" href="/account.html">账户</a>
-    <a class="side-link" href="/login.html">登录 / 注册</a>
+    <a class="side-link" href="/login.html" id="nav-login">登录 / 注册</a>
     <div class="side-foot">
-      <div class="badge-dot" id="ws-state">○ 轮询模式（3s）</div>
-      <div class="badge-dot" id="foot-state">只绑 127.0.0.1</div>
-      <div>门户跑在自研 webframe 上</div>
+      <div class="badge-dot" id="ws-state">○ 轮询模式</div>
+      <div>数据只在本机 · 只绑 127.0.0.1</div>
     </div>
   </aside>
 
@@ -44,7 +45,6 @@
     </div>
 
     <div class="page">
-      <div class="overline">Audit</div>
       <h1>操作审计 <span class="note">（启停动作的账，含拒绝与失败；需登录查看）</span></h1>
       <div id="dash" class="dash" hidden>
         <div class="dash-chart" id="dash-actions"></div>
