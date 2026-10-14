@@ -330,6 +330,11 @@ class SensorHub:
         received = self._drain()
         new_alerts = self._evaluate_alerts()
         self.ticks += 1
+        if self.ticks % 600 == 0:            # 每 600 拍收口一次读数保留上限
+            try:
+                self.recorder.trim(5000)
+            except Exception:
+                pass                          # 收口失败不绊倒节拍（下一周期再试）
         return {"sent": sent, "dropped": dropped,
                 "received": received, "new_alerts": new_alerts}
 

@@ -65,6 +65,23 @@ class Recorder:
         if anomaly:
             self.anomalies[anomaly] += 1
 
+    def trim(self, keep_per_device: int = 5000) -> int:
+        """读数保留上限（轮四十八性能收口）：每设备只留最近 keep_per_device 条，
+        更老的 DELETE——长跑库不再无限膨胀。series 的尾部扫描（LIMIT 下推）
+        语义不受影响。返回删除行数。"""
+        keep = max(100, int(keep_per_device))
+        deleted = 0
+        devices = [r[0] for r in self.conn.execute("SELECT DISTINCT device FROM readings")]
+        for dev in devices:
+            cur = self.conn.execute(
+                "DELETE FROM readings WHERE device = ? AND seq <= "
+                "(SELECT seq FROM readings WHERE device = ? "
+                "ORDER BY seq DESC LIMIT 1 OFFSET ?)",
+                (dev, dev, keep - 1))
+            deleted += cur.rowcount
+        self.conn.commit()
+        return deleted
+
     # ---------------------------------------------------------------- 对账口
 
     def summary(self) -> dict:
