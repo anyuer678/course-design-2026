@@ -40,10 +40,12 @@ def _run(args) -> str:
 
 
 def _mask_live_measurements(text: str) -> str:
-    text = re.sub(r"\d[\d,]*(?:\.\d+)? 次/秒", "[现场] 次/秒", text)
+    # 连同前导对齐空格一起吞（轮五十四 CI 实测）：速率数字宽度随机器波动，
+    # 只换数字会留下不同数量的对齐空格 → 磁盘 vs 现算差空格 → --check 抽签。
+    text = re.sub(r"\s*\d[\d,]*(?:\.\d+)? 次/秒", " [现场] 次/秒", text)
     text = re.sub(r"(比 MD5 慢 )\d[\d,]*( 倍)", r"\1[现场]\2", text)
-    text = re.sub(r"\d[\d.]* 秒跑完", "[现场] 秒跑完", text)
-    text = re.sub(r"\d[\d.]* 小时", "[现场] 小时", text)
+    text = re.sub(r"\s*\d[\d.]* 秒跑完", " [现场] 秒跑完", text)
+    text = re.sub(r"\s*\d[\d.]* 小时", " [现场] 小时", text)
     return text
 
 
