@@ -1,6 +1,6 @@
 """g2/render.py —— G2 练习卡片的渲染器与校验器（口径见 g2/README.md）。
 
-唯一事实源：`g2/cards.json`（40 张卡：B1–B41，B36 未做——用户主动跳过）。
+唯一事实源：`g2/cards.json`（37 张卡：B1–B38，B36/B39/B40/B41 未做——用户主动跳过或已归档）。
 - `--write`：渲染 `g2/README.md`（索引）+ `g2/B<编号>.md`（每张卡）；
 - `--check`：渲染新鲜度 + 逐条核验事实来源——总结句 / 知识点行 / 任务原文 /
   坑单标题必须在对应 README 里**逐字**存在，materials 里的路径必须真实存在。
@@ -22,7 +22,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 G2 = ROOT / "g2"
 CARDS = G2 / "cards.json"
-EXPECTED_IDS = [f"B{i}" for i in range(1, 42) if i != 36]
+EXPECTED_IDS = [f"B{i}" for i in range(1, 39) if i != 36]   # 轮六十：B39/40/41 归档移出
 VERIFY_CARD = "python g2/render.py --check"
 
 
@@ -100,7 +100,7 @@ def render_index(cards: list) -> str:
     lines = [
         "# G2 练习册（生成物：`python g2/render.py --write`）",
         "",
-        f"> {len(cards)} 张卡片（B1–B41；B36 未做）：**这张卡对应什么 / 口述提纲 / 知识点速览 /",
+        f"> {len(cards)} 张卡片（B1–B38；B36/B39/B40/B41 未做）：**这张卡对应什么 / 口述提纲 / 知识点速览 /",
         "> 独立修改任务（全部练习建议原文） / 失败复现 + 延伸坑单 / 从哪看起**——内容全部取自",
         "> 各项目 README 原文，**不新造题**；每条引用由 `--check` 逐字核对（README 一改就红）。",
         "> **完成归你**：卡片只搭脚手架，不代做、不代勾。",
@@ -143,7 +143,7 @@ def validate_cards(root: Path, cards: list) -> list:
         return ["cards.json 顶层必须是数组"]
     ids = [c.get("id") for c in cards]
     if ids != EXPECTED_IDS:
-        problems.append(f"卡片编号必须恰好是 B1–B41（B36 缺位）：实际 {ids}")
+        problems.append(f"卡片编号必须恰好是 B1–B38（B36/B39/B40/B41 缺位）：实际 {ids}")
     seen = set()
     for c in cards:
         cid = c.get("id", "?")
