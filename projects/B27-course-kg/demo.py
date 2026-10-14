@@ -27,7 +27,7 @@ def show(title):
 
 
 def demo_data(g):
-    show("第一段：图谱数据 —— 41 门任务与 PLAN §3 的依赖边")
+    show("第一段：图谱数据 —— 38 门任务与 PLAN §3 的依赖边")
     batches = {}
     for t, info in g.nodes.items():
         batches.setdefault(info["batch"], []).append(t)
@@ -37,7 +37,7 @@ def demo_data(g):
     for e in g.edges:
         kinds[e["kind"]] = kinds.get(e["kind"], 0) + 1
     print(f"    关系边 {len(g.edges)} 条，按类型: {kinds}")
-    check(len(g.nodes) == 41, "41 个任务节点")
+    check(len(g.nodes) == 38, "38 个任务节点")
     check(sum(kinds.values()) == len(g.edges), "边分类账目一致")
     check("先修" in kinds, "存在硬先修边")
 

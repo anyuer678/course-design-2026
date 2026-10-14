@@ -152,8 +152,8 @@ class KnowledgeGraph:
     def validate(self) -> None:
         """图的结构校验：边端点存在（add_edge 已查）、无环、任务数完整。"""
         self.topological_order()                      # 有环即抛
-        if len(self.nodes) != 41:
-            raise ValueError(f"任务数应为 41，实际 {len(self.nodes)}")
+        if len(self.nodes) != 38:
+            raise ValueError(f"任务数应为 38，实际 {len(self.nodes)}")   # 轮五十八：B39/40/41 非专业课移出
 
 
 def load_default() -> KnowledgeGraph:

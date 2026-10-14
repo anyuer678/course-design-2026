@@ -1,6 +1,6 @@
 """tests/test_showcase.py —— B27 展示页生成器自测（口径：showcase/SPEC.md）。
 
-钉住：页面新鲜度、交互图（41 节点/42 边）与闭包/解锁/缺口/路径的现算事实、
+钉住：页面新鲜度、交互图（38 节点/42 边）与闭包/解锁/缺口/路径的现算事实、
 演示输出的 GBK 扫净（[ok]/[fail] 取代 Unicode 对勾/叉号）、改坏必红、页面标记与零外链。
 """
 from __future__ import annotations
@@ -48,7 +48,7 @@ class TestPayload(unittest.TestCase):
         cls.payload = sc.collect()
 
     def test_graph_and_queries(self):
-        self.assertEqual(self.payload["n_nodes"], 41)
+        self.assertEqual(self.payload["n_nodes"], 38)
         self.assertEqual(self.payload["n_edges"], 42)
         facts = dict(self.payload["facts"])
         self.assertIn("B1 / B2 / B5 / B6 / B8", facts["闭包查询"])
@@ -63,14 +63,14 @@ class TestPayload(unittest.TestCase):
         demo = self.payload["demo"]
         self.assertNotIn("\u2714", demo)
         self.assertNotIn("\u2718", demo)
-        self.assertIn("[ok] 41 个任务节点", demo)
+        self.assertIn("[ok] 38 个任务节点", demo)
         self.assertNotIn("AppData", demo)
 
 
 class TestRenderedPage(unittest.TestCase):
     def test_interactive_graph_is_embedded(self):
         text = sc.OUT.read_text(encoding="utf-8")
-        self.assertEqual(text.count('class="node"'), 41)
+        self.assertEqual(text.count('class="node"'), 38)
         self.assertEqual(text.count('class="edge"'), 42)
         self.assertIn("CLOSURE", text)
 

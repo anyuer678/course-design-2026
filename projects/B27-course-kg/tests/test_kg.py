@@ -4,7 +4,7 @@
     1. 传递闭包 <-- 测试内独立实现的 BFS（不 import kg.graph 的闭包函数）
     2. 缺先修 / 解锁 <-- 手工整理的 PLAN §3 用例逐数断言
     3. 拓扑序合法性 <-- 每条边 u→v 满足 pos[u] < pos[v]
-    4. 数据完整性 <-- CSV 行数 / 任务数 41 / 词池不变式（文件与内存图一致）
+    4. 数据完整性 <-- CSV 行数 / 任务数 38 / 词池不变式（文件与内存图一致）
     5. HTML <-- 节点与边全部出现、自包含（无 http 外链）
 """
 import math
@@ -39,7 +39,7 @@ class TestGraphData(unittest.TestCase):
         cls.g = load_default()
 
     def test_shape(self):
-        self.assertEqual(len(self.g.nodes), 41)
+        self.assertEqual(len(self.g.nodes), 38)
         self.assertGreaterEqual(len(self.g.edges), 40)
 
     def test_edges_reference_existing_nodes(self):
@@ -56,7 +56,7 @@ class TestGraphData(unittest.TestCase):
 
     def test_no_cycle_by_topo(self):
         order = self.g.topological_order()
-        self.assertEqual(len(order), 41)
+        self.assertEqual(len(order), 38)
         pos = {t: i for i, t in enumerate(order)}
         for e in self.g.edges:
             self.assertLess(pos[e["src"]], pos[e["dst"]],
