@@ -1274,3 +1274,10 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   P8"；标题改"9 产品 + 1 门户"；演进表加**阶段十：真功能+体验冲刺十六轮**
   （轮 36-51 全部 CI 绿清单）。② screenshots/studio.png 与 courselab.png 重截
   （旧图停在轮四十四前——多页面导航/进入控制台按钮/测验卡不在图里）。
+
+- ✅ **轮五十三：CI 抽签治理——netlab stop 宽限重 join（10-14，用户"继续"）**：
+  轮五十二 CI 红的根因治理：`netlab/server.py stop()` 原 join(3s) 超时即 raise
+  ——CI 慢机上单 tick（select wait + handler 处理）会破 3s，抽签红
+  （test_ws_live::test_snapshot_then_append 实录）。修法保守不改语义：
+  超时后再 join(timeout×4) 宽限一次，**真死锁最终仍 raise**。
+  回归：B11 + sensorhub **144 项全绿**（62 subtests）。

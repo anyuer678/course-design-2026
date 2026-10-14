@@ -107,6 +107,11 @@ class Server:
         if self._thread:
             self._thread.join(timeout)
             if self._thread.is_alive():
+                # 慢机/CI 抽签宽限（轮五十二实测：快照+增量测试偶发卡超 3s——
+                # 单 tick 最长 = select wait + handler 处理，CI 机上会破 3s）。
+                # 再等一个长窗口；真死锁最终仍 raise，语义不变。
+                self._thread.join(timeout * 4)
+            if self._thread.is_alive():
                 raise RuntimeError("事件循环线程没能退出，可能有连接卡在 select 里")
         self._cleanup()
         if self._error is not None:
