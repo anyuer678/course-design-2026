@@ -30,7 +30,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import quote, unquote, urlparse
 
-from app import admin, auth, can, courses, labs, notices, tasks
+from app import admin, auth, can, courses, labs, notices, quiz, tasks
 from app.db import DB, now_str
 
 # 自检的 HTTP 客户端一律直连（显式无代理 opener）：系统代理（如 :7890）没开时，
@@ -255,6 +255,24 @@ class Handler(SimpleHTTPRequestHandler):
             detail["meta"] = admin.course_meta_public(self.db, cid)
             return self.send_json({"ok": True, "course": detail})
 
+        if path.startswith("/api/quiz/"):
+            user = self.current_user()
+            rest = path[len("/api/quiz/"):]
+            if rest == "mine":
+                if not user:
+                    return self.send_error_json(401, "登录后可见", "AUTH_REQUIRED")
+                return self.send_json(
+                    {"ok": True,
+                     "attempts": quiz.my_attempts(self.db, user["id"])})
+            cid = unquote(rest).strip("/")
+            if courses.course_detail(cid) is None:
+                return self.send_error_json(404, "课程不存在", "NO_COURSE")
+            paper = quiz.quiz_for(cid)
+            if paper is None:
+                return self.send_error_json(404, "该课程没有测验", "NO_QUIZ")
+            paper["signed_in"] = bool(user)
+            return self.send_json({"ok": True, **paper})
+
         if path == "/api/tasks/mine":
             user = self.current_user()
             if user is None:
@@ -445,6 +463,8 @@ class Handler(SimpleHTTPRequestHandler):
                 return self._lab_run(data)
             if path.startswith("/api/labs/runs/") and path.endswith("/stop"):
                 return self._lab_stop(path)
+            if path.startswith("/api/quiz/") and path.endswith("/submit"):
+                return self._quiz_submit(path, data)
             if path == "/api/tasks/claim":
                 return self._task_action(data, "claim")
             if path == "/api/tasks/done":
@@ -636,6 +656,19 @@ class Handler(SimpleHTTPRequestHandler):
         if not self._can_view_run(user, meta):
             return self.send_error_json(403, "只能停自己的实验", "FORBIDDEN")
         return self.send_json(self.labs.stop(run_id))
+
+    def _quiz_submit(self, path, data):
+        user = self.current_user()
+        cid = unquote(path[len("/api/quiz/"):-len("/submit")]).strip("/")
+        if courses.course_detail(cid) is None or quiz.quiz_for(cid) is None:
+            return self.send_error_json(404, "该课程没有测验", "NO_QUIZ")
+        answers = data.get("answers") or {}
+        if not isinstance(answers, dict):
+            return self.send_error_json(400, "answers 须为对象", "BAD_ANSWERS")
+        result = quiz.grade(self.db, user["id"] if user else None, cid, answers)
+        if result is None:
+            return self.send_error_json(404, "该课程没有测验", "NO_QUIZ")
+        return self.send_json({"ok": True, "cid": cid, **result})
 
     def _register(self, data):
         status = "pending" if self.cfg.get("registration") == "approval" else "active"

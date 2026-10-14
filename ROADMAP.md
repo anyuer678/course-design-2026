@@ -1243,3 +1243,16 @@ sklearn 默认早停 `n_iter_no_change=10` 截胡（必须 tol=0 打通轮数）
   sensorhub + studio **96 项全绿**；复测：2s 节拍稳态 49% 单核（65%→49%，多核
   总占用 ~6%）。方法论沉淀：**性能反馈先做进程级 CPU 增量采样定位大户，改完
   同口径复测**——`Get-Process CPU 增量/15s`。
+
+- ✅ **轮五十：CourseLab 随堂测验——GAP 内容层第一轮（10-14，用户"继续"）**：
+  知识点其实已现成（courses.py 现算 g2/cards.json 的知识点表，30 门课齐），缺的是
+  **测验**。最小闭环：① 题库 `courselab/data/quiz.json`——6 门课（B12 算法/B5 计组/
+  B9 操作系统/B38 mini-redis/B11 网络/B10 minidb）× 3 题 = 18 道选择题，每题带
+  explain（出题出处指回课程卡）；② `app/quiz.py`——quiz_for 剥答案（answer/explain
+  不过网）、grade 判分+落库、my_attempts（成绩分析图数据源）；③ `quiz_attempts` 表；
+  ④ API：GET `/api/quiz/<cid>`、POST `/api/quiz/<cid>/submit`（**do_POST 段**——首版
+  误插 do_GET 导致 404，已移正）、`/api/quiz/mine`；游客可拉题可判分但**不计分**；
+  ⑤ course.html「随堂测验」卡：radio 答题 → 提交 → 得分 + 逐题 ✓/✗ + 解析 + 选项
+  禁用。测试 +4（剥答案/全对全错部分/落库与游客不计分/未知课程）；courselab 自检
+  PASS；端到端走查：3 题 3/3 得分、解析渲染、无测验课静默隐藏（404 NO_QUIZ 前端
+  不弹错）、游客提交不计分。成绩 ECharts 分析留下一轮（quiz_attempts 已是数据源）。

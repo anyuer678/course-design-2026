@@ -23,6 +23,14 @@
 <h2>知识点速览</h2>
 <div id="knowledge"></div>
 
+<h2 id="quiz-title">随堂测验 <span id="quiz-score" class="note"></span></h2>
+<div class="card" id="quiz-card" hidden>
+  <p class="note" id="quiz-note">每题单选，提交后即出分与解析。</p>
+  <div id="quiz-questions"></div>
+  <button class="btn" id="btn-quiz-submit" style="margin-top:.6rem">提交答案</button>
+  <p class="note" id="quiz-msg"></p>
+</div>
+
 <h2 id="tasks-title">练习任务</h2>
 <div id="tasks"></div>
 
@@ -236,6 +244,73 @@ function taskAct(kind, key, note, btn) {
     .catch(function () { alert("网络错误，请重试。"); })
     .then(function () { btn.disabled = false; });
 }
+
+function initQuiz() {
+  var box = document.getElementById("quiz-questions");
+  CL.api("/api/quiz/" + encodeURIComponent(cid)).then(function (res) {
+    if (!res.data || !res.data.ok) return;          // 无测验：卡保持隐藏
+    document.getElementById("quiz-card").hidden = false;
+    box.textContent = "";
+    (res.data.questions || []).forEach(function (qz) {
+      var wrap = document.createElement("div");
+      wrap.style.marginBottom = ".8rem";
+      var q = document.createElement("p");
+      q.style.margin = ".3rem 0";
+      q.textContent = (qz.id + 1) + ". " + qz.q;
+      wrap.appendChild(q);
+      qz.options.forEach(function (opt, idx) {
+        var lab = document.createElement("label");
+        lab.style.display = "block";
+        lab.style.marginLeft = "1rem";
+        var radio = document.createElement("input");
+        radio.type = "radio"; radio.name = "quiz-" + qz.id; radio.value = idx;
+        lab.appendChild(radio);
+        lab.appendChild(document.createTextNode(" " + opt));
+        wrap.appendChild(lab);
+      });
+      box.appendChild(wrap);
+    });
+    document.getElementById("btn-quiz-submit").onclick = function () {
+      var btn = this;
+      var answers = {};
+      (res.data.questions || []).forEach(function (qz) {
+        var picked = box.querySelector('input[name="quiz-' + qz.id + '"]:checked');
+        answers[qz.id] = picked ? Number(picked.value) : null;
+      });
+      btn.disabled = true; btn.textContent = "判分中…";
+      CL.api("/api/quiz/" + encodeURIComponent(cid) + "/submit",
+             { method: "POST", body: { answers: answers } })
+        .then(function (r) {
+          var msg = document.getElementById("quiz-msg");
+          if (!r.data || !r.data.ok) {
+            msg.textContent = (r.data && r.data.error) || "提交失败";
+            return;
+          }
+          document.getElementById("quiz-score").textContent =
+            "得分 " + r.data.score + " / " + r.data.total;
+          (r.data.detail || []).forEach(function (d) {
+            var q = box.querySelector('input[name="quiz-' + d.id + '"]');
+            var wrap = q && q.closest("div");
+            if (!wrap) return;
+            var mark = document.createElement("p");
+            mark.style.margin = ".2rem 0";
+            mark.style.color = d.ok ? "#059669" : "#dc2626";
+            mark.textContent = (d.ok ? "✓ 正确。" : "✗ 正确答案："
+              + (res.data.questions[d.id].options[d.answer]) + "。")
+              + d.explain;
+            wrap.appendChild(mark);
+            box.querySelectorAll('input[name="quiz-' + d.id + '"]')
+              .forEach(function (inp) { inp.disabled = true; });
+          });
+          msg.textContent = "已记录" + (res.data.signed_in ? "到你的成绩" : "（未登录不计分）") + "。";
+          btn.disabled = true; btn.textContent = "已提交";
+        })
+        .catch(function () { msg.textContent = "网络错误，请重试。"; })
+        .then(function () { if (btn.textContent === "判分中…") { btn.disabled = false; btn.textContent = "提交答案"; } });
+    };
+  });
+}
+initQuiz();
 
 function refreshTaskboard() {
   CL.api("/api/courses/" + encodeURIComponent(cid)).then(function (res) {
